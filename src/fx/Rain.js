@@ -131,12 +131,12 @@ void main(){
 
   // close drops stay bead-like; distant ones become streaks
   float near = 1.0 - smoothstep(1.6, 9.5, dist);
-  float streak = mix(0.055, 0.22, rain) * mix(0.55, 1.35, h.w)
-               + relSp * 0.011
-               + near * 0.02;
-  float thick = mix(0.0038, 0.011, h.y) * mix(1.0, 1.55, near);
+  float streak = mix(0.08, 0.32, rain) * mix(0.55, 1.45, h.w)
+               + relSp * 0.014
+               + near * 0.03;
+  float thick = mix(0.0065, 0.018, h.y) * mix(1.0, 1.85, near);
   // stay above a pixel so they do not sparkle out
-  float minW = 1.15 / max(uProjScaleY / max(dist, 1.0), 1.0);
+  float minW = 2.1 / max(uProjScaleY / max(dist, 1.0), 1.0);
   thick = max(thick, minW);
 
   vec3 world = p + along * (position.y * streak * 0.5) + side * (position.x * thick);
@@ -146,7 +146,7 @@ void main(){
   float fade = 1.0 - smoothstep(0.70, 0.98, max(edge.x, max(edge.y, edge.z)));
   float nearFade = smoothstep(0.28, 1.15, dist);
   float farFade = 1.0 - smoothstep(vol.x * 0.85, vol.x * 1.15, dist);
-  vAlpha = fade * nearFade * farFade * mix(0.35, 1.0, rain) * mix(0.55, 1.0, 1.0 - canopy * 0.35);
+  vAlpha = fade * nearFade * farFade * mix(0.55, 1.0, rain) * mix(0.62, 1.0, 1.0 - canopy * 0.28);
   vUv = position.xy;
   vKind = near;
   vFlash = 0.0;
@@ -193,11 +193,11 @@ void main(){
   mask = clamp(mask, 0.0, 1.0);
   if(mask < 0.02) discard;
 
-  vec3 col = vec3(0.62, 0.70, 0.78) * (0.22 + vKind * 0.35);
-  col += uSkyAmbient * 0.45;
-  col += uSunColor * 0.08;
-  col += uFlashColor * uFlash.w * 0.55;
-  float a = mask * vAlpha * mix(0.22, 0.85, uWeather.z);
+  vec3 col = vec3(0.82, 0.88, 0.96) * (0.55 + vKind * 0.65);
+  col += uSkyAmbient * 1.15;
+  col += uSunColor * 0.35;
+  col += uFlashColor * uFlash.w * 0.85;
+  float a = mask * vAlpha * mix(0.55, 1.25, uWeather.z);
   oColor = vec4(col * a, a);
 }
 `;
@@ -334,9 +334,9 @@ void main(){
   }
   if(mask < 0.02) discard;
 
-  vec3 col = vec3(0.70, 0.76, 0.82) * 0.28 + uSkyAmbient * 0.35 + uSunColor * 0.05;
-  col += uFlashColor * uFlash.w * 0.4;
-  float a = mask * vAlpha * 0.55;
+  vec3 col = vec3(0.82, 0.88, 0.94) * 0.55 + uSkyAmbient * 0.7 + uSunColor * 0.12;
+  col += uFlashColor * uFlash.w * 0.55;
+  float a = mask * vAlpha * 0.85;
   oColor = vec4(col * a, a);
 }
 `;
