@@ -345,9 +345,10 @@ export class CameraDirector {
       }
     }
 
-    // keep the camera out of the ground
+    // keep the camera out of the ground and out of trunks
     const gh = this._ground(pos.x, pos.z);
     if (pos.y < gh + 0.22) pos.y = gh + 0.22;
+    this.forest.trees?.pushOutOfTrunks?.(pos, 0.75);
 
     // hand-held shake: two octaves of noise, stronger in wind
     const sh = this.shake * (0.5 + 0.5 * st.storm);

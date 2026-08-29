@@ -18,18 +18,18 @@ const smooth = (t) => t * t * (3 - 2 * t);
 
 // dayT: 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
 export const ACTS = [
-  { name: 'dawn mist',        dur: 46, dayT: 0.235, cover: 0.30, storm: 0, rain: 0,    wind: 0.9, turb: 0.20, fog: 0.0062, mist: 1.00, cirrus: 0.35 },
-  { name: 'first light',      dur: 40, dayT: 0.275, cover: 0.34, storm: 0, rain: 0,    wind: 1.5, turb: 0.22, fog: 0.0044, mist: 0.74, cirrus: 0.40 },
-  { name: 'morning shafts',   dur: 44, dayT: 0.335, cover: 0.40, storm: 0, rain: 0,    wind: 2.2, turb: 0.28, fog: 0.0034, mist: 0.46, cirrus: 0.30 },
-  { name: 'high sun',         dur: 40, dayT: 0.470, cover: 0.30, storm: 0, rain: 0,    wind: 3.4, turb: 0.34, fog: 0.0021, mist: 0.20, cirrus: 0.22 },
-  { name: 'wind rising',      dur: 34, dayT: 0.530, cover: 0.55, storm: 0.15, rain: 0, wind: 7.0, turb: 0.52, fog: 0.0027, mist: 0.24, cirrus: 0.30 },
-  { name: 'front arriving',   dur: 32, dayT: 0.565, cover: 0.82, storm: 0.45, rain: 0.10, wind: 11.0, turb: 0.68, fog: 0.0044, mist: 0.36, cirrus: 0.15 },
-  { name: 'downpour',         dur: 42, dayT: 0.600, cover: 0.97, storm: 0.85, rain: 0.85, wind: 15.0, turb: 0.85, fog: 0.0082, mist: 0.56, cirrus: 0.0 },
-  { name: 'severe',           dur: 40, dayT: 0.635, cover: 1.00, storm: 1.00, rain: 1.00, wind: 22.0, turb: 1.00, fog: 0.0105, mist: 0.64, cirrus: 0.0 },
-  { name: 'breaking up',      dur: 38, dayT: 0.690, cover: 0.70, storm: 0.30, rain: 0.22, wind: 8.0, turb: 0.55, fog: 0.0068, mist: 0.82, cirrus: 0.25 },
-  { name: 'golden hour',      dur: 46, dayT: 0.745, cover: 0.44, storm: 0.05, rain: 0.0, wind: 3.0, turb: 0.30, fog: 0.0044, mist: 0.90, cirrus: 0.50 },
-  { name: 'blue hour',        dur: 40, dayT: 0.790, cover: 0.35, storm: 0, rain: 0,    wind: 1.6, turb: 0.20, fog: 0.0054, mist: 1.05, cirrus: 0.40 },
-  { name: 'night',            dur: 48, dayT: 0.880, cover: 0.25, storm: 0, rain: 0,    wind: 1.0, turb: 0.15, fog: 0.0046, mist: 0.95, cirrus: 0.25 },
+  { name: 'dawn mist',        dur: 46, dayT: 0.235, cover: 0.30, storm: 0, rain: 0,    wind: 0.9, turb: 0.20, fog: 0.0062, mist: 0.68, cirrus: 0.35 },
+  { name: 'first light',      dur: 40, dayT: 0.275, cover: 0.34, storm: 0, rain: 0,    wind: 1.5, turb: 0.22, fog: 0.0044, mist: 0.50, cirrus: 0.40 },
+  { name: 'morning shafts',   dur: 44, dayT: 0.335, cover: 0.40, storm: 0, rain: 0,    wind: 2.2, turb: 0.28, fog: 0.0034, mist: 0.30, cirrus: 0.30 },
+  { name: 'high sun',         dur: 40, dayT: 0.470, cover: 0.30, storm: 0, rain: 0,    wind: 3.4, turb: 0.34, fog: 0.0021, mist: 0.12, cirrus: 0.22 },
+  { name: 'wind rising',      dur: 34, dayT: 0.530, cover: 0.55, storm: 0.15, rain: 0, wind: 7.0, turb: 0.52, fog: 0.0027, mist: 0.15, cirrus: 0.30 },
+  { name: 'front arriving',   dur: 32, dayT: 0.565, cover: 0.82, storm: 0.45, rain: 0.10, wind: 11.0, turb: 0.68, fog: 0.0044, mist: 0.24, cirrus: 0.15 },
+  { name: 'downpour',         dur: 42, dayT: 0.600, cover: 0.97, storm: 0.85, rain: 0.85, wind: 15.0, turb: 0.85, fog: 0.0082, mist: 0.40, cirrus: 0.0 },
+  { name: 'severe',           dur: 40, dayT: 0.635, cover: 1.00, storm: 1.00, rain: 1.00, wind: 22.0, turb: 1.00, fog: 0.0105, mist: 0.46, cirrus: 0.0 },
+  { name: 'breaking up',      dur: 38, dayT: 0.690, cover: 0.70, storm: 0.30, rain: 0.22, wind: 8.0, turb: 0.55, fog: 0.0068, mist: 0.56, cirrus: 0.25 },
+  { name: 'golden hour',      dur: 46, dayT: 0.745, cover: 0.44, storm: 0.05, rain: 0.0, wind: 3.0, turb: 0.30, fog: 0.0044, mist: 0.58, cirrus: 0.50 },
+  { name: 'blue hour',        dur: 40, dayT: 0.790, cover: 0.35, storm: 0, rain: 0,    wind: 1.6, turb: 0.20, fog: 0.0054, mist: 0.70, cirrus: 0.40 },
+  { name: 'night',            dur: 48, dayT: 0.880, cover: 0.25, storm: 0, rain: 0,    wind: 1.0, turb: 0.15, fog: 0.0046, mist: 0.62, cirrus: 0.25 },
 ];
 
 export class Weather {
@@ -189,7 +189,7 @@ export class Weather {
 
     const T = Sky.sunTransmittance(sunDir, 2);
     const above = clamp01((sunDir.y + 0.045) / 0.14);
-    const sunScale = 19.0 * above * lerp(1, 0.34, clamp01(s.cover * 0.9));
+    const sunScale = 2.72 * above * lerp(1, 0.34, clamp01(s.cover * 0.9));
     U.uSunColor.value.set(T[0] * sunScale, T[1] * sunScale, T[2] * sunScale);
 
     // moon opposes the sun with a tilt; phase from the timeline
@@ -197,7 +197,7 @@ export class Weather {
     U.uMoonDir.value.copy(moonDir);
     const moonUp = clamp01((moonDir.y + 0.03) / 0.15);
     const mT = Sky.sunTransmittance(moonDir, 2);
-    const moonScale = 0.052 * moonUp * lerp(1, 0.25, clamp01(s.cover));
+    const moonScale = 0.0074 * moonUp * lerp(1, 0.25, clamp01(s.cover));
     U.uMoonColor.value.set(mT[0] * moonScale * 0.86, mT[1] * moonScale * 0.92, mT[2] * moonScale * 1.12);
 
     this.nightAmount = clamp01(1 - (sunDir.y + 0.12) / 0.20);

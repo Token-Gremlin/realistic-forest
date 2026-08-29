@@ -143,22 +143,27 @@ void main(){
   vec3 H = normalize(L + V);
   float nh = max(dot(N, H), 0.0);
   float lh = max(dot(L, H), 0.0);
-  float wrap = foliage ? 0.32 : 0.0;
+  // wrap-around diffuse is kept small now that transmission is energy-correct
+  float wrap = foliage ? 0.14 : 0.0;
   float diffTerm = max((ndl + wrap) / (1.0 + wrap), 0.0);
   vec3 sunRad = uSunColor * shadow;
   Lo += sunRad * diffCol * diffTerm * Fd_Burley(nv, max(ndl, 0.001), lh, rough) * PI;
   float specV = V_SmithGGXCorrelated(nv, ndlSat, a);
   Lo += sunRad * F_Schlick(f0, lh) * D_GGX(nh, a) * specV * ndlSat * PI;
 
-  // -------------------------------------------------- leaf transmission
+  /* ------------------------------------------------ leaf transmission
+   * Light coming through the blade. Energy-wise this is E * T * p(theta) with T
+   * the leaf transmittance (a few per cent up to ~0.15) and p a *normalised*
+   * phase function, so neither may be scaled up: an over-bright transmission
+   * term makes every back-lit crown glow like a lamp and washes the whole frame.
+   * The transmitted light takes the blade's own hue, hence the single albedo
+   * factor — multiplying by both a tint and the albedo double-counts it.       */
   if(foliage && s.transmission > 0.01){
     float back = max(dot(-N, L), 0.0);
-    float fwd = phaseHG(dot(-V, L), 0.72) * 4.0;
-    // thinner leaves let more through; grass blades transmit strongly
-    vec3 tint = mix(vec3(0.42, 0.72, 0.20), vec3(0.86, 0.92, 0.42), 0.35);
-    float thick = mix(1.0, 0.55, s.param);
-    vec3 trans = uSunColor * shadow * s.transmission * (back * 0.55 + 0.45) * fwd * thick;
-    Lo += trans * tint * diffCol * 1.35;
+    float ph = phaseHG(dot(-V, L), 0.55);
+    float T = s.transmission * 0.135;
+    float thin = mix(0.70, 1.30, s.param);
+    Lo += sunRad * diffCol * T * thin * (back * 0.80 + 0.20) * ph * PI;
   }
 
   // ---------------------------------------------------------------- moon
@@ -188,9 +193,9 @@ void main(){
     vec3 fdir = fl / max(sqrt(fd2), 1e-3);
     float atten = 1.0 / (1.0 + fd2 * 0.00018);
     float fndl = max(dot(N, fdir), 0.0) + (foliage ? 0.25 : 0.0);
-    Lo += uFlashColor * uFlash.w * atten * fndl * diffCol * 3.2;
+    Lo += uFlashColor * uFlash.w * atten * fndl * diffCol * 1.15;
     Lo += uFlashColor * uFlash.w * atten * F_Schlick(f0, max(dot(normalize(fdir + V), V), 0.0))
-          * D_GGX(max(dot(N, normalize(fdir + V)), 0.0), a) * 0.6;
+          * D_GGX(max(dot(N, normalize(fdir + V)), 0.0), a) * 0.14;
   }
 
   oColor = vec4(max(Lo, 0.0), 1.0);

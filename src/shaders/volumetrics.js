@@ -60,18 +60,26 @@ float mediaDensity(vec3 p, out float mistFrac){
   float waterDepth = m.g - m.r;
 
   // --- ground mist: an exponential shell hugging the terrain
-  float mistH = mix(2.6, 7.5, uFog.z);
+  float mistH = mix(1.9, 5.6, uFog.z);
   float mist = exp(-max(above, 0.0) / mistH) * uFog.z;
-  mist *= 1.0 + 1.35 * smoothstep(0.15, 0.85, wetness);
+  mist *= 1.0 + 1.25 * smoothstep(0.15, 0.85, wetness);
   mist *= 1.0 + 1.9 * smoothstep(-0.2, 0.6, waterDepth);
   // hollows collect mist
   vec2 dh = vec2(groundHeight(p.xz + vec2(9.0, 0.0)) - ground, groundHeight(p.xz + vec2(0.0, 9.0)) - ground);
   mist *= 1.0 + 0.5 * clamp((dh.x + dh.y) * 0.10, -0.6, 1.2);
 
+  // Mist banks: without a large-scale mask the layer reads as a uniform veil
+  // over the whole forest. This carves clear pockets and dense drifts so the
+  // camera can move between them, which is where the depth cue comes from.
+  float bank = fbm(p.xz * 0.0075 + 53.0, 4, 2.1, 0.55) * 0.5 + 0.5;
+  float bank2 = fbm(p.xz * 0.031 + 17.0, 3, 2.1, 0.5) * 0.5 + 0.5;
+  mist *= smoothstep(0.30, 0.80, bank) * 1.35 + 0.16;
+  mist *= mix(0.55, 1.35, bank2);
+
   vec3 wind = vec3(uWind.x, 0.0, uWind.y) * uTime * (0.45 + uWind.z * 0.16);
   vec4 dt = texture(uDetailTex, (p + wind * 0.6) * 0.0125);
   vec4 dt2 = texture(uDetailTex, (p + wind * 1.7) * 0.052);
-  float wisp = mix(0.40, 1.50, dt.a) * mix(0.70, 1.28, dt2.r);
+  float wisp = mix(0.42, 1.45, dt.a) * mix(0.72, 1.26, dt2.r);
   mist *= wisp;
   mistFrac = mist;
 
@@ -82,7 +90,7 @@ float mediaDensity(vec3 p, out float mistFrac){
   // --- rain veiling
   float rain = uWeather.z * 0.030 * (0.7 + 0.6 * dt2.g);
 
-  return max(mist * 0.0145 + hfog + haze + rain, 0.0);
+  return max(mist * 0.0112 + hfog + haze + rain, 0.0);
 }
 
 void main(){
@@ -107,8 +115,8 @@ void main(){
   float mu = dot(rd, uSunDir);
   float ph = mix(phaseHG(mu, 0.72), phaseHG(mu, -0.24), 0.28);
   float phMoon = phaseHG(dot(rd, uMoonDir), 0.6);
-  vec3 ambTop = skyIrradiance(vec3(0.0, 1.0, 0.0)) * 0.062;
-  vec3 ambSide = skyIrradiance(rd) * 0.036;
+  vec3 ambTop = skyIrradiance(vec3(0.0, 1.0, 0.0)) * 0.050;
+  vec3 ambSide = skyIrradiance(rd) * 0.030;
 
   float prevT = 0.0;
   for(int i = 0; i < 64; i++){
@@ -135,7 +143,7 @@ void main(){
     if(uFlash.w > 0.001){
       vec3 fv = uFlash.xyz - p;
       float fd2 = dot(fv, fv);
-      S += uFlashColor * uFlash.w * 22.0 / (1.0 + fd2 * 0.0004);
+      S += uFlashColor * uFlash.w * 3.2 / (1.0 + fd2 * 0.0004);
     }
     S *= sigma;
     float Tstep = exp(-sigma * ds);
@@ -207,7 +215,7 @@ void main(){
       vec3 rd = (wp - uCamPos) / max(dist, 1e-4);
       vec3 rad, tr;
       atmScatter(uCamPos, rd, uSunDir, dist, 8, rad, tr);
-      col = col * mix(vec3(1.0), tr, uAerial) + rad * 22.0 * uAerial;
+      col = col * mix(vec3(1.0), tr, uAerial) + rad * 3.15 * uAerial;
     }
   }
   col = col * v.a + v.rgb;

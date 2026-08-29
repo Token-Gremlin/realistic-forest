@@ -62,7 +62,7 @@ export class Controls {
     this.yaw = e.y; this.pitch = e.x;
   }
 
-  update(dt, groundHeightAt) {
+  update(dt, groundHeightAt, collide) {
     const k = this.keys;
     const dir = new THREE.Vector3();
     const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
@@ -92,6 +92,7 @@ export class Controls {
       const h = groundHeightAt(this.camera.position.x, this.camera.position.z);
       if (this.camera.position.y < h + 0.6) this.camera.position.y = h + 0.6;
     }
+    if (this.walk && collide) collide(this.camera.position);
     this.camera.quaternion.setFromEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
   }
 

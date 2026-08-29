@@ -225,12 +225,14 @@ void main(){
   float waterDepth = m.g - m.r;
   float slope = 1.0 - clamp(groundNormalMap(p, uMapInfo.w * 1.5).y, 0.0, 1.0);
 
-  float dens = 0.26;
-  dens += (1.0 - eco.g) * 0.90;
-  dens += eco.r * 0.42;
-  dens -= eco.b * 1.15;
-  dens -= smoothstep(0.30, 0.80, slope) * 0.60;
-  dens -= smoothstep(0.55, 0.98, eco.a) * 0.28;
+  // Grass is a light-limited species: under a closed canopy the floor is leaf
+  // litter and shade herbs, not a lawn. Multiplying by the light fraction rather
+  // than subtracting is what makes a closed stand read as a closed stand.
+  float light = pow(clamp(1.0 - eco.g * 0.92, 0.0, 1.0), 1.45);
+  float dens = (0.22 + eco.r * 0.55) * (0.16 + 1.30 * light);
+  dens -= eco.b * 1.00;
+  dens -= smoothstep(0.30, 0.80, slope) * 0.55;
+  dens -= smoothstep(0.50, 0.95, eco.a) * 0.32;
   dens *= 1.0 - smoothstep(-0.12, 0.22, waterDepth);
   // tussocks: two scales of clumping so the sward is patchy, never a lawn
   float clump = fbm(p * 0.105, 4, 2.1, 0.55) * 0.5 + 0.5;

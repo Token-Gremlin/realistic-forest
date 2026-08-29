@@ -38,7 +38,7 @@ export class RenderPipeline {
       vignette: 0.30,
       saturation: 1.03,
       punch: 1.0,
-      chroma: 0.09,
+      chroma: 0.05,
       sharpen: 0.22,
       aerial: 1.0,
       aoRadius: 1.35,
@@ -189,7 +189,7 @@ export class RenderPipeline {
 
     this.bloomDown = new Blit(fsMaterial(bloomDownFragment(), {
       uSrc: { value: null }, uTexel: { value: new THREE.Vector2() },
-      uFirst: { value: 0 }, uThreshold: { value: 1.1 },
+      uFirst: { value: 0 }, uThreshold: { value: 0.85 },
     }));
     this.bloomUpPass = new Blit(fsMaterial(bloomUpFragment(), {
       uSrc: { value: null }, uAdd: { value: null },
@@ -208,7 +208,7 @@ export class RenderPipeline {
       uDepthTex: { value: null }, uMiscTex: { value: null },
       uResolution: U.uResolution, uNearFar: U.uNearFar,
       uGrade: { value: new THREE.Vector4(1, 0.045, 0.028, 0.30) },
-      uGrade2: { value: new THREE.Vector4(1.03, 1.0, 0.09, 0.22) },
+      uGrade2: { value: new THREE.Vector4(1.05, 1.0, 0.05, 0.24) },
       uDofParams: { value: new THREE.Vector4(12, 14, 12, 1) },
       uMotionBlur: { value: 0.55 },
       uTime: U.uTime, uInvViewProj: U.uInvViewProj, uCamPos: U.uCamPos,
@@ -240,18 +240,34 @@ export class RenderPipeline {
           float l = dot(max(c, 0.0), vec3(0.2126, 0.7152, 0.0722));
           s += log(max(l, 1e-5)) * wt; w += wt;
         }
-        // autofocus: nearest hit in a small cluster around the frame centre
-        float best = 1e9;
+        // Autofocus: the *median* depth over a cluster around the frame centre.
+        // Taking the nearest hit locks onto whichever twig drifts through the
+        // middle of frame and throws a landscape shot out of focus.
+        float ds[25];
+        int nd = 0;
         for(int j = -2; j <= 2; j++) for(int i = -2; i <= 2; i++){
-          vec2 uv = vec2(0.5) + vec2(float(i), float(j)) * 0.022;
+          vec2 uv = vec2(0.5) + vec2(float(i), float(j)) * 0.045;
           float dep = texture(uDepthTex, uv).r;
           if(dep >= 0.999999) continue;
           vec4 cp = uInvViewProj * vec4(uv * 2.0 - 1.0, dep * 2.0 - 1.0, 1.0);
-          float dist = length(cp.xyz / cp.w - uCamPos);
-          best = min(best, dist);
+          ds[nd] = length(cp.xyz / cp.w - uCamPos);
+          nd++;
         }
-        if(best > 1e8) best = 400.0;
-        oCol = vec4(exp(s / w), best, 0.0, 1.0);
+        float med = 400.0;
+        if(nd > 0){
+          // partial selection sort up to the middle element
+          int mid = nd / 2;
+          for(int a = 0; a <= mid; a++){
+            int mi = a;
+            for(int b = a + 1; b < 25; b++){
+              if(b >= nd) break;
+              if(ds[b] < ds[mi]) mi = b;
+            }
+            float tmp = ds[a]; ds[a] = ds[mi]; ds[mi] = tmp;
+          }
+          med = ds[mid];
+        }
+        oCol = vec4(exp(s / w), med, 0.0, 1.0);
       }
     `, {
       uSrc: { value: null }, uDepthTex: { value: null },

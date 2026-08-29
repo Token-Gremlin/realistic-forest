@@ -121,7 +121,7 @@ vec4 marchClouds(vec3 ro, vec3 rd, vec3 sunDir, vec3 sunCol, vec3 ambTop, vec3 a
     vec3 amb = mix(ambBot, ambTop, clamp(hf, 0.0, 1.0)) * (0.35 + 0.65 * hf);
     // lightning lights the cloud deck from inside
     float fd = length(p - vec3(uFlash.x, ATM_Rg + uFlash.y, uFlash.z));
-    vec3 flash = uFlashColor * uFlash.w * 260.0 / (1.0 + fd * fd * 4.0e-6);
+    vec3 flash = uFlashColor * uFlash.w * 37.0 / (1.0 + fd * fd * 4.0e-6);
 
     vec3 S = (sunCol * sunLight + amb + flash) * sigma;
     float Tstep = exp(-sigma * ds);
@@ -208,7 +208,7 @@ vec3 moonDisc(vec3 rd, vec3 moonDir, vec3 sunDir, vec3 moonCol){
   float ndl = max(dot(n, sunDir), 0.0);
   ndl = pow(ndl, 0.72);
   float limb = 0.55 + 0.45 * z;
-  return moonCol * alb * ndl * limb * 42.0;
+  return moonCol * alb * ndl * limb * 6.0;
 }
 `;
 
@@ -255,8 +255,8 @@ export class Sky {
         vec3 rd = vec3(sin(az) * cos(el), sin(el), -cos(az) * cos(el));
         vec3 rad, tr;
         atmScatter(vec3(0.0, 40.0, 0.0), rd, uSunDir, 1e9, 14, rad, tr);
-        vec3 col = rad * 22.0;
-        col += nightSky(rd, uNightAmount) * 0.25;
+        vec3 col = rad * 3.15;
+        col += nightSky(rd, uNightAmount) * 0.036;
         col += uMoonColor * 0.02 * max(0.0, dot(rd, uMoonDir));
         // cheap cloud contribution so bounce light knows about overcast
         if(rd.y > -0.02){
@@ -331,12 +331,12 @@ export class Sky {
         vec3 rd = normalize(far - uCamPos);
         vec3 rad, tr;
         atmScatter(uCamPos, rd, uSunDir, 1e9, 20, rad, tr);
-        vec3 col = rad * 22.0;
+        vec3 col = rad * 3.15;
 
         // night sky behind the atmosphere
         vec3 night = nightSky(rd, uNightAmount);
         night += moonDisc(rd, uMoonDir, uSunDir, uMoonColor);
-        col += night * tr;
+        col += night * tr * 0.14;
 
         // sun disc with limb darkening
         float cs = dot(rd, uSunDir);
@@ -346,10 +346,10 @@ export class Sky {
           float disc = 1.0 - smoothstep(0.985, 1.02, th);
           float mu = sqrt(max(0.0, 1.0 - min(th, 1.0) * min(th, 1.0)));
           float limb = 0.34 + 0.66 * pow(mu, 0.72);
-          col += uSunColor * disc * limb * 5600.0;
+          col += uSunColor * disc * limb * 800.0;
         }
         // aureole from mie forward scattering already in atmScatter; add glow
-        col += uSunColor * pow(max(cs, 0.0), 900.0) * 12.0;
+        col += uSunColor * pow(max(cs, 0.0), 900.0) * 1.7;
 
         vec3 ro = vec3(0.0, ATM_Rg + max(uCamPos.y, 1.0), 0.0);
         float cirTr;
@@ -363,7 +363,7 @@ export class Sky {
         col = col * cl.a + cl.rgb;
 
         // whole-sky lightning wash
-        col += uFlashColor * uFlash.w * 0.55 * (0.35 + 0.65 * max(0.0, 1.0 - abs(rd.y)));
+        col += uFlashColor * uFlash.w * 0.08 * (0.35 + 0.65 * max(0.0, 1.0 - abs(rd.y)));
 
         oCol = vec4(max(col, 0.0), 1.0);
       }

@@ -184,7 +184,10 @@ async function start() {
 
     weather.update(dt, camera.position);
     if (director.enabled) director.update(dt, weather);
-    else controls.update(dt, (x, z) => forest.groundHeight(x, z));
+    else {
+      controls.update(dt, (x, z) => forest.groundHeight(x, z),
+        (p) => forest.trees?.pushOutOfTrunks?.(p, 0.4));
+    }
 
     U.uCamPos.value.copy(camera.position);
     camera.updateMatrixWorld(true);
@@ -201,7 +204,7 @@ async function start() {
       // adaptation keeps the shade genuinely dark while still opening up when
       // the camera breaks into a clearing.
       const luma = Math.max(pipeline.sceneLuma, 1e-5);
-      const target = THREE.MathUtils.clamp(0.223 / Math.pow(luma, 0.65), 0.08, 12);
+      const target = THREE.MathUtils.clamp(0.0895 / Math.pow(luma, 0.65), 0.06, 9);
       const rate = target < exposure ? 1.4 : 0.5;      // closing down is faster
       exposure = THREE.MathUtils.lerp(exposure, target, 1 - Math.exp(-dt * rate));
       pipeline.settings.exposure = exposure;
@@ -213,10 +216,13 @@ async function start() {
     if (state.autoFocus) {
       const measured = pipeline.centerDistance;
       const intent = director.enabled ? director.autoFocusDistance() : measured;
-      const target = THREE.MathUtils.clamp(measured * 0.72 + intent * 0.28, 0.5, 400);
+      // Wide shots want the director's intent to dominate; close shots want the
+      // measurement. Otherwise a landscape reveal focuses on the nearest shrub.
+      const w = director.enabled ? THREE.MathUtils.clamp((intent - 15) / 55, 0.25, 0.82) : 0;
+      const target = THREE.MathUtils.clamp(measured * (1 - w) + intent * w, 0.5, 400);
       pipeline.dof.focus = THREE.MathUtils.lerp(pipeline.dof.focus, target, 1 - Math.exp(-dt * 2.2));
       // wider aperture up close, tighter for landscape shots
-      const ap = THREE.MathUtils.clamp(21 - Math.log2(Math.max(target, 1)) * 3.1, 3, 21);
+      const ap = THREE.MathUtils.clamp(21 - Math.log2(Math.max(target, 1)) * 3.4, 2.2, 21);
       pipeline.dof.aperture = THREE.MathUtils.lerp(pipeline.dof.aperture, ap, 1 - Math.exp(-dt * 1.5));
     }
 

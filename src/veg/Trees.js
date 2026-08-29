@@ -431,6 +431,54 @@ export class Trees {
     entry.buf = buf;
   }
 
+  /**
+   * Trunks within `r` of a point, for camera collision. Only the 3x3 chunk
+   * neighbourhood is examined, so this is cheap enough to call every frame.
+   */
+  trunksNear(x, z, r, out = []) {
+    out.length = 0;
+    const c0 = Math.floor((x - r) / CHUNK), c1 = Math.floor((x + r) / CHUNK);
+    const d0 = Math.floor((z - r) / CHUNK), d1 = Math.floor((z + r) / CHUNK);
+    for (let cz = d0; cz <= d1; cz++) {
+      for (let cx = c0; cx <= c1; cx++) {
+        const list = this.chunks.get(this._chunkKey(cx, cz));
+        if (!list) continue;
+        for (const t of list) {
+          const dx = t.x - x, dz = t.z - z;
+          const variant = this.variants[t.variant];
+          const rad = variant.radius * t.scale;
+          const reach = r + rad;
+          if (dx * dx + dz * dz < reach * reach) out.push({ x: t.x, z: t.z, r: rad, h: t.height });
+        }
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Pushes a point out of any trunk it has entered. Returns true if it moved.
+   * The camera flying through a trunk is one of the few faults that instantly
+   * destroys the illusion, so this runs for both the director and walk mode.
+   */
+  pushOutOfTrunks(pos, clearance = 0.55) {
+    const near = this.trunksNear(pos.x, pos.z, 3.0, this._near ?? (this._near = []));
+    let moved = false;
+    for (const t of near) {
+      // trunks flare at the base, so the exclusion radius grows near the ground
+      const rel = pos.y - (this.forest.maps.height(t.x, t.z));
+      const flare = 1 + 1.4 * Math.max(0, 1 - rel / Math.max(t.h * 0.06, 0.4));
+      const want = t.r * flare + clearance;
+      let dx = pos.x - t.x, dz = pos.z - t.z;
+      let d = Math.hypot(dx, dz);
+      if (d >= want) continue;
+      if (d < 1e-4) { dx = 1; dz = 0; d = 1; }
+      pos.x = t.x + (dx / d) * want;
+      pos.z = t.z + (dz / d) * want;
+      moved = true;
+    }
+    return moved;
+  }
+
   /** Cascade-aware shadow visibility, called before each cascade renders. */
   beforeShadow(cam, idx) {
     for (const v of this.variants) {
