@@ -135,7 +135,7 @@ export class RenderPipeline {
 
   _buildPasses() {
     const envU = () => Env.pick(
-      'uTime', 'uFrame', 'uSunDir', 'uSunColor', 'uMoonDir', 'uMoonColor', 'uGroundAlbedo',
+      'uTime', 'uFrame', 'uSunDir', 'uSunColor', 'uMoonDir', 'uMoonColor', 'uSkyAmbient', 'uGroundAlbedo',
       'uCamPos', 'uInvViewProj', 'uPrevViewProj', 'uResolution', 'uNearFar', 'uWeather',
       'uFlash', 'uFlashColor', 'uFire', 'uFireColor', 'uWind', 'uWindPhase', 'uFog',
       'uShadowMap', 'uShadowMatrices', 'uShadowSplits', 'uShadowTexel',

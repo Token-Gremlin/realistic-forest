@@ -256,7 +256,7 @@ export class Sky {
         vec3 rad, tr;
         atmScatter(vec3(0.0, 40.0, 0.0), rd, uSunDir, 1e9, 14, rad, tr);
         vec3 col = rad * 3.15;
-        col += nightSky(rd, uNightAmount) * 0.036;
+        col += nightSky(rd, uNightAmount) * 0.085;
         col += uMoonColor * 0.02 * max(0.0, dot(rd, uMoonDir));
         // cheap cloud contribution so bounce light knows about overcast
         if(rd.y > -0.02){
@@ -336,7 +336,7 @@ export class Sky {
         // night sky behind the atmosphere
         vec3 night = nightSky(rd, uNightAmount);
         night += moonDisc(rd, uMoonDir, uSunDir, uMoonColor);
-        col += night * tr * 0.14;
+        col += night * tr * 0.24;
 
         // sun disc with limb darkening
         float cs = dot(rd, uSunDir);

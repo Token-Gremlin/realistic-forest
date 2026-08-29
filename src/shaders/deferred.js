@@ -50,6 +50,7 @@ uniform vec3 uSunDir;
 uniform vec3 uSunColor;
 uniform vec3 uMoonDir;
 uniform vec3 uMoonColor;
+uniform vec3 uSkyAmbient;
 uniform vec3 uGroundAlbedo;
 uniform vec3 uCamPos;
 uniform mat4 uInvViewProj;
@@ -169,8 +170,11 @@ void main(){
   }
 
   // ---------------------------------------------------------------- moon
+  // wrap so the dark side of a trunk still takes a little moonlight
   float mndl = max(dot(N, uMoonDir), 0.0);
-  Lo += uMoonColor * diffCol * mndl * (0.6 + 0.4 * shadow);
+  float mwrap = (mndl + 0.35) / 1.35;
+  Lo += uMoonColor * diffCol * mwrap * (0.75 + 0.25 * shadow);
+  Lo += uSkyAmbient * diffCol * ao * 0.55;
 
   // ------------------------------------------------------------ sky IBL
   vec3 irr = skyIrradiance(N);

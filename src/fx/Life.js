@@ -42,10 +42,10 @@ function layerMaterial(vert, frag, uniforms, additive) {
     transparent: true,
     depthTest: false,
     depthWrite: false,
-    blending: additive ? THREE.AdditiveBlending : THREE.CustomBlending,
+    blending: THREE.CustomBlending,
     blendEquation: THREE.AddEquation,
     blendSrc: THREE.OneFactor,
-    blendDst: THREE.OneMinusSrcAlphaFactor,
+    blendDst: additive ? THREE.OneFactor : THREE.OneMinusSrcAlphaFactor,
   });
 }
 
@@ -229,7 +229,7 @@ void main(){
   float canopy = eco.g;
   float rock = eco.b;
   float fit = clamp(wet * 0.5 + canopy * 0.4 + (1.0 - rock) * 0.25, 0.0, 1.0);
-  if(h.y > fit * 0.96 + 0.22){
+  if(h.y > fit * 0.98 + 0.35){
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vAlpha = 0.0; vUv = vec2(0.0); vPulse = 0.0;
     return;
@@ -282,16 +282,18 @@ void main(){
   if(vAlpha < 0.01) discard;
   vec2 uv = gl_FragCoord.xy / uResolution;
   float sceneZ = texture(uSceneDepth, uv).r;
-  if(gl_FragCoord.z > sceneZ + 3.0e-4) discard;
+  // glow through the understorey: only discard if well behind a solid
+  float dz = gl_FragCoord.z - sceneZ;
+  if(dz > 0.012) discard;
   float d = length(vUv);
-  float core = exp(-d * d * 7.5);
-  float halo = exp(-d * d * 1.8);
+  float core = exp(-d * d * 6.0);
+  float halo = exp(-d * d * 1.35);
   if(core + halo < 0.02) discard;
-  vec3 col = mix(vec3(0.18, 0.70, 0.08), vec3(1.35, 1.55, 0.32), core);
-  col *= 3.2 + vPulse * 10.0;
+  vec3 col = mix(vec3(0.22, 0.85, 0.08), vec3(1.6, 1.85, 0.38), core);
+  col *= 12.0 + vPulse * 28.0;
   col += uFlashColor * uFlash.w * 0.15;
-  float a = (core + halo * 0.4) * vAlpha;
-  oColor = vec4(col * a, a);
+  float a = (core + halo * 0.55) * vAlpha * (1.0 - smoothstep(0.0, 0.01, max(dz, 0.0)));
+  oColor = vec4(col * a, 0.0);
 }
 `;
 

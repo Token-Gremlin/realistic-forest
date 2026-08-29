@@ -201,11 +201,17 @@ export class Weather {
     U.uMoonDir.value.copy(moonDir);
     const moonUp = clamp01((moonDir.y + 0.03) / 0.15);
     const mT = Sky.sunTransmittance(moonDir, 2);
-    const moonScale = 0.016 * moonUp * lerp(1, 0.28, clamp01(s.cover));
-    U.uMoonColor.value.set(mT[0] * moonScale * 0.86, mT[1] * moonScale * 0.92, mT[2] * moonScale * 1.12);
-
     this.nightAmount = clamp01(1 - (sunDir.y + 0.12) / 0.20);
     U.uNightAmount.value = this.nightAmount;
+
+    const moonScale = 0.085 * moonUp * lerp(1, 0.32, clamp01(s.cover));
+    U.uMoonColor.value.set(mT[0] * moonScale * 0.86, mT[1] * moonScale * 0.92, mT[2] * moonScale * 1.12);
+    // cinematic night fill: cool ambient so interiors are readable, not a void
+    U.uSkyAmbient.value.set(
+      lerp(0.11, 0.016, this.nightAmount),
+      lerp(0.145, 0.028, this.nightAmount),
+      lerp(0.20, 0.055, this.nightAmount),
+    );
     // a late-day autumn hint so leaves turn and drop without a calendar
     const autumn = smooth(clamp01((s.dayT - 0.68) / 0.08))
       * (1 - smooth(clamp01((s.dayT - 0.82) / 0.08)));

@@ -113,6 +113,7 @@ export class Water {
       ...Env.pick('uTime', 'uDelta', 'uCamPos', 'uWind', 'uWindPhase', 'uWeather',
         'uSunDir', 'uSunColor', 'uMoonDir', 'uMoonColor', 'uJitter', 'uViewProj',
         'uPrevViewProj', 'uInvViewProj', 'uResolution', 'uNearFar', 'uFlash', 'uFlashColor',
+        'uFire', 'uFireColor',
         'uSkyProbe', 'uSkyIrradiance', 'uShadowMap', 'uShadowMatrices', 'uShadowSplits',
         'uShadowTexel'),
       ...this.maps.sharedUniforms,
@@ -180,6 +181,7 @@ precision highp sampler2DShadow;
 uniform vec3 uCamPos; uniform vec4 uWeather; uniform float uTime;
 uniform vec3 uSunDir; uniform vec3 uSunColor; uniform vec3 uMoonDir; uniform vec3 uMoonColor;
 uniform vec4 uFlash; uniform vec3 uFlashColor;
+uniform vec4 uFire; uniform vec3 uFireColor;
 ${GLSL_COMMON}
 ${GLSL_MAPS}
 ${GLSL_IBL}
@@ -282,7 +284,7 @@ void main(){
   vec2 rnd = vec2(ign(gl_FragCoord.xy, uTime), ign(gl_FragCoord.yx + 7.0, uTime));
   float sunShadowK = sunShadow(vWorld, vec3(0.0, 1.0, 0.0), 1.0, viewDist, rnd, 1.0);
   float causAmt = caus * exp(-depth * 0.55) * sunShadowK * max(uSunDir.y, 0.0);
-  vec3 bedLit = bed * (1.0 + causAmt * 2.6) * trans;
+  vec3 bedLit = bed * (1.0 + causAmt * 3.4) * trans;
 
   // ---- in-water scattering (turbidity) builds up with depth
   vec3 inScatter = uScatter * skyIrradiance(vec3(0.0, 1.0, 0.0)) * (1.0 - trans) * 3.4;
@@ -310,6 +312,13 @@ void main(){
   if(uFlash.w > 0.001){
     vec3 fd = normalize(uFlash.xyz - vWorld);
     col += uFlashColor * uFlash.w * pow(max(dot(N, normalize(fd + V)), 0.0), 90.0) * 2.2;
+  }
+  if(uFire.w > 0.001){
+    vec3 toFire = uFire.xyz - vWorld;
+    float fd2 = dot(toFire, toFire);
+    vec3 fd = toFire * inversesqrt(fd2 + 1e-4);
+    float atten = uFire.w / (1.0 + fd2 * 0.014);
+    col += uFireColor * atten * pow(max(dot(N, normalize(fd + V)), 0.0), 48.0) * 3.2;
   }
 
   // ---- foam: shallow edges, fast flow, and rain agitation

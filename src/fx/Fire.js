@@ -44,10 +44,10 @@ function makeMat(vert, frag, uniforms, additive) {
     transparent: true,
     depthTest: false,
     depthWrite: false,
-    blending: additive ? THREE.AdditiveBlending : THREE.CustomBlending,
+    blending: THREE.CustomBlending,
     blendEquation: THREE.AddEquation,
     blendSrc: THREE.OneFactor,
-    blendDst: THREE.OneMinusSrcAlphaFactor,
+    blendDst: additive ? THREE.OneFactor : THREE.OneMinusSrcAlphaFactor,
   });
 }
 
@@ -143,7 +143,8 @@ void main(){
   if(vAlpha < 0.02) discard;
   vec2 uv = gl_FragCoord.xy / uResolution;
   float sceneZ = texture(uSceneDepth, uv).r;
-  if(gl_FragCoord.z > sceneZ + 3.0e-4) discard;
+  float dz = gl_FragCoord.z - sceneZ;
+  if(dz > 0.01) discard;
 
   vec2 q = vUv;
   q.x *= 1.15;
@@ -152,13 +153,13 @@ void main(){
   float mask = max(body, tip);
   if(mask < 0.05) discard;
 
-  vec3 cool = vec3(0.55, 0.04, 0.01);
-  vec3 hot = vec3(1.35, 0.85, 0.18);
+  vec3 cool = vec3(0.70, 0.06, 0.01);
+  vec3 hot = vec3(1.55, 0.95, 0.22);
   vec3 col = mix(cool, hot, clamp(vHeat * 0.7 + (1.0 - q.y) * 0.45, 0.0, 1.0));
   col *= uFireColor / max(uFireColor.r, 0.2);
-  col *= 2.4 + vHeat * 3.5;
-  float a = mask * vAlpha;
-  oColor = vec4(col * a, a);
+  col *= 4.5 + vHeat * 6.0;
+  float a = mask * vAlpha * (1.0 - smoothstep(0.0, 0.008, max(dz, 0.0)));
+  oColor = vec4(col * a, 0.0);
 }
 `;
 
@@ -241,15 +242,16 @@ void main(){
   if(vAlpha < 0.01) discard;
   vec2 uv = gl_FragCoord.xy / uResolution;
   float sceneZ = texture(uSceneDepth, uv).r;
-  if(gl_FragCoord.z > sceneZ + 3.0e-4) discard;
+  float dz = gl_FragCoord.z - sceneZ;
+  if(dz > 0.01) discard;
   float d = length(vUv);
-  float core = exp(-d * d * 8.0);
+  float core = exp(-d * d * 7.0);
   if(core < 0.02) discard;
-  vec3 col = mix(vec3(1.2, 0.55, 0.08), vec3(0.7, 0.08, 0.02), vAge);
+  vec3 col = mix(vec3(1.45, 0.65, 0.10), vec3(0.75, 0.10, 0.02), vAge);
   col *= uFireColor / max(uFireColor.r, 0.2);
-  col *= 3.5 + (1.0 - vAge) * 4.0;
-  float a = core * vAlpha;
-  oColor = vec4(col * a, a);
+  col *= 6.0 + (1.0 - vAge) * 8.0;
+  float a = core * vAlpha * (1.0 - smoothstep(0.0, 0.008, max(dz, 0.0)));
+  oColor = vec4(col * a, 0.0);
 }
 `;
 

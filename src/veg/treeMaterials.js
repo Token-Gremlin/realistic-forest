@@ -317,7 +317,7 @@ Leaf leafSurface(vec3 wp, vec3 N, vec3 T, vec3 B, vec2 uv, float seed, float hei
   o.albedo = clamp(alb, vec3(0.004), vec3(0.8));
   o.normal = nrm;
   // cuticle: young leaves are glossier, dried ones matte
-  o.rough = clamp(mix(0.34, 0.62, fract(idv * 4.1)) + dry * 0.25 + uWeather.w * -0.14, 0.06, 1.0);
+  o.rough = clamp(mix(0.44, 0.70, fract(idv * 4.1)) + dry * 0.22 + uWeather.w * -0.10, 0.12, 1.0);
   o.trans = uLeafParams.z * mix(0.75, 1.25, 1.0 - rib) * mix(1.0, 0.55, turn);
   o.occ = mix(0.62, 1.0, heightNorm) * mix(0.85, 1.0, edge);
   o.thin = 1.0 - rib * 0.6;
