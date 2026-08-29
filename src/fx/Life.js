@@ -192,6 +192,7 @@ uniform float uNightAmount;
 uniform vec3 uVolume;
 uniform vec3 uCamFwd;
 uniform float uProjScaleY;
+uniform float uHoldPulse;
 
 in vec3 position;
 in float iSeed;
@@ -215,7 +216,7 @@ void main(){
     return;
   }
 
-  vec3 origin = uCamPos + uCamFwd * 4.2;
+  vec3 origin = uCamPos + uCamFwd * 5.0;
   vec3 vol = uVolume;
   vec2 wander = vec2(sin(uTime * 0.11 + h.z * 5.0), cos(uTime * 0.09 + h.w * 4.2)) * 0.08;
   vec3 p;
@@ -239,8 +240,9 @@ void main(){
   p.y = ground + hover
     + sin(uTime * mix(0.4, 1.1, h.w) + h.z * 8.0) * 0.18;
 
-  float pulse = pow(0.5 + 0.5 * sin(uTime * mix(1.5, 3.8, h.w) + h.z * 14.0), 3.2);
-  pulse = mix(0.28, 1.0, pulse);
+  float pulse = uHoldPulse >= 0.0
+    ? mix(0.08, 1.0, step(0.38, fract(h.w * 7.3 + uHoldPulse)))
+    : mix(0.28, 1.0, pow(0.5 + 0.5 * sin(uTime * mix(1.5, 3.8, h.w) + h.z * 14.0), 3.2));
 
   vec3 view = p - uCamPos;
   float dist = length(view);
@@ -249,8 +251,8 @@ void main(){
   vec3 side = normalize(cross(up, viewN));
   vec3 fwd = normalize(cross(viewN, side));
 
-  float size = mix(0.11, 0.22, h.z);
-  float minW = 4.2 / max(uProjScaleY / max(dist, 1.0), 1.0);
+  float size = mix(0.034, 0.068, h.z);
+  float minW = 1.55 / max(uProjScaleY / max(dist, 1.0), 1.0);
   size = max(size, minW);
 
   vec3 world = p + side * (position.x * size) + fwd * (position.y * size);
@@ -286,13 +288,13 @@ void main(){
   float dz = gl_FragCoord.z - sceneZ;
   if(dz > 0.012) discard;
   float d = length(vUv);
-  float core = exp(-d * d * 6.0);
-  float halo = exp(-d * d * 1.35);
-  if(core + halo < 0.02) discard;
-  vec3 col = mix(vec3(0.22, 0.85, 0.08), vec3(1.6, 1.85, 0.38), core);
-  col *= 12.0 + vPulse * 28.0;
+  float core = exp(-d * d * 22.0);
+  float halo = exp(-d * d * 4.8);
+  if(core + halo < 0.03) discard;
+  vec3 col = mix(vec3(0.10, 0.55, 0.04), vec3(2.2, 2.4, 0.55), core);
+  col *= 16.0 + vPulse * 36.0;
   col += uFlashColor * uFlash.w * 0.15;
-  float a = (core + halo * 0.55) * vAlpha * (1.0 - smoothstep(0.0, 0.01, max(dz, 0.0)));
+  float a = (core + halo * 0.22) * vAlpha * (1.0 - smoothstep(0.0, 0.01, max(dz, 0.0)));
   oColor = vec4(col * a, 0.0);
 }
 `;
@@ -569,7 +571,7 @@ export class Life {
       forest,
       Math.max(220, Math.round(rain * 0.045)),
       FIREFLY_VERT, FIREFLY_FRAG,
-      { uVolume: { value: new THREE.Vector3(7, 3.2, 7) }, uCamFwd: { value: new THREE.Vector3(0, 0, -1) } },
+      { uVolume: { value: new THREE.Vector3(5.4, 2.5, 5.4) }, uCamFwd: { value: new THREE.Vector3(0, 0, -1) }, uHoldPulse: { value: -1 } },
       true,
     );
     this.birds = makeLayer(
@@ -591,11 +593,15 @@ export class Life {
       this.insects.mesh, this.fireflies.mesh, this.birds.mesh, this.leaves.mesh,
     ];
     this.stats = { insects: 0, fireflies: 0, birds: 0, leaves: 0 };
+    this.holdPulse = -1;
   }
 
   update(_dt, camera) {
     if (camera) {
       camera.getWorldDirection(this.fireflies.uniforms.uCamFwd.value);
+    }
+    if (this.fireflies.uniforms.uHoldPulse) {
+      this.fireflies.uniforms.uHoldPulse.value = this.holdPulse;
     }
     const night = U.uNightAmount.value;
     const rain = U.uWeather.value.z;

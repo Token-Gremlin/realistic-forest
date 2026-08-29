@@ -111,7 +111,7 @@ void main(){
   vec3 up = vec3(0.0, 1.0, 0.0);
   vec3 side = normalize(cross(up, viewN));
 
-  float wid = mix(0.18, 0.55, h.w) * (0.6 + uFire.w);
+  float wid = mix(0.10, 0.28, h.w) * (0.55 + uFire.w * 0.7);
   float minW = 2.0 / max(uProjScaleY / max(dist, 1.0), 1.0);
   wid = max(wid, minW);
 
@@ -153,11 +153,12 @@ void main(){
   float mask = max(body, tip);
   if(mask < 0.05) discard;
 
-  vec3 cool = vec3(0.70, 0.06, 0.01);
-  vec3 hot = vec3(1.55, 0.95, 0.22);
-  vec3 col = mix(cool, hot, clamp(vHeat * 0.7 + (1.0 - q.y) * 0.45, 0.0, 1.0));
+  vec3 cool = vec3(0.55, 0.04, 0.01);
+  vec3 hot = vec3(2.1, 1.15, 0.28);
+  float core = exp(-length(vec2(q.x * 1.6, q.y * 0.7 + 0.05)) * 3.4);
+  vec3 col = mix(cool, hot, clamp(vHeat * 0.55 + (1.0 - q.y) * 0.4 + core * 0.5, 0.0, 1.0));
   col *= uFireColor / max(uFireColor.r, 0.2);
-  col *= 4.5 + vHeat * 6.0;
+  col *= 5.5 + vHeat * 8.0 + core * 10.0;
   float a = mask * vAlpha * (1.0 - smoothstep(0.0, 0.008, max(dz, 0.0)));
   oColor = vec4(col * a, 0.0);
 }
