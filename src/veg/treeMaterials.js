@@ -22,12 +22,27 @@ in vec4 iVar;        // wind phase, season/health tint, variant random, lod fade
 const TREE_TRANSFORM = /* glsl */ `
 uniform float uTreeHeight;
 uniform float uWindAmp;
+uniform vec4 uWeather;
 
 mat3 instBasis(){
-  // yaw plus a small lean; kept as a matrix so normals transform correctly
+  // yaw plus a lean. Small leans stay a shear so healthy trees just nod;
+  // once |iRot.zw| grows (storm failure) it becomes a real rotation about
+  // the ground axis and the stem goes down instead of stretching.
   mat3 yaw = mat3(iRot.x, 0.0, iRot.y, 0.0, 1.0, 0.0, -iRot.y, 0.0, iRot.x);
-  mat3 lean = mat3(1.0, 0.0, 0.0, iRot.z, 1.0, iRot.w, 0.0, 0.0, 1.0);
-  return lean * yaw;
+  float amt = length(vec2(iRot.z, iRot.w));
+  if(amt < 0.28){
+    mat3 lean = mat3(1.0, 0.0, 0.0, iRot.z, 1.0, iRot.w, 0.0, 0.0, 1.0);
+    return lean * yaw;
+  }
+  vec2 td = vec2(iRot.z, iRot.w) / max(amt, 1e-5);
+  vec3 axis = normalize(vec3(-td.y, 0.0, td.x));
+  float c = cos(amt), s = sin(amt), ic = 1.0 - c;
+  mat3 R = mat3(
+    c + axis.x*axis.x*ic,        axis.x*axis.y*ic - axis.z*s, axis.x*axis.z*ic + axis.y*s,
+    axis.y*axis.x*ic + axis.z*s, c + axis.y*axis.y*ic,        axis.y*axis.z*ic - axis.x*s,
+    axis.z*axis.x*ic - axis.y*s, axis.z*axis.y*ic + axis.x*s, c + axis.z*axis.z*ic
+  );
+  return R * yaw;
 }
 
 vec3 instanceBase(){
@@ -55,6 +70,12 @@ vec3 treeVertex(vec3 local, float heightNorm, float flex, float phase, float t, 
   float lag = sin(t * (2.3 + 1.7 * phase) + phase * 17.0 + dot(world.xz, wd) * 0.31);
   d.xz += wd * lag * s * 0.006 * flex * flex * uTreeHeight * iPosScale.w;
   d.y += cos(t * (1.9 + 1.3 * phase) + phase * 11.0) * s * 0.0022 * flex * uTreeHeight * iPosScale.w;
+  // a front passing through: extra whip on the tips, extra lean on the stem
+  float storm = uWeather.y;
+  d *= 1.0 + storm * (0.55 + 0.85 * flex) + uWind.w * 0.18;
+  // a stem that has gone over should not keep whipping like a standing tree
+  float fallen = smoothstep(0.34, 1.12, length(vec2(iRot.z, iRot.w)));
+  d *= 1.0 - fallen * 0.92;
   return world + d;
 }
 `;
@@ -591,6 +612,7 @@ ${GLSL_WIND}
 ${GLSL_MAPS}
 ${INSTANCE_ATTRS}
 uniform float uTreeHeight; uniform float uWindAmp;
+uniform vec4 uWeather;
 uniform mat4 projectionMatrix; uniform mat4 viewMatrix;
 uniform mat4 uViewProj; uniform mat4 uPrevViewProj;
 uniform vec3 uCamPos;
@@ -612,9 +634,15 @@ vec3 place(float t){
   vec3 r = normalize(vec3(-f.z, 0.0, f.x));
   // the second card is rotated 90 degrees so the crown has depth
   if(position.z > 0.5) r = f;
-  vec3 p = base + r * (position.x * w) + vec3(0.0, position.y * h, 0.0);
+  float amt = length(vec2(iRot.z, iRot.w));
+  vec3 up = vec3(0.0, 1.0, 0.0);
+  if(amt > 0.001){
+    vec2 td = vec2(iRot.z, iRot.w) / amt;
+    up = normalize(vec3(td.x * sin(amt), cos(amt), td.y * sin(amt)));
+  }
+  vec3 p = base + r * (position.x * w) + up * (position.y * h);
   float phase = fract(iVar.x);
-  vec3 d = windSwayAt(p, position.y * h, 0.35, phase, uWindAmp * 0.9, t);
+  vec3 d = windSwayAt(p, position.y * h, 0.35, phase, uWindAmp * (0.9 + uWeather.y * 0.8), t);
   return p + d;
 }
 

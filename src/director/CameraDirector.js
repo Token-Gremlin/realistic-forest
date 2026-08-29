@@ -18,6 +18,7 @@ const easeOut = (t) => 1 - (1 - t) * (1 - t) * (1 - t);
 const SHOTS = [
   'lowGlide', 'trunkTravelling', 'canopyRise', 'wideReveal', 'streamApproach',
   'mistDrift', 'towardSun', 'clearingOrbit', 'groundCrawl', 'stormWide', 'descendThroughCanopy',
+  'fallenStem',
 ];
 
 export class CameraDirector {
@@ -88,7 +89,7 @@ export class CameraDirector {
     add('canopyRise', 2);
     add('descendThroughCanopy', 2);
     if (misty) add('mistDrift', 4);
-    if (storming) { add('stormWide', 4); add('trunkTravelling', 2); }
+    if (storming) { add('stormWide', 4); add('trunkTravelling', 2); add('fallenStem', 3); }
     if (st.rain > 0.35) {
       add('groundCrawl', 3);
       add('stormWide', 2);
@@ -285,6 +286,49 @@ export class CameraDirector {
         this.focus = 90;
         break;
       }
+      case 'fallenStem': {
+        let stem = null;
+        const trees = this.forest.trees;
+        if (trees) {
+          let best = -1;
+          for (const list of trees.chunks.values()) {
+            for (const t of list) {
+              const dmg = t.damage ?? 0;
+              if (dmg < 0.18) continue;
+              const dx = t.x - c.x, dz = t.z - c.z;
+              const d2 = dx * dx + dz * dz;
+              if (d2 > 90 * 90) continue;
+              const score = dmg * 4 - Math.sqrt(d2) * 0.02 + t.height * 0.04;
+              if (score > best) { best = score; stem = t; }
+            }
+          }
+        }
+        if (!stem) {
+          this.start('groundCrawl', weather);
+          return;
+        }
+        const gh = this._ground(stem.x, stem.z);
+        const fx = stem.fallDirX ?? 1, fz = stem.fallDirZ ?? 0;
+        const side = Math.random() < 0.5 ? 1 : -1;
+        this.path = {
+          from: new THREE.Vector3(
+            stem.x - fx * 6 + (-fz) * side * 4,
+            gh + 1.1,
+            stem.z - fz * 6 + fx * side * 4,
+          ),
+          to: new THREE.Vector3(
+            stem.x + fx * stem.height * 0.35 + (-fz) * side * 2,
+            gh + 1.6,
+            stem.z + fz * stem.height * 0.35 + fx * side * 2,
+          ),
+          lookAt: new THREE.Vector3(stem.x + fx * stem.height * 0.4, gh + 1.4, stem.z + fz * stem.height * 0.4),
+          lookAhead: 0,
+        };
+        this.shotDur = 12 + Math.random() * 5;
+        this.fovTarget = 36 + Math.random() * 8;
+        this.focus = 8;
+        break;
+      }
       default:
         this.start('lowGlide', weather);
         return;
@@ -344,6 +388,8 @@ export class CameraDirector {
       } else if (p.down) {
         look.copy(pos).addScaledVector(dir, 6);
         look.y = pos.y - 16 + t * 8;
+      } else if (p.lookAt) {
+        look.copy(p.lookAt);
       } else {
         look.copy(pos).addScaledVector(dir, p.lookAhead ?? 12);
         look.y = pos.y + (p.lookUp ?? 0) + Math.sin(this.time * 0.17) * 0.8;

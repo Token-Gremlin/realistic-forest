@@ -124,6 +124,12 @@ displacement with side leaders — and meshes it as a camera-facing ribbon. The
 deferred flash, volumetrics, sky and water already listen to the same uniform;
 the bolt just pulls that light down the channel so the forest actually sees it.
 
+Nearby stems then fail. A tree record accumulates damage; the shared instance
+shader shears a small lean and, past a threshold, Rodrigues-rotates the whole
+skeleton onto the ground. Hashed leaves, twigs and bark chunks (`StormDebris`)
+blow through a camera-following volume and settle as litter. A close strike
+kicks both the trees and a debris burst.
+
 `src/director/CameraDirector.js` scouts locations against the world maps so a
 stream shot finds water and a clearing shot finds an opening, then executes the
 shot with damped look-at, a hand-held micro-shake and auto-focus.

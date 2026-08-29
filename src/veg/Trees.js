@@ -3,6 +3,7 @@ import { SPECIES, pickSpecies } from './TreeSpecies.js';
 import { buildTreeLods } from './TreeGenerator.js';
 import { makeBarkMaterial, makeLeafMaterial, makeBillboardMaterial } from './treeMaterials.js';
 import { Rng, hash2i, clamp, lerp, smoothstep } from '../core/rng.js';
+import { U } from '../core/env.js';
 
 /**
  * Tree streaming and level of detail.
@@ -65,7 +66,7 @@ export class Trees {
     this._eco = {};
     this._lastRebuild = new THREE.Vector3(1e9, 1e9, 1e9);
     this._frame = 0;
-    this.stats = { trees: 0, lod: [0, 0, 0, 0] };
+    this.stats = { trees: 0, lod: [0, 0, 0, 0], fallen: 0 };
   }
 
   /* ------------------------------------------------------------- geometry */
@@ -320,11 +321,75 @@ export class Trees {
       }
     }
 
+    this._tickDamage(dt, cam);
+
     const moved = this._lastRebuild.distanceTo(cam);
-    if (built > 0 || moved > 4.5 || (this._frame % 45) === 0) {
+    if (built > 0 || moved > 4.5 || this._damageDirty || (this._frame % 45) === 0) {
       this._lastRebuild.copy(cam);
+      this._damageDirty = false;
       this._rebuildBuckets(camera);
     }
+  }
+
+  /**
+   * Storm failure: a few stems near the camera start to go over and then
+   * finish falling. Healthier trees resist; snags and sick ones go first.
+   * Damage lives on the tree record so a fallen stem stays down while the
+   * chunk is still loaded.
+   */
+  _tickDamage(dt, cam) {
+    const storm = U.uWeather.value.y;
+    const wind = U.uWind.value.z;
+    const rain = U.uWeather.value.z;
+    if (storm < 0.18 && wind < 8.5) return;
+    const rate = (storm * 0.65 + Math.max(0, wind - 8) * 0.045) * (0.55 + rain * 0.55);
+    const wx = U.uWind.value.x, wz = U.uWind.value.y;
+    let changed = 0;
+    const r2 = 155 * 155;
+    for (const list of this.chunks.values()) {
+      for (const t of list) {
+        if (t.scale < 0.28) continue;
+        const dx = t.x - cam.x, dz = t.z - cam.z;
+        if (dx * dx + dz * dz > r2) continue;
+        if ((t.damage ?? 0) >= 1) continue;
+        if ((t.damage ?? 0) > 0) {
+          t.damage = Math.min(1, t.damage + dt * (0.32 + storm * 0.85));
+          changed++;
+          continue;
+        }
+        const fragile = 0.28 + t.tint * 1.55;
+        const p = rate * dt * 0.055 * fragile * (0.4 + t.rnd * 0.8);
+        if (Math.random() < p) {
+          const h = t.rnd * Math.PI * 2;
+          t.fallDirX = wx * 0.75 + Math.cos(h) * 0.35;
+          t.fallDirZ = wz * 0.75 + Math.sin(h) * 0.35;
+          const n = Math.hypot(t.fallDirX, t.fallDirZ) || 1;
+          t.fallDirX /= n; t.fallDirZ /= n;
+          t.damage = 0.05;
+          changed++;
+        }
+      }
+    }
+    if (changed) this._damageDirty = true;
+  }
+
+  onLightning(pos) {
+    if (!pos) return;
+    let changed = 0;
+    for (const list of this.chunks.values()) {
+      for (const t of list) {
+        const dx = t.x - pos.x, dz = t.z - pos.z;
+        if (dx * dx + dz * dz > 55 * 55) continue;
+        if (t.rnd < 0.45) continue;
+        t.fallDirX = t.fallDirX ?? (dx || 1);
+        t.fallDirZ = t.fallDirZ ?? (dz || 0);
+        const n = Math.hypot(t.fallDirX, t.fallDirZ) || 1;
+        t.fallDirX /= n; t.fallDirZ /= n;
+        t.damage = Math.min(1, (t.damage ?? 0) + 0.2 + t.rnd * 0.35);
+        changed++;
+      }
+    }
+    if (changed) this._damageDirty = true;
   }
 
   _rebuildBuckets(camera) {
@@ -349,17 +414,33 @@ export class Trees {
         const dx = t.x - cam.x, dz = t.z - cam.z, dy = t.y + t.height * 0.5 - cam.y;
         const dist = Math.sqrt(dx * dx + dz * dz + dy * dy);
         if (dist > rMax) continue;
+        const dmg = t.damage ?? 0;
 
         // cull only the far representations; near trees may cast into view
         if (dist > 70) {
-          sphere.center.set(t.x, t.y + t.height * 0.55, t.z);
-          sphere.radius = Math.max(t.crown, t.height * 0.6);
+          const fall = dmg > 0.2 ? dmg * 1.55 : 0;
+          const off = t.height * Math.sin(fall) * 0.45;
+          sphere.center.set(
+            t.x + (t.fallDirX ?? 0) * off,
+            t.y + t.height * Math.cos(fall) * 0.45,
+            t.z + (t.fallDirZ ?? 0) * off,
+          );
+          sphere.radius = Math.max(t.crown, t.height * (dmg > 0.2 ? 0.72 : 0.6));
           if (!frustum.intersectsSphere(sphere)) continue;
         }
 
         const variant = this.variants[t.variant];
         vals[0] = t.x; vals[1] = t.y; vals[2] = t.z; vals[3] = t.scale;
-        vals[4] = t.cos; vals[5] = t.sin; vals[6] = t.tiltX; vals[7] = t.tiltZ;
+        vals[4] = t.cos; vals[5] = t.sin;
+        if (dmg > 0.001) {
+          // ease: slow lean, then the last third drops the stem to the ground
+          const k = dmg * dmg * (3 - 2 * dmg);
+          const ang = Math.hypot(t.tiltX, t.tiltZ) + k * 1.56;
+          vals[6] = (t.fallDirX ?? 1) * ang;
+          vals[7] = (t.fallDirZ ?? 0) * ang;
+        } else {
+          vals[6] = t.tiltX; vals[7] = t.tiltZ;
+        }
         vals[8] = t.phase; vals[9] = t.tint; vals[10] = t.rnd;
 
         // scale the LOD distances with the tree size: a 30 m beech deserves
@@ -420,6 +501,11 @@ export class Trees {
 
     this.stats.trees = total;
     this.stats.lod = lodCounts;
+    let fallen = 0;
+    for (const list of this.chunks.values()) {
+      for (const t of list) if ((t.damage ?? 0) > 0.2) fallen++;
+    }
+    this.stats.fallen = fallen;
   }
 
   _reattach(entry, bucket) {
