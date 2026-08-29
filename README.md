@@ -130,6 +130,10 @@ skeleton onto the ground. Hashed leaves, twigs and bark chunks (`StormDebris`)
 blow through a camera-following volume and settle as litter. A close strike
 kicks both the trees and a debris burst.
 
+Ground cover includes hanging vines under closed canopy and snapped limbs
+in the litter, and the terrain shader draws a dark glossy wet margin plus
+small puddles along the waterline.
+
 `src/fx/Life.js` keeps the woods from looking empty between storms: midges mill
 in wet air at dusk, fireflies pulse in the understorey at night, distant birds
 cross a clearing, and a calm leaf-fall answers season and wind. All four are

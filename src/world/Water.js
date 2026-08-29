@@ -283,8 +283,8 @@ void main(){
   float caus = caustics(causticP, uTime);
   vec2 rnd = vec2(ign(gl_FragCoord.xy, uTime), ign(gl_FragCoord.yx + 7.0, uTime));
   float sunShadowK = sunShadow(vWorld, vec3(0.0, 1.0, 0.0), 1.0, viewDist, rnd, 1.0);
-  float causAmt = caus * exp(-depth * 0.55) * sunShadowK * max(uSunDir.y, 0.0);
-  vec3 bedLit = bed * (1.0 + causAmt * 3.4) * trans;
+  float causAmt = caus * exp(-depth * 0.48) * sunShadowK * max(uSunDir.y, 0.0);
+  vec3 bedLit = bed * (1.0 + causAmt * 4.4) * trans;
 
   // ---- in-water scattering (turbidity) builds up with depth
   vec3 inScatter = uScatter * skyIrradiance(vec3(0.0, 1.0, 0.0)) * (1.0 - trans) * 3.4;
@@ -322,12 +322,12 @@ void main(){
   }
 
   // ---- foam: shallow edges, fast flow, and rain agitation
-  float shore = 1.0 - smoothstep(0.0, 0.28, depth);
-  float fastFoam = smoothstep(0.45, 1.1, flowMag);
+  float shore = 1.0 - smoothstep(0.0, 0.36, depth);
+  float fastFoam = smoothstep(0.38, 1.05, flowMag);
   float foamNoise = fbm(wxz * 5.5 - flow * uTime * 1.4, 3, 2.1, 0.5) * 0.5 + 0.5;
   float foamNoise2 = fbm(wxz * 16.0 - flow * uTime * 2.6 + 9.0, 2, 2.1, 0.5) * 0.5 + 0.5;
   float rainFoam = uWeather.z * (0.12 + foamNoise2 * 0.22);
-  float foam = clamp(shore * 1.25 + fastFoam + rainFoam, 0.0, 1.4);
+  float foam = clamp(shore * 1.55 + fastFoam + rainFoam, 0.0, 1.4);
   foam *= smoothstep(0.42, 0.86, foamNoise * 0.65 + foamNoise2 * 0.45);
   foam = clamp(foam, 0.0, 1.0);
   vec3 foamCol = (skyIrradiance(vec3(0.0, 1.0, 0.0)) * 0.55 + uSunColor * sunShadowK * 0.18);

@@ -142,6 +142,13 @@ export class Clutter {
           woodA: [0.062, 0.050, 0.036], woodB: [0.140, 0.118, 0.086] };
       case 'moss':
         return { ...base, alignGround: 1.0, windAmp: 0.002, mossBias: 1.0 };
+      case 'vine':
+        return { ...base, leaflets: 11, serration: 0.7, transmission: 0.74, windAmp: 0.034,
+          leafA: [0.028, 0.072, 0.024], leafB: [0.070, 0.128, 0.040],
+          stemA: [0.040, 0.038, 0.024], stemB: [0.080, 0.070, 0.042] };
+      case 'limb':
+        return { ...base, alignGround: 1.0, windAmp: 0, mossBias: 0.35,
+          woodA: [0.055, 0.042, 0.028], woodB: [0.125, 0.100, 0.068] };
       default:
         return base;
     }

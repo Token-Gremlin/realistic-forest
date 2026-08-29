@@ -386,6 +386,115 @@ export function buildBramble(seed, opts = {}) {
   return buildBush(seed, { ...opts, arching: 1 });
 }
 
+/* -------------------------------------------------------------- hanging vine */
+export function buildVine(seed, opts = {}) {
+  const r = new Rng(seed);
+  const mb = new MeshBuilder();
+  const hang = lerp(4.2, 10.5, r.f()) * (opts.scale ?? 1);
+  const strands = 3 + r.int(3);
+  const w0 = r.f() * 6.2;
+  for (let s = 0; s < strands; s++) {
+    const az = (s / strands) * Math.PI * 2 + r.range(-0.55, 0.55);
+    const segs = 10;
+    const pts = [];
+    const lean = lerp(0.12, 0.48, r.f());
+    // some curtains stop in the air so they read as hanging, not as climbers
+    const reach = lerp(0.42, 1.0, r.f());
+    const swirl = r.range(-0.9, 0.9);
+    for (let i = 0; i <= segs; i++) {
+      const t = i / segs;
+      const drop = t * t;
+      const wander = Math.sin(t * 5.4 + w0 + s) * hang * 0.07;
+      const spin = t * swirl;
+      pts.push(V(
+        Math.cos(az + spin) * lean * hang * drop * 0.55 + Math.cos(az + 1.3) * wander,
+        hang * (1 - t * reach),
+        Math.sin(az + spin) * lean * hang * drop * 0.55 + Math.sin(az + 1.3) * wander,
+      ));
+    }
+    const rad = lerp(0.009, 0.022, r.f());
+    const rads = [];
+    for (let i = 0; i <= segs; i++) rads.push(rad * (1 - (i / segs) * 0.5));
+    tube(mb, pts, rads, 5, PART.STEM, {
+      totalHeight: hang, rnd: r.f(), flex0: 0.16, flex1: 1.0, phase: r.f(), cap: false, lumpy: 0.1,
+    });
+    const leaves = 8 + r.int(8);
+    for (let l = 0; l < leaves; l++) {
+      const t = lerp(0.08, 0.97, r.f());
+      const si = Math.min(segs - 1, Math.floor(t * segs));
+      const base = pts[si].clone();
+      const along = V().subVectors(pts[si + 1], pts[si]).normalize();
+      const nb = { t: V(), b: V() };
+      orthoBasis(along, nb);
+      const w = lerp(0.14, 0.34, r.f());
+      const hh = w * lerp(1.6, 2.6, r.f());
+      const roll = r.f() * Math.PI * 2;
+      const cr = Math.cos(roll), sr = Math.sin(roll);
+      const ax = V().addScaledVector(nb.t, cr).addScaledVector(nb.b, sr);
+      const ay = V().addScaledVector(nb.t, -sr).addScaledVector(nb.b, cr);
+      // simple blades, not fern leaflets — hanging leaves have a single outline
+      card(mb, base.addScaledVector(ax, w * 0.32), ax, ay, w, hh, PART.BLADE, {
+        totalHeight: hang, rnd: r.f(), flex: 0.92, phase: r.f(), droop: 0.95,
+      });
+    }
+  }
+  return { mesh: mb, height: hang, radius: Math.max(mb.radius, hang * 0.38), material: 'plant' };
+}
+
+/* ----------------------------------------------------------- snapped limb */
+export function buildLimb(seed, opts = {}) {
+  const r = new Rng(seed);
+  const mb = new MeshBuilder();
+  const len = lerp(1.15, 3.4, r.f()) * (opts.scale ?? 1);
+  const rad = len * lerp(0.038, 0.088, r.f());
+  const az = r.f() * Math.PI * 2;
+  const segs = 6;
+  const pts = [];
+  const kink = r.range(-0.55, 0.55);
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs;
+    pts.push(V(
+      Math.cos(az) * len * t + Math.cos(az + 1.57) * kink * len * t * t * 0.32,
+      rad * (0.85 + 0.4 * Math.sin(t * 4.6)),
+      Math.sin(az) * len * t + Math.sin(az + 1.57) * kink * len * t * t * 0.32,
+    ));
+  }
+  tube(mb, pts, [rad, rad * 0.97, rad * 0.88, rad * 0.68, rad * 0.38, rad * 0.16, rad * 0.05], 6, PART.WOOD, {
+    totalHeight: rad * 2, rnd: r.f(), lumpy: 0.28, cap: true, vScale: 5,
+  });
+  // snapped end: a few splinters so it does not read as a clean cut
+  const tip = pts[segs];
+  const splinters = 2 + r.int(3);
+  for (let k = 0; k < splinters; k++) {
+    const sa = az + r.range(-0.7, 0.7);
+    const sl = rad * lerp(1.6, 4.2, r.f());
+    const sr = rad * lerp(0.08, 0.22, r.f());
+    const spts = [
+      V(tip.x, tip.y, tip.z),
+      V(tip.x + Math.cos(sa) * sl, tip.y + rad * 0.35, tip.z + Math.sin(sa) * sl),
+    ];
+    tube(mb, spts, [sr, sr * 0.15], 4, PART.WOOD, {
+      totalHeight: rad * 2, rnd: r.f(), lumpy: 0.15, cap: true, vScale: 5,
+    });
+  }
+  if (r.f() < 0.78) {
+    const si = 1 + r.int(3);
+    const base = pts[si];
+    const sa = az + r.range(0.7, 1.9) * (r.f() < 0.5 ? 1 : -1);
+    const slen = len * lerp(0.24, 0.55, r.f());
+    const spts = [];
+    for (let i = 0; i <= 3; i++) {
+      const t = i / 3;
+      spts.push(V(base.x + Math.cos(sa) * slen * t, base.y + rad * 0.55 * t, base.z + Math.sin(sa) * slen * t));
+    }
+    const sr = rad * 0.48;
+    tube(mb, spts, [sr, sr * 0.72, sr * 0.36, sr * 0.07], 5, PART.WOOD, {
+      totalHeight: rad * 2, rnd: r.f(), lumpy: 0.22, cap: true, vScale: 5,
+    });
+  }
+  return { mesh: mb, height: mb.height, radius: mb.radius, material: 'solid', sink: rad * 0.5 };
+}
+
 /* ---------------------------------------------------------- moss / lichen mat */
 export function buildMossPatch(seed, opts = {}) {
   const r = new Rng(seed);
@@ -470,5 +579,15 @@ export const ARCHETYPES = [
     key: 'log', build: buildLog, variants: 3, density: 0.01, maxDist: 95,
     score: (e) => 0.05 + e.canopy * 1.2 + e.moisture * 0.4 - e.slope * 0.9
       - Math.max(0, e.waterDepth + 0.3) * 3,
+  },
+  {
+    key: 'vine', build: buildVine, variants: 3, density: 0.13, maxDist: 52,
+    score: (e) => -0.15 + e.canopy * 2.4 + e.moisture * 0.8 - e.rock * 1.2 - e.slope * 0.6
+      - Math.max(0, e.waterDepth + 0.25) * 4,
+  },
+  {
+    key: 'limb', build: buildLimb, variants: 3, density: 0.055, maxDist: 44,
+    score: (e) => -0.05 + e.litter * 1.4 + e.canopy * 1.1 - e.slope * 0.7
+      - Math.max(0, e.waterDepth + 0.25) * 4,
   },
 ];
