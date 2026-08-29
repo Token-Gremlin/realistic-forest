@@ -80,10 +80,11 @@ export class RenderPipeline {
     });
     for (const t of this.gbuf.textures) { t.colorSpace = THREE.NoColorSpace; }
 
-    // shares the g-buffer depth so forward passes depth-test correctly
+    // No depth attachment: forward passes (water, rain, particles) reject
+    // occluded fragments against the depth copy in the shader instead. Sharing
+    // the g-buffer depth attachment here would make every forward draw a
+    // framebuffer feedback loop, since the same texture stays bound as a sampler.
     this.hdr = makeRT(w, h, { type: THREE.HalfFloatType });
-    this.hdr.depthBuffer = true;
-    this.hdr.depthTexture = depthTex;
     this.hdrCopy = makeRT(w, h, { type: THREE.HalfFloatType });
 
     // The depth attachment is shared with `hdr`, so sampling it while `hdr` is
@@ -445,7 +446,9 @@ export class RenderPipeline {
     if (w.hasWater && w.hasWater()) {
       this._blitTo(this.hdr.texture, this.hdrCopy);
       r.setRenderTarget(this.hdr);
-      w.drawWater(camera, this.hdrCopy.texture, this.depthTex);
+      // depthRT, not the shared depth attachment: sampling that while rendering
+      // into `hdr` would be a framebuffer feedback loop
+      w.drawWater(camera, this.hdrCopy.texture, this.depthRT.texture);
     }
 
     /* ----------------------------------------------------------- volumetrics */
