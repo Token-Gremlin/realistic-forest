@@ -1,0 +1,289 @@
+import { RAW_HEADER } from '../core/gfx.js';
+import { GLSL_COMMON } from './lib.js';
+
+/** Temporal anti-aliasing: velocity reprojection with YCoCg neighbourhood clamp. */
+export function taaFragment() {
+  return /* glsl */ `
+${RAW_HEADER}
+${GLSL_COMMON}
+uniform sampler2D uColor;
+uniform sampler2D uHistory;
+uniform sampler2D uMiscTex;
+uniform sampler2D uDepthTex;
+uniform vec2 uResolution;
+uniform float uBlend;
+uniform float uFirst;
+layout(location = 0) out vec4 oColor;
+in vec2 vUv;
+
+vec3 rgb2ycocg(vec3 c){
+  return vec3(0.25*c.r + 0.5*c.g + 0.25*c.b, 0.5*c.r - 0.5*c.b, -0.25*c.r + 0.5*c.g - 0.25*c.b);
+}
+vec3 ycocg2rgb(vec3 c){
+  return vec3(c.x + c.y - c.z, c.x + c.z, c.x - c.y - c.z);
+}
+vec3 tonemapT(vec3 c){ return c / (1.0 + maxc(c)); }
+vec3 tonemapInv(vec3 c){ return c / max(1.0 - maxc(c), 1e-4); }
+
+void main(){
+  vec2 texel = 1.0 / uResolution;
+
+  // closest-depth velocity: avoids smearing on silhouettes
+  float bestD = 2.0; vec2 bestOff = vec2(0.0);
+  for(int j = -1; j <= 1; j++) for(int i = -1; i <= 1; i++){
+    vec2 o = vec2(float(i), float(j)) * texel;
+    float d = texture(uDepthTex, vUv + o).r;
+    if(d < bestD){ bestD = d; bestOff = o; }
+  }
+  vec2 vel = texture(uMiscTex, vUv + bestOff).xy;
+
+  vec3 c00 = texture(uColor, vUv).rgb;
+  vec3 m1 = vec3(0.0), m2 = vec3(0.0);
+  vec3 mn = vec3(1e9), mx = vec3(-1e9);
+  for(int j = -1; j <= 1; j++) for(int i = -1; i <= 1; i++){
+    vec3 s = rgb2ycocg(tonemapT(texture(uColor, vUv + vec2(float(i), float(j)) * texel).rgb));
+    m1 += s; m2 += s * s;
+    mn = min(mn, s); mx = max(mx, s);
+  }
+  m1 /= 9.0; m2 /= 9.0;
+  vec3 sigma = sqrt(max(m2 - m1 * m1, 0.0));
+  vec3 lo = max(mn, m1 - sigma * 1.45);
+  vec3 hi = min(mx, m1 + sigma * 1.45);
+
+  vec2 prevUv = vUv - vel;
+  float valid = (uFirst > 0.5) ? 0.0 : 1.0;
+  if(any(lessThan(prevUv, vec2(0.0))) || any(greaterThan(prevUv, vec2(1.0)))) valid = 0.0;
+
+  vec3 hist = texture(uHistory, prevUv).rgb;
+  vec3 histT = rgb2ycocg(tonemapT(hist));
+  histT = clamp(histT, lo, hi);
+  vec3 curT = rgb2ycocg(tonemapT(c00));
+
+  float blend = uBlend * valid;
+  // reduce history weight under fast motion
+  blend *= 1.0 - clamp(length(vel * uResolution) * 0.014, 0.0, 0.55);
+  vec3 outT = mix(curT, histT, blend);
+  vec3 outC = tonemapInv(ycocg2rgb(outT));
+  oColor = vec4(max(outC, 0.0), 1.0);
+}
+`;
+}
+
+export function bloomDownFragment() {
+  return /* glsl */ `
+${RAW_HEADER}
+${GLSL_COMMON}
+uniform sampler2D uSrc;
+uniform vec2 uTexel;
+uniform float uFirst;
+uniform float uThreshold;
+layout(location = 0) out vec4 oColor;
+in vec2 vUv;
+vec3 tap(vec2 uv){ return max(texture(uSrc, uv).rgb, 0.0); }
+void main(){
+  vec2 t = uTexel;
+  // 13-tap Karis downsample
+  vec3 a = tap(vUv + t * vec2(-2.0, 2.0));
+  vec3 b = tap(vUv + t * vec2( 0.0, 2.0));
+  vec3 c = tap(vUv + t * vec2( 2.0, 2.0));
+  vec3 d = tap(vUv + t * vec2(-2.0, 0.0));
+  vec3 e = tap(vUv);
+  vec3 f = tap(vUv + t * vec2( 2.0, 0.0));
+  vec3 g = tap(vUv + t * vec2(-2.0,-2.0));
+  vec3 h = tap(vUv + t * vec2( 0.0,-2.0));
+  vec3 i = tap(vUv + t * vec2( 2.0,-2.0));
+  vec3 j = tap(vUv + t * vec2(-1.0, 1.0));
+  vec3 k = tap(vUv + t * vec2( 1.0, 1.0));
+  vec3 l = tap(vUv + t * vec2(-1.0,-1.0));
+  vec3 m = tap(vUv + t * vec2( 1.0,-1.0));
+  vec3 col = e * 0.125;
+  col += (a + c + g + i) * 0.03125;
+  col += (b + d + f + h) * 0.0625;
+  col += (j + k + l + m) * 0.125;
+  if(uFirst > 0.5){
+    float l2 = luma(col);
+    float soft = smoothstep(uThreshold * 0.5, uThreshold * 1.6, l2);
+    col *= soft;
+    col = min(col, vec3(64.0));
+  }
+  oColor = vec4(col, 1.0);
+}
+`;
+}
+
+export function bloomUpFragment() {
+  return /* glsl */ `
+${RAW_HEADER}
+uniform sampler2D uSrc;
+uniform sampler2D uAdd;
+uniform vec2 uTexel;
+uniform float uRadius;
+layout(location = 0) out vec4 oColor;
+in vec2 vUv;
+void main(){
+  vec2 t = uTexel * uRadius;
+  vec3 c = vec3(0.0);
+  c += texture(uSrc, vUv + vec2(-t.x,  t.y)).rgb * 1.0;
+  c += texture(uSrc, vUv + vec2( 0.0,  t.y)).rgb * 2.0;
+  c += texture(uSrc, vUv + vec2( t.x,  t.y)).rgb * 1.0;
+  c += texture(uSrc, vUv + vec2(-t.x,  0.0)).rgb * 2.0;
+  c += texture(uSrc, vUv).rgb * 4.0;
+  c += texture(uSrc, vUv + vec2( t.x,  0.0)).rgb * 2.0;
+  c += texture(uSrc, vUv + vec2(-t.x, -t.y)).rgb * 1.0;
+  c += texture(uSrc, vUv + vec2( 0.0, -t.y)).rgb * 2.0;
+  c += texture(uSrc, vUv + vec2( t.x, -t.y)).rgb * 1.0;
+  c *= 1.0 / 16.0;
+  oColor = vec4(c + texture(uAdd, vUv).rgb, 1.0);
+}
+`;
+}
+
+/** Half-res circle-of-confusion gather for depth of field. */
+export function dofFragment() {
+  return /* glsl */ `
+${RAW_HEADER}
+${GLSL_COMMON}
+uniform sampler2D uColor;
+uniform sampler2D uDepthTex;
+uniform vec2 uResolution;
+uniform vec2 uNearFar;
+uniform vec4 uDof;     // x focus dist, y aperture, z max coc px, w bokeh rotation
+uniform mat4 uInvViewProj;
+uniform vec3 uCamPos;
+layout(location = 0) out vec4 oColor;
+in vec2 vUv;
+
+float cocFromDepth(float d){
+  if(d >= 0.999999) return uDof.z;
+  vec3 wp = worldFromDepth(vUv, d, uInvViewProj);
+  float dist = length(wp - uCamPos);
+  float c = uDof.y * (dist - uDof.x) / max(dist, 0.05);
+  return clamp(c, -uDof.z, uDof.z);
+}
+
+void main(){
+  float d0 = texture(uDepthTex, vUv).r;
+  float coc0 = cocFromDepth(d0);
+  float r = abs(coc0);
+  vec3 sum = texture(uColor, vUv).rgb;
+  float wsum = 1.0;
+  const int N = 28;
+  float rot = ign(gl_FragCoord.xy) * 6.2831853 + uDof.w;
+  for(int i = 0; i < N; i++){
+    vec2 o = vogel(i, N, rot) * r / uResolution;
+    vec3 s = texture(uColor, vUv + o).rgb;
+    float sd = texture(uDepthTex, vUv + o).r;
+    float sc = abs(cocFromDepth(sd));
+    // accept samples whose own blur circle reaches this pixel
+    float w = clamp((sc - length(o * uResolution)) * 0.5 + 1.0, 0.0, 1.0);
+    w = max(w, 0.02);
+    sum += s * w; wsum += w;
+  }
+  oColor = vec4(sum / wsum, r);
+}
+`;
+}
+
+/** Final grade: exposure, DOF blend, motion blur, AgX, grain, vignette. */
+export function compositeFragment() {
+  return /* glsl */ `
+${RAW_HEADER}
+${GLSL_COMMON}
+uniform sampler2D uColor;
+uniform sampler2D uBloom;
+uniform sampler2D uDof;
+uniform sampler2D uDepthTex;
+uniform sampler2D uMiscTex;
+uniform vec2 uResolution;
+uniform vec2 uNearFar;
+uniform vec4 uGrade;     // x exposure, y bloom amount, z grain, w vignette
+uniform vec4 uGrade2;    // x saturation, y punch, z chromatic aberration, w sharpen
+uniform vec4 uDofParams; // x focus, y aperture, z maxcoc, w enable
+uniform float uMotionBlur;
+uniform float uTime;
+uniform mat4 uInvViewProj;
+uniform vec3 uCamPos;
+uniform vec4 uWeather;
+layout(location = 0) out vec4 oColor;
+in vec2 vUv;
+
+float cocAt(vec2 uv){
+  float d = texture(uDepthTex, uv).r;
+  if(d >= 0.999999) return uDofParams.z;
+  vec3 wp = worldFromDepth(uv, d, uInvViewProj);
+  float dist = length(wp - uCamPos);
+  return clamp(uDofParams.y * (dist - uDofParams.x) / max(dist, 0.05), -uDofParams.z, uDofParams.z);
+}
+
+void main(){
+  vec2 uv = vUv;
+  vec3 col;
+
+  // ---- motion blur along the screen velocity
+  vec2 vel = texture(uMiscTex, uv).xy;
+  float vlen = length(vel * uResolution);
+  if(uMotionBlur > 0.0 && vlen > 1.2){
+    vec2 step = vel * uMotionBlur;
+    float n = ign(gl_FragCoord.xy, uTime);
+    vec3 acc = vec3(0.0); float w = 0.0;
+    const int MB = 9;
+    for(int i = 0; i < MB; i++){
+      float t = (float(i) + n) / float(MB) - 0.5;
+      acc += texture(uColor, uv - step * t).rgb;
+      w += 1.0;
+    }
+    col = acc / w;
+  } else {
+    col = texture(uColor, uv).rgb;
+  }
+
+  // ---- depth of field blend
+  if(uDofParams.w > 0.5){
+    float coc = abs(cocAt(uv));
+    float f = smoothstep(0.8, 3.2, coc);
+    if(f > 0.001){
+      vec3 blurred = texture(uDof, uv).rgb;
+      col = mix(col, blurred, f);
+    }
+  }
+
+  // ---- bloom
+  col += texture(uBloom, uv).rgb * uGrade.y;
+
+  // ---- chromatic aberration toward the frame edge (linear, before tonemap)
+  float ca = uGrade2.z;
+  if(ca > 0.0001){
+    vec2 dd = (uv - 0.5);
+    float r2 = dot(dd, dd);
+    vec2 off = dd * r2 * ca * 0.02;
+    col.r = texture(uColor, uv - off).r + texture(uBloom, uv - off).r * uGrade.y;
+    col.b = texture(uColor, uv + off).b + texture(uBloom, uv + off).b * uGrade.y;
+  }
+
+  // ---- optical vignette in linear light
+  vec2 d = (uv - 0.5) * vec2(uResolution.x / uResolution.y, 1.0);
+  float r2v = dot(d, d);
+  col *= clamp(1.0 - uGrade.w * r2v * 1.25, 0.0, 1.0);
+
+  // ---- tone mapping (returns display-encoded)
+  vec3 mapped = tonemapAgX(col, uGrade.x, uGrade2.x, uGrade2.y);
+
+  // ---- sharpen in display space (recovers TAA softness)
+  if(uGrade2.w > 0.001){
+    vec2 t = 1.0 / uResolution;
+    vec3 blur = (
+      tonemapAgX(texture(uColor, uv + vec2( t.x, 0.0)).rgb, uGrade.x, uGrade2.x, uGrade2.y) +
+      tonemapAgX(texture(uColor, uv - vec2( t.x, 0.0)).rgb, uGrade.x, uGrade2.x, uGrade2.y) +
+      tonemapAgX(texture(uColor, uv + vec2(0.0, t.y)).rgb, uGrade.x, uGrade2.x, uGrade2.y) +
+      tonemapAgX(texture(uColor, uv - vec2(0.0, t.y)).rgb, uGrade.x, uGrade2.x, uGrade2.y)) * 0.25;
+    mapped = clamp(mapped + (mapped - blur) * uGrade2.w, 0.0, 1.0);
+  }
+
+  // ---- grain, stronger in the shadows like real film
+  float g = ign(gl_FragCoord.xy, uTime * 13.7) - 0.5;
+  mapped += g * uGrade.z * (0.30 + 0.70 * (1.0 - luma(mapped)));
+
+  oColor = vec4(clamp(mapped, 0.0, 1.0), 1.0);
+}
+`;
+}

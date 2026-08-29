@@ -1,0 +1,20 @@
+{
+  "name": "procedural-forest",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Fully procedural cinematic forest rendered in the browser with Three.js + WebGL2. No external assets.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "capture": "node tools/capture.mjs"
+  },
+  "dependencies": {
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1",
+    "vite": "^8.2.2"
+  }
+}
