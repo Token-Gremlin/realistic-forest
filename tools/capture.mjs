@@ -8,7 +8,7 @@
  * surface as console messages, and the frames show whether the image is right.
  */
 import { chromium } from 'playwright';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const args = Object.fromEntries(
@@ -109,21 +109,23 @@ if (ready) {
   console.log('perf', JSON.stringify(perf, null, 2));
   writeFileSync(resolve(outDir, 'perf.json'), JSON.stringify({ perf, args }, null, 2));
 
-  if (args.js) {
+  const jsCode = args.jsFile ? readFileSync(resolve(args.jsFile), 'utf8') : args.js;
+  if (jsCode) {
     const ret = await page.evaluate((code) => {
       // eslint-disable-next-line no-new-func
       const r = new Function('f', code)(window.__forest);
       return r === undefined ? null : r;
-    }, args.js);
+    }, jsCode);
     if (ret !== null) console.log(`js result: ${typeof ret === 'string' ? ret : JSON.stringify(ret, null, 2)}`);
     await new Promise((r) => setTimeout(r, parseInt(args.evalSettle ?? '2000', 10)));
   }
-  if (args.js2) {
+  const js2Code = args.js2File ? readFileSync(resolve(args.js2File), 'utf8') : args.js2;
+  if (js2Code) {
     const ret = await page.evaluate((code) => {
       // eslint-disable-next-line no-new-func
       const r = new Function('f', code)(window.__forest);
       return r === undefined ? null : r;
-    }, args.js2);
+    }, js2Code);
     if (ret !== null) console.log(`js2 result: ${typeof ret === 'string' ? ret : JSON.stringify(ret, null, 2)}`);
   }
 
