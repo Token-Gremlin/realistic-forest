@@ -204,10 +204,9 @@ void main(){
     vec3 fr = uFire.xyz - wp;
     float rd2 = dot(fr, fr);
     vec3 rdir = fr / max(sqrt(rd2), 1e-3);
-    float atten = uFire.w / (1.0 + rd2 * 0.0018);
-    float rndl = max(dot(N, rdir), 0.0) + (foliage ? 0.22 : 0.0);
-    Lo += uFireColor * atten * rndl * diffCol * 1.25;
-    Lo += uFireColor * atten * 0.08;
+    float atten = uFire.w / (1.0 + rd2 * 0.014);
+    float rndl = max(dot(N, rdir), 0.0) + (foliage ? 0.18 : 0.0);
+    Lo += uFireColor * atten * rndl * diffCol * 1.15;
   }
 
   oColor = vec4(max(Lo, 0.0), 1.0);
