@@ -3,7 +3,7 @@ f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
 f.state.exposureAuto = false;
-f.pipeline.settings.exposure = 1.22;
+f.pipeline.settings.exposure = 1.08;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
@@ -43,11 +43,11 @@ const gh = maps.height(bx, bz);
 const lookX = x, lookZ = z;
 const lookH = maps.height(lookX, lookZ);
 const lookW = Math.max(0, best?.s.waterDepth ?? 0);
-f.camera.position.set(bx - (lookX - bx) * 0.15, gh + 1.28, bz - (lookZ - bz) * 0.15);
+f.camera.position.set(bx - (lookX - bx) * 0.15, gh + 1.62, bz - (lookZ - bz) * 0.15);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.65);
 const p = f.camera.position;
-p.y = Math.max(p.y, maps.height(p.x, p.z) + 1.12);
-f.camera.lookAt(lookX, lookH + 0.12 + lookW * 0.25, lookZ);
+p.y = Math.max(p.y, maps.height(p.x, p.z) + 1.48);
+f.camera.lookAt(lookX, lookH + 0.08 + lookW * 0.2, lookZ);
 f.camera.updateMatrixWorld(true);
 
 return {

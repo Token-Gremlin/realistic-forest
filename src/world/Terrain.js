@@ -216,9 +216,10 @@ Ground groundSurface(vec3 wp, vec3 N, vec4 eco, vec4 mapv, vec4 ao, float lodPx)
   alb *= mix(1.0, 0.42, wet);
   // darker still right at the meniscus so the waterline reads as a line
   alb *= mix(1.0, 0.58, margin * 0.75);
-  rough = mix(rough, 0.10, wet * 0.9);
-  rough = mix(rough, 0.055, margin * 0.65);
-  grad *= mix(1.0, 0.32, wet);
+  // wet dirt, not chrome: keep enough roughness that morning shafts do not blow the bank
+  rough = mix(rough, 0.22, wet * 0.85);
+  rough = mix(rough, 0.16, margin * 0.6);
+  grad *= mix(1.0, 0.40, wet);
 
   // ---- puddles: small flattened mirrors in hollows of the wet band
   if(wet > 0.25 && det2 > 0.04){
@@ -226,8 +227,8 @@ Ground groundSurface(vec3 wp, vec3 N, vec4 eco, vec4 mapv, vec4 ao, float lodPx)
     float puddle = (1.0 - smoothstep(0.06, 0.20, pf.x)) * wet * (1.0 - steep);
     puddle *= smoothstep(0.4, 0.75, fbm(p * 0.9 + 88.0, 3, 2.1, 0.5) * 0.5 + 0.5);
     alb = mix(alb, silt * 0.28, puddle * 0.85);
-    rough = mix(rough, 0.045, puddle);
-    grad *= mix(1.0, 0.15, puddle);
+    rough = mix(rough, 0.10, puddle);
+    grad *= mix(1.0, 0.18, puddle);
   }
 
   // ---- rain wetting the whole surface
