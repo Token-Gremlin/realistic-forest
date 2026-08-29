@@ -5,6 +5,7 @@ import { Water } from '../world/Water.js';
 import { Rain } from '../fx/Rain.js';
 import { Lightning } from '../fx/Lightning.js';
 import { StormDebris } from '../fx/StormDebris.js';
+import { Life } from '../fx/Life.js';
 
 /**
  * Registers every vegetation and effect system with the world. Kept separate so
@@ -45,6 +46,10 @@ export async function registerSystems(forest, quality, progress) {
   const debris = new StormDebris(forest, quality);
   forest.addSystem(debris);
   forest.debris = debris;
+
+  const life = new Life(forest, quality);
+  forest.addSystem(life);
+  forest.life = life;
 
   progress(1, 'ready');
 }

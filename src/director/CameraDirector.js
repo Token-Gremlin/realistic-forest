@@ -18,7 +18,7 @@ const easeOut = (t) => 1 - (1 - t) * (1 - t) * (1 - t);
 const SHOTS = [
   'lowGlide', 'trunkTravelling', 'canopyRise', 'wideReveal', 'streamApproach',
   'mistDrift', 'towardSun', 'clearingOrbit', 'groundCrawl', 'stormWide', 'descendThroughCanopy',
-  'fallenStem',
+  'fallenStem', 'fireflyWalk', 'birdSky',
 ];
 
 export class CameraDirector {
@@ -97,6 +97,8 @@ export class CameraDirector {
       add('lowGlide', 2);
     }
     if (!night && st.cover < 0.7) add('towardSun', 3);
+    if (night && st.rain < 0.35) add('fireflyWalk', 5);
+    if (!night && st.storm < 0.4 && st.rain < 0.35) add('birdSky', 2);
 
     // avoid repeating the previous two shots
     let pick = pool[(Math.random() * pool.length) | 0];
@@ -327,6 +329,37 @@ export class CameraDirector {
         this.shotDur = 12 + Math.random() * 5;
         this.fovTarget = 36 + Math.random() * 8;
         this.focus = 8;
+        break;
+      }
+      case 'fireflyWalk': {
+        const a = near(80, (s) => s.moisture * 1.6 + s.canopy * 1.1 - s.slope * 1.4 - s.rock * 0.8);
+        const dir = Math.random() * Math.PI * 2;
+        const len = 10 + Math.random() * 12;
+        const bx = a.x + Math.cos(dir) * len, bz = a.z + Math.sin(dir) * len;
+        this.path = {
+          from: new THREE.Vector3(a.x, this._ground(a.x, a.z) + 0.55, a.z),
+          to: new THREE.Vector3(bx, this._ground(bx, bz) + 0.7, bz),
+          lookAhead: 7, sink: true,
+        };
+        this.shotDur = 16 + Math.random() * 6;
+        this.fovTarget = 40 + Math.random() * 8;
+        this.focus = 4;
+        break;
+      }
+      case 'birdSky': {
+        const a = near(220, (s) => (1 - s.canopy) * 1.8 + s.skyVis * 1.2 - s.slope * 0.4);
+        const gh = this._ground(a.x, a.z);
+        const dir = Math.random() * Math.PI * 2;
+        const len = 24 + Math.random() * 20;
+        const bx = a.x + Math.cos(dir) * len, bz = a.z + Math.sin(dir) * len;
+        this.path = {
+          from: new THREE.Vector3(a.x, gh + 14 + Math.random() * 10, a.z),
+          to: new THREE.Vector3(bx, this._ground(bx, bz) + 18 + Math.random() * 12, bz),
+          lookAhead: 80, lookUp: 28,
+        };
+        this.shotDur = 18 + Math.random() * 8;
+        this.fovTarget = 48 + Math.random() * 10;
+        this.focus = 70;
         break;
       }
       default:

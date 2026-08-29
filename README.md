@@ -130,6 +130,11 @@ skeleton onto the ground. Hashed leaves, twigs and bark chunks (`StormDebris`)
 blow through a camera-following volume and settle as litter. A close strike
 kicks both the trees and a debris burst.
 
+`src/fx/Life.js` keeps the woods from looking empty between storms: midges mill
+in wet air at dusk, fireflies pulse in the understorey at night, distant birds
+cross a clearing, and a calm leaf-fall answers season and wind. All four are
+hashed instances in a camera volume — no CPU particles.
+
 `src/director/CameraDirector.js` scouts locations against the world maps so a
 stream shot finds water and a clearing shot finds an opening, then executes the
 shot with damped look-at, a hand-held micro-shake and auto-focus.

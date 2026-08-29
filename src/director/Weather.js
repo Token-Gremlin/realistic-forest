@@ -205,6 +205,11 @@ export class Weather {
     U.uMoonColor.value.set(mT[0] * moonScale * 0.86, mT[1] * moonScale * 0.92, mT[2] * moonScale * 1.12);
 
     this.nightAmount = clamp01(1 - (sunDir.y + 0.12) / 0.20);
+    U.uNightAmount.value = this.nightAmount;
+    // a late-day autumn hint so leaves turn and drop without a calendar
+    const autumn = smooth(clamp01((s.dayT - 0.68) / 0.08))
+      * (1 - smooth(clamp01((s.dayT - 0.82) / 0.08)));
+    U.uSeason.value = autumn * 0.62;
 
     U.uWeather.value.set(s.cover, s.storm, s.rain, s.wetness);
     U.uFog.value.set(s.fog, 0.045 + 0.02 * s.storm, s.mist, 0.25 + 0.6 * s.storm + 0.3 * s.rain);

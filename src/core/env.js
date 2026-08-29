@@ -44,6 +44,9 @@ export const Env = {
     uInvViewProj: { value: new THREE.Matrix4() },
     uPrevViewProj: { value: new THREE.Matrix4() },
     uExposure: { value: 1.0 },
+    // night 0..1 from sun elevation; season 0..1 (0 summer, 1 autumn drop)
+    uNightAmount: { value: 0 },
+    uSeason: { value: 0 },
 
     // --- sky probe (filled by Sky)
     uSkyProbe: { value: null },

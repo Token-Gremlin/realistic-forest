@@ -83,6 +83,10 @@ export class Forest {
     this.ensureMaps(camera);
     this.camPos = camera.position;
     this.stats.patches = this.terrain.selectView(camera);
+    if (this.trees && this._season !== U.uSeason.value) {
+      this._season = U.uSeason.value;
+      this.trees.setSeason(this._season);
+    }
     for (const s of this.systems) s.update?.(dt, camera, this);
   }
 
