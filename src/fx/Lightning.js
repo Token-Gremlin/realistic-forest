@@ -52,15 +52,16 @@ void main(){
   side = normalize(side);
 
   float w = iMeta.x;
-  float minW = 1.6 / max(uProjScaleY / max(dist, 1.0), 1.0);
+  // survive 528-wide software frames: a 1.6 px ribbon is fog
+  float minW = (iMeta.y < 0.0 ? 11.0 : 4.8) / max(uProjScaleY / max(dist, 1.0), 1.0);
   w = max(w, minW);
   // flicker the width a touch so the channel is not a plastic tube
   w *= 0.82 + 0.28 * hash13(p * 0.15 + uFlash.w * 40.0);
 
   vec3 world = p + side * iCorner.x * w;
   vSide = iCorner.x;
-  vBright = iMeta.y;
-  vGlow = step(0.35, iMeta.x);
+  vBright = abs(iMeta.y);
+  vGlow = 1.0 - step(0.0, iMeta.y);
   gl_Position = uViewProj * vec4(world, 1.0);
 }
 `;
@@ -84,20 +85,21 @@ void main(){
   if(uFlash.w < 0.0008 || vBright < 0.001) discard;
   vec2 uv = gl_FragCoord.xy / uResolution;
   float sceneZ = texture(uSceneDepth, uv).r;
-  // keep the bolt on the sky; only hide it behind solid near geometry
-  if(sceneZ < 0.9995 && gl_FragCoord.z > sceneZ + 4.0e-4) discard;
+  // only hide behind near solids; fog and distant canopy must not eat the channel
+  float dz = gl_FragCoord.z - sceneZ;
+  if(sceneZ < 0.999 && dz > 0.010) discard;
 
   float ax = abs(vSide);
-  float core = exp(-ax * ax * 14.0);
-  float halo = exp(-ax * ax * 2.4);
-  float mask = vGlow > 0.5 ? halo * 0.55 : (core * 1.4 + halo * 0.25);
-  if(mask < 0.02) discard;
+  float core = exp(-ax * ax * 10.0);
+  float halo = exp(-ax * ax * 1.55);
+  float mask = vGlow > 0.5 ? halo * 0.72 : (core * 1.55 + halo * 0.35);
+  if(mask < 0.015) discard;
 
-  vec3 col = uFlashColor * (1.15 + vGlow * 0.15);
+  vec3 col = uFlashColor * (1.2 + vGlow * 0.2);
   float amp = uFlash.w * vBright * mask;
-  // core is almost white; glow keeps the blue edge
-  col = mix(vec3(1.0, 1.0, 1.0), col, 0.18 + vGlow * 0.50);
-  oColor = vec4(col * amp * 7.5, clamp(amp * 1.4, 0.0, 1.0));
+  col = mix(vec3(1.35, 1.38, 1.45), col, 0.12 + vGlow * 0.55);
+  // true additive: alpha 0 so dest fog stays and the bolt adds on top
+  oColor = vec4(col * amp * 18.0, 0.0);
 }
 `;
 
@@ -169,7 +171,7 @@ export class Lightning {
       blending: THREE.CustomBlending,
       blendEquation: THREE.AddEquation,
       blendSrc: THREE.OneFactor,
-      blendDst: THREE.OneMinusSrcAlphaFactor,
+      blendDst: THREE.OneFactor,
     });
 
     this.mesh = new THREE.Mesh(this.geometry, this.material);
@@ -265,7 +267,7 @@ export class Lightning {
       const gy = maps.height?.(gx, gz) ?? 0;
       const ground = new THREE.Vector3(gx, gy + 0.4, gz);
       const gens = close ? 6 : 5;
-      const width = close ? 0.85 + power * 0.7 : 1.4 + power * 1.1;
+      const width = close ? 1.7 + power * 1.15 : 2.2 + power * 1.4;
       this._grow(cloud, ground, close ? 22 : 48, gens, width, 1.0, segs, close ? 0.42 : 0.32);
 
       // a couple of return-stroke forks near the ground
@@ -292,12 +294,12 @@ export class Lightning {
       const o = n * 3, m = n * 2;
       A[o] = s.a.x; A[o + 1] = s.a.y; A[o + 2] = s.a.z;
       B[o] = s.b.x; B[o + 1] = s.b.y; B[o + 2] = s.b.z;
-      M[m] = Math.max(s.width * 0.38, 0.12); M[m + 1] = s.bright;
+      M[m] = Math.max(s.width * 0.42, 0.18); M[m + 1] = s.bright;
       n++;
       const o2 = n * 3, m2 = n * 2;
       A[o2] = s.a.x; A[o2 + 1] = s.a.y; A[o2 + 2] = s.a.z;
       B[o2] = s.b.x; B[o2 + 1] = s.b.y; B[o2 + 2] = s.b.z;
-      M[m2] = Math.max(s.width * 2.4, 0.85); M[m2 + 1] = s.bright * 0.38;
+      M[m2] = Math.max(s.width * 3.6, 1.4); M[m2 + 1] = -(s.bright * 0.42);
       n++;
     }
     this.geometry.instanceCount = n;

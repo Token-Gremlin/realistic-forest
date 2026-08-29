@@ -123,6 +123,8 @@ already stirs its own rain ripples from the same weather uniform.
 displacement with side leaders — and meshes it as a camera-facing ribbon. The
 deferred flash, volumetrics, sky and water already listen to the same uniform;
 the bolt just pulls that light down the channel so the forest actually sees it.
+The ribbon is true additive — a hot core and a wide glow — so it punches
+storm fog instead of being blended away.
 
 Nearby stems then fail. A tree record accumulates damage; the shared instance
 shader shears a small lean and, past a threshold, Rodrigues-rotates the whole
