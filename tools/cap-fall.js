@@ -15,7 +15,8 @@ for (let i = 0; i < 120; i++) {
   const x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
   const s = maps.sample(x, z, {});
   if (!s.inside) continue;
-  const score = (1 - s.canopy) * 2.2 + (s.skyVis ?? 0) * 2.0 - s.slope * 1.2
+  if ((s.skyVis ?? 0) < 0.22) continue;
+  const score = (1 - s.canopy) * 2.2 + (s.skyVis ?? 0) * 2.4 - s.slope * 1.2
     - (s.waterDepth > 0.15 ? 3 : 0);
   if (score > bestS) { bestS = score; best = { x, z, s }; }
 }
@@ -26,7 +27,7 @@ f.camera.position.set(x, gh + 5.8, z);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.9);
 const p = f.camera.position;
 p.y = Math.max(p.y, maps.height(p.x, p.z) + 5.2);
-f.camera.lookAt(p.x + 14, p.y + 3.2, p.z + 5);
+f.camera.lookAt(p.x + 16, p.y + 5.8, p.z + 4);
 f.camera.updateMatrixWorld(true);
 
 if (f.forest.falling) {
