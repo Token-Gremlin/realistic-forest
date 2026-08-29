@@ -90,6 +90,8 @@ async function start() {
   camera.position.set(120, 40, -60);
   forest.ensureMaps(camera, true);
   camera.position.y = forest.groundHeight(camera.position.x, camera.position.z) + 1.7;
+  U.uCamPos.value.copy(camera.position);
+  U.uCamPrevPos.value.copy(camera.position);
 
   boot(0.45, 'growing vegetation');
   await nextFrame();
@@ -189,6 +191,7 @@ async function start() {
         (p) => forest.trees?.pushOutOfTrunks?.(p, 0.4));
     }
 
+    U.uCamPrevPos.value.copy(U.uCamPos.value);
     U.uCamPos.value.copy(camera.position);
     camera.updateMatrixWorld(true);
     camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
@@ -266,7 +269,7 @@ async function start() {
       hudEl.innerHTML = `
         <b>${fps.toFixed(0)} fps</b> <span class="k">· ${pipeline.width}×${pipeline.height} (${(pipeline.scale * 100) | 0}%)</span><br/>
         <span class="k">act</span> ${weather.actName} <span class="k">· day</span> ${(weather.state.dayT * 24).toFixed(1)}h<br/>
-        <span class="k">wind</span> ${weather.state.wind.toFixed(1)} <span class="k">rain</span> ${weather.state.rain.toFixed(2)} <span class="k">storm</span> ${weather.state.storm.toFixed(2)}<br/>
+        <span class="k">wind</span> ${weather.state.wind.toFixed(1)} <span class="k">rain</span> ${weather.state.rain.toFixed(2)} <span class="k">storm</span> ${weather.state.storm.toFixed(2)} <span class="k">drops</span> ${forest.rain?.stats.drops ?? 0}<br/>
         <span class="k">draws</span> ${info.calls} <span class="k">tris</span> ${(info.triangles / 1e6).toFixed(2)}M <span class="k">patches</span> ${forest.stats.patches}<br/>
         <span class="k">${director.enabled ? `shot: ${director.shot}` : 'free camera (WASD, mouse, shift, wheel)'}</span><br/>
         <span class="k">H panel · C camera · N/B act · G walk · F dof · P pause</span>

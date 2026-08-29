@@ -113,6 +113,12 @@ morning shafts, high sun, a building front, downpour, severe storm with
 lightning, then golden hour, blue hour and night. Quantities are coupled and
 eased: wind rises before the rain, wetness lags the rain and dries slowly after.
 
+`src/fx/Rain.js` draws the shower in world space: hashed droplets wrap through a
+volume around the camera, lean with the wind, and stretch along their velocity
+minus the camera's so a pan becomes a streak instead of a screen-space overlay.
+Hits become ground crowns, water rings and canopy ticks; the water shader
+already stirs its own rain ripples from the same weather uniform.
+
 `src/director/CameraDirector.js` scouts locations against the world maps so a
 stream shot finds water and a clearing shot finds an opening, then executes the
 shot with damped look-at, a hand-held micro-shake and auto-focus.

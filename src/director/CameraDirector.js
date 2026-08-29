@@ -89,6 +89,12 @@ export class CameraDirector {
     add('descendThroughCanopy', 2);
     if (misty) add('mistDrift', 4);
     if (storming) { add('stormWide', 4); add('trunkTravelling', 2); }
+    if (st.rain > 0.35) {
+      add('groundCrawl', 3);
+      add('stormWide', 2);
+      add('streamApproach', 2);
+      add('lowGlide', 2);
+    }
     if (!night && st.cover < 0.7) add('towardSun', 3);
 
     // avoid repeating the previous two shots

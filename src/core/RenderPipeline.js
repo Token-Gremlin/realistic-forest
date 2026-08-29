@@ -493,7 +493,7 @@ export class RenderPipeline {
 
     /* --------------------------------------------------- forward transparents */
     r.setRenderTarget(this.hdr);
-    w.drawForward(camera);
+    w.drawForward(camera, this.hdr.texture, this.depthRT.texture);
 
     /* ---------------------------------------------------------------- TAA */
     let lit = this.hdr.texture;

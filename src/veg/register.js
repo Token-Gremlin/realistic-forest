@@ -2,6 +2,7 @@ import { Trees } from './Trees.js';
 import { Grass } from './Grass.js';
 import { Clutter } from './Clutter.js';
 import { Water } from '../world/Water.js';
+import { Rain } from '../fx/Rain.js';
 
 /**
  * Registers every vegetation and effect system with the world. Kept separate so
@@ -29,6 +30,11 @@ export async function registerSystems(forest, quality, progress) {
   const water = new Water(forest, quality);
   forest.addSystem(water);
   forest.water = water;
+
+  progress(0.97, 'seeding rain');
+  const rain = new Rain(forest, quality);
+  forest.addSystem(rain);
+  forest.rain = rain;
 
   progress(1, 'ready');
 }

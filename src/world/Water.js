@@ -317,7 +317,8 @@ void main(){
   float fastFoam = smoothstep(0.45, 1.1, flowMag);
   float foamNoise = fbm(wxz * 5.5 - flow * uTime * 1.4, 3, 2.1, 0.5) * 0.5 + 0.5;
   float foamNoise2 = fbm(wxz * 16.0 - flow * uTime * 2.6 + 9.0, 2, 2.1, 0.5) * 0.5 + 0.5;
-  float foam = clamp(shore * 1.25 + fastFoam, 0.0, 1.4);
+  float rainFoam = uWeather.z * (0.12 + foamNoise2 * 0.22);
+  float foam = clamp(shore * 1.25 + fastFoam + rainFoam, 0.0, 1.4);
   foam *= smoothstep(0.42, 0.86, foamNoise * 0.65 + foamNoise2 * 0.45);
   foam = clamp(foam, 0.0, 1.0);
   vec3 foamCol = (skyIrradiance(vec3(0.0, 1.0, 0.0)) * 0.55 + uSunColor * sunShadowK * 0.18);

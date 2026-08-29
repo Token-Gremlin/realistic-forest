@@ -97,7 +97,8 @@ export class Forest {
     this.renderer.render(this.gscene, camera);
   }
 
-  drawForward(camera) {
+  drawForward(camera, colorTex, depthTex) {
+    for (const s of this.systems) s.beforeForward?.(colorTex, depthTex);
     if (this.fscene.children.length) this.renderer.render(this.fscene, camera);
   }
 

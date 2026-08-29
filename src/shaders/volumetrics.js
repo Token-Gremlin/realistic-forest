@@ -87,8 +87,8 @@ float mediaDensity(vec3 p, out float mistFrac){
   float hfog = uFog.x * exp(-max(p.y - ground * 0.2, 0.0) * uFog.y);
   float haze = uFog.w * 0.004 * (0.6 + 0.4 * dt.g);
 
-  // --- rain veiling
-  float rain = uWeather.z * 0.030 * (0.7 + 0.6 * dt2.g);
+  // --- rain veiling: a thin sheet that thickens with the shower, not a fog wall
+  float rain = uWeather.z * 0.022 * (0.55 + 0.7 * dt2.g) * (0.7 + 0.3 * uWeather.y);
 
   return max(mist * 0.0112 + hfog + haze + rain, 0.0);
 }
