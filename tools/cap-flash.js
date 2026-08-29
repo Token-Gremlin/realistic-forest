@@ -21,7 +21,7 @@ for (let i = 0; i < 130; i++) {
 }
 const x = best?.x ?? c.x, z = best?.z ?? c.z;
 const gh = maps.height(x, z);
-f.camera.position.set(x, gh + 3.8, z);
+f.camera.position.set(x, gh + 9.2, z);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.1);
 const p = f.camera.position;
 let near = null, nd = 1e9;
@@ -43,12 +43,12 @@ if (near && nd < 14) {
 }
 const nl = Math.hypot(lx, lz) || 1;
 lx /= nl; lz /= nl;
-p.y = Math.max(p.y, maps.height(p.x, p.z) + 3.6);
-const sx = p.x + lx * 20;
-const sz = p.z + lz * 20;
-const strikeY = maps.height(sx, sz) + 58;
-// look up the channel so it crosses sky, not a trunk
-f.camera.lookAt(sx, p.y + 22, sz);
+p.y = Math.max(p.y, maps.height(p.x, p.z) + 8.8);
+const sx = p.x + lx * 18;
+const sz = p.z + lz * 18;
+const strikeY = maps.height(sx, sz) + 62;
+// above the grass, looking up the channel into storm sky
+f.camera.lookAt(sx, p.y + 28, sz);
 f.camera.updateMatrixWorld(true);
 f.weather.holdFlash = true;
 f.weather.flash.pos.set(sx, strikeY, sz);
@@ -71,4 +71,5 @@ return {
   sky: +(best?.s.skyVis ?? 0).toFixed(2),
   falling: f.forest.falling?.stats ?? null,
   segs: f.forest.lightning?.stats?.segs ?? 0,
+  bolt: !!f.forest.lightning?.mesh?.visible,
 };
