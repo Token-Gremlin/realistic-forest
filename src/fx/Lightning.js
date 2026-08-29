@@ -71,8 +71,6 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
-uniform sampler2D uSceneDepth;
-uniform vec2 uResolution;
 uniform vec3 uFlashColor;
 uniform vec4 uFlash;
 
@@ -83,11 +81,6 @@ layout(location = 0) out vec4 oColor;
 
 void main(){
   if(uFlash.w < 0.0008 || vBright < 0.001) discard;
-  vec2 uv = gl_FragCoord.xy / uResolution;
-  float sceneZ = texture(uSceneDepth, uv).r;
-  // only hide behind near solids; storm sky and distant canopy must not eat the channel
-  float dz = gl_FragCoord.z - sceneZ;
-  if(sceneZ < 0.90 && dz > 0.035) discard;
 
   float ax = abs(vSide);
   float core = exp(-ax * ax * 10.0);
@@ -130,37 +123,36 @@ export class Lightning {
     this.ground = new THREE.Vector3();
     this.stats = { segs: 0 };
 
-    const count = MAX_SEGS;
-    this._A = new Float32Array(count * 3);
-    this._B = new Float32Array(count * 3);
-    this._meta = new Float32Array(count * 2);
-    this.bufA = new THREE.InstancedBufferAttribute(this._A, 3);
-    this.bufB = new THREE.InstancedBufferAttribute(this._B, 3);
-    this.bufMeta = new THREE.InstancedBufferAttribute(this._meta, 2);
+    // Expanded triangles, not instances: SwiftShader was drawing the mesh
+    // (instanceCount > 0, visible) while the ribbon never reached the
+    // framebuffer. Per-vertex copies of A/B/meta are cheap at 720 segments.
+    const maxV = MAX_SEGS * 6;
+    this._A = new Float32Array(maxV * 3);
+    this._B = new Float32Array(maxV * 3);
+    this._meta = new Float32Array(maxV * 2);
+    this._corner = new Float32Array(maxV * 2);
+    const corners = [-1, 0, 1, 0, -1, 1, -1, 1, 1, 0, 1, 1];
+    for (let i = 0; i < MAX_SEGS; i++) {
+      this._corner.set(corners, i * 12);
+    }
+    this.bufA = new THREE.BufferAttribute(this._A, 3);
+    this.bufB = new THREE.BufferAttribute(this._B, 3);
+    this.bufMeta = new THREE.BufferAttribute(this._meta, 2);
     this.bufA.setUsage(THREE.DynamicDrawUsage);
     this.bufB.setUsage(THREE.DynamicDrawUsage);
     this.bufMeta.setUsage(THREE.DynamicDrawUsage);
 
-    const g = new THREE.InstancedBufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
-      0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,
-    ]), 3));
-    // per-vertex corner lives in a non-instance attribute, repeated per instance
-    g.setAttribute('iCorner', new THREE.BufferAttribute(new Float32Array([
-      -1, 0,  1, 0,  -1, 1,
-      -1, 1,  1, 0,   1, 1,
-    ]), 2));
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', this.bufA);
     g.setAttribute('iA', this.bufA);
     g.setAttribute('iB', this.bufB);
     g.setAttribute('iMeta', this.bufMeta);
-    g.instanceCount = 0;
+    g.setAttribute('iCorner', new THREE.BufferAttribute(this._corner, 2));
+    g.setDrawRange(0, 0);
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
     this.geometry = g;
 
-    this.uniforms = {
-      ...Env.pick('uViewProj', 'uCamPos', 'uFlash', 'uFlashColor', 'uResolution', 'uProjScaleY'),
-      uSceneDepth: { value: null },
-    };
+    this.uniforms = Env.pick('uViewProj', 'uCamPos', 'uFlash', 'uFlashColor', 'uProjScaleY');
 
     this.material = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
@@ -180,6 +172,7 @@ export class Lightning {
     this.mesh.frustumCulled = false;
     this.mesh.matrixAutoUpdate = false;
     this.mesh.visible = false;
+    this.mesh.renderOrder = 20;
     this.forwardMeshes = [this.mesh];
   }
 
@@ -310,27 +303,28 @@ export class Lightning {
       this.lightPos.lerpVectors(cloud, ground, close ? 0.58 : 0.42);
     }
 
-    // emit each segment twice: hot core then wide glow
+    // emit each segment twice: hot core then wide glow, 6 verts per ribbon
     let n = 0;
     const A = this._A, B = this._B, M = this._meta;
+    const pushRibbon = (a, b, width, bright) => {
+      if (n + 6 > MAX_SEGS * 6) return;
+      for (let v = 0; v < 6; v++) {
+        const o = n * 3, m = n * 2;
+        A[o] = a.x; A[o + 1] = a.y; A[o + 2] = a.z;
+        B[o] = b.x; B[o + 1] = b.y; B[o + 2] = b.z;
+        M[m] = width; M[m + 1] = bright;
+        n++;
+      }
+    };
     for (const s of segs) {
-      if (n >= MAX_SEGS - 1) break;
-      const o = n * 3, m = n * 2;
-      A[o] = s.a.x; A[o + 1] = s.a.y; A[o + 2] = s.a.z;
-      B[o] = s.b.x; B[o + 1] = s.b.y; B[o + 2] = s.b.z;
-      M[m] = Math.max(s.width * 0.42, 0.18); M[m + 1] = s.bright;
-      n++;
-      const o2 = n * 3, m2 = n * 2;
-      A[o2] = s.a.x; A[o2 + 1] = s.a.y; A[o2 + 2] = s.a.z;
-      B[o2] = s.b.x; B[o2 + 1] = s.b.y; B[o2 + 2] = s.b.z;
-      M[m2] = Math.max(s.width * 3.6, 1.4); M[m2 + 1] = -(s.bright * 0.42);
-      n++;
+      pushRibbon(s.a, s.b, Math.max(s.width * 0.42, 0.18), s.bright);
+      pushRibbon(s.a, s.b, Math.max(s.width * 3.6, 1.4), -(s.bright * 0.42));
     }
-    this.geometry.instanceCount = n;
+    this.geometry.setDrawRange(0, n);
     this.bufA.needsUpdate = true;
     this.bufB.needsUpdate = true;
     this.bufMeta.needsUpdate = true;
-    this.stats.segs = n;
+    this.stats.segs = n / 6;
     this.active = n > 0;
     this.sawFlash = false;
     this.mesh.visible = this.active;
@@ -354,7 +348,4 @@ export class Lightning {
     }
   }
 
-  beforeForward(_color, depthTex) {
-    this.uniforms.uSceneDepth.value = depthTex;
-  }
 }
