@@ -5,6 +5,7 @@ import { Water } from '../world/Water.js';
 import { Rain } from '../fx/Rain.js';
 import { Lightning } from '../fx/Lightning.js';
 import { StormDebris } from '../fx/StormDebris.js';
+import { FallingBranches } from '../fx/FallingBranches.js';
 import { Life } from '../fx/Life.js';
 import { Fire } from '../fx/Fire.js';
 
@@ -47,6 +48,10 @@ export async function registerSystems(forest, quality, progress) {
   const debris = new StormDebris(forest, quality);
   forest.addSystem(debris);
   forest.debris = debris;
+
+  const falling = new FallingBranches(forest, quality);
+  forest.addSystem(falling);
+  forest.falling = falling;
 
   const life = new Life(forest, quality);
   forest.addSystem(life);

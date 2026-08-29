@@ -127,8 +127,10 @@ the bolt just pulls that light down the channel so the forest actually sees it.
 Nearby stems then fail. A tree record accumulates damage; the shared instance
 shader shears a small lean and, past a threshold, Rodrigues-rotates the whole
 skeleton onto the ground. Hashed leaves, twigs and bark chunks (`StormDebris`)
-blow through a camera-following volume and settle as litter. A close strike
-kicks both the trees and a debris burst.
+blow through a camera-following volume and settle as litter. Forked metre-scale
+limbs (`FallingBranches`) hang from the crown, drop, tumble and bounce — real
+wood in the g-buffer, not cards. A close strike kicks the trees, the debris
+and a burst of falling wood.
 
 Ground cover includes hanging vines under closed canopy and snapped limbs
 in the litter, and the terrain shader draws a dark glossy wet margin plus

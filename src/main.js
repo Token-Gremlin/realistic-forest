@@ -269,7 +269,7 @@ async function start() {
       hudEl.innerHTML = `
         <b>${fps.toFixed(0)} fps</b> <span class="k">· ${pipeline.width}×${pipeline.height} (${(pipeline.scale * 100) | 0}%)</span><br/>
         <span class="k">act</span> ${weather.actName} <span class="k">· day</span> ${(weather.state.dayT * 24).toFixed(1)}h<br/>
-        <span class="k">wind</span> ${weather.state.wind.toFixed(1)} <span class="k">rain</span> ${weather.state.rain.toFixed(2)} <span class="k">storm</span> ${weather.state.storm.toFixed(2)} <span class="k">drops</span> ${forest.rain?.stats.drops ?? 0} <span class="k">debris</span> ${forest.debris?.stats.debris ?? 0} <span class="k">down</span> ${forest.trees?.stats.fallen ?? 0}<br/>
+        <span class="k">wind</span> ${weather.state.wind.toFixed(1)} <span class="k">rain</span> ${weather.state.rain.toFixed(2)} <span class="k">storm</span> ${weather.state.storm.toFixed(2)} <span class="k">drops</span> ${forest.rain?.stats.drops ?? 0} <span class="k">debris</span> ${forest.debris?.stats.debris ?? 0} <span class="k">fall</span> ${forest.falling?.stats.falling ?? 0} <span class="k">down</span> ${forest.trees?.stats.fallen ?? 0}<br/>
         <span class="k">life</span> i${forest.life?.stats.insects ?? 0} f${forest.life?.stats.fireflies ?? 0} b${forest.life?.stats.birds ?? 0} l${forest.life?.stats.leaves ?? 0} <span class="k">fire</span> ${((forest.fire?.stats.strength ?? 0) * 100) | 0}% e${forest.fire?.stats.embers ?? 0}<br/>
         <span class="k">draws</span> ${info.calls} <span class="k">tris</span> ${(info.triangles / 1e6).toFixed(2)}M <span class="k">patches</span> ${forest.stats.patches}<br/>
         <span class="k">${director.enabled ? `shot: ${director.shot}` : 'free camera (WASD, mouse, shift, wheel)'}</span><br/>
