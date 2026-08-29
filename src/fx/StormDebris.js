@@ -232,6 +232,7 @@ export class StormDebris {
     this.mesh.visible = false;
     this.forwardMeshes = [this.mesh];
     this.stats = { debris: 0 };
+    this.suppressed = false;
   }
 
   onLightning(pos) {
@@ -245,7 +246,7 @@ export class StormDebris {
     const storm = U.uWeather.value.y;
     const wind = U.uWind.value.z;
     const drive = Math.max(storm, THREE.MathUtils.smoothstep(wind, 7, 18));
-    this.mesh.visible = drive > 0.06;
+    this.mesh.visible = !this.suppressed && drive > 0.06;
     if (this.burst.t >= 0) {
       this.burst.t += dt;
       if (this.burst.t > 1.6) this.burst.t = -10;

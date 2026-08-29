@@ -11,7 +11,10 @@ function catchUp(f) {
   }
   if (f.forest.water) f.forest.water.update(0.016, f.camera);
   if (f.forest.debris) f.forest.debris.update(0.016);
-  if (f.forest.falling) f.forest.falling.update(0.016, f.camera);
+  if (f.forest.falling) {
+    if (f.forest.falling.suppressed) f.forest.falling.holdPhase = -1;
+    f.forest.falling.update(0.016, f.camera);
+  }
   if (f.weather.holdFlash) {
     f.weather.update(0, f.camera.position);
     f.forest.lightning?.update?.();
@@ -43,4 +46,7 @@ return {
   water: f.forest.water?.stats?.cells ?? 0,
   clutter: f.forest.clutter?.stats.instances ?? 0,
   kinds: clutterCounts(f),
+  flash: +f.weather.flash.intensity.toFixed(2),
+  bolt: !!f.forest.lightning?.mesh?.visible,
+  segs: f.forest.lightning?.stats?.segs ?? 0,
 };

@@ -53,7 +53,7 @@ void main(){
 
   float w = iMeta.x;
   // survive 528-wide software frames: a 1.6 px ribbon is fog
-  float minW = (iMeta.y < 0.0 ? 11.0 : 4.8) / max(uProjScaleY / max(dist, 1.0), 1.0);
+  float minW = (iMeta.y < 0.0 ? 18.0 : 8.0) / max(uProjScaleY / max(dist, 1.0), 1.0);
   w = max(w, minW);
   // flicker the width a touch so the channel is not a plastic tube
   w *= 0.82 + 0.28 * hash13(p * 0.15 + uFlash.w * 40.0);
@@ -85,9 +85,9 @@ void main(){
   if(uFlash.w < 0.0008 || vBright < 0.001) discard;
   vec2 uv = gl_FragCoord.xy / uResolution;
   float sceneZ = texture(uSceneDepth, uv).r;
-  // only hide behind near solids; fog and distant canopy must not eat the channel
+  // only hide behind near solids; storm sky and distant canopy must not eat the channel
   float dz = gl_FragCoord.z - sceneZ;
-  if(sceneZ < 0.999 && dz > 0.010) discard;
+  if(sceneZ < 0.90 && dz > 0.035) discard;
 
   float ax = abs(vSide);
   float core = exp(-ax * ax * 10.0);
@@ -97,9 +97,9 @@ void main(){
 
   vec3 col = uFlashColor * (1.2 + vGlow * 0.2);
   float amp = uFlash.w * vBright * mask;
-  col = mix(vec3(1.35, 1.38, 1.45), col, 0.12 + vGlow * 0.55);
+  col = mix(vec3(1.55, 1.58, 1.72), col, 0.10 + vGlow * 0.50);
   // true additive: alpha 0 so dest fog stays and the bolt adds on top
-  oColor = vec4(col * amp * 18.0, 0.0);
+  oColor = vec4(col * amp * 36.0, 0.0);
 }
 `;
 
@@ -126,6 +126,8 @@ export class Lightning {
     this.active = false;
     this.sawFlash = false;
     this.lightPos = new THREE.Vector3();
+    this.cloud = new THREE.Vector3();
+    this.ground = new THREE.Vector3();
     this.stats = { segs: 0 };
 
     const count = MAX_SEGS;
@@ -230,15 +232,24 @@ export class Lightning {
     }
   }
 
-  onLightning(pos, power, close, _dist = 200) {
+  /**
+   * @param {THREE.Vector3} pos cloud / flash origin
+   * @param {number} power
+   * @param {boolean} close
+   * @param {number} [_dist]
+   * @param {THREE.Vector3 | null} [hit] pin the ground strike; stills use this
+   *   so the channel actually crosses the lens instead of wandering off-frame
+   */
+  onLightning(pos, power, close, _dist = 200, hit = null) {
     const maps = this.forest.maps;
     const cam = this.forest.camPos ?? pos;
     this.seed = ((pos.x * 913) ^ (pos.z * 457) ^ ((power * 1000) | 0)) | 0;
 
     const cloud = new THREE.Vector3(pos.x, pos.y, pos.z);
     const segs = [];
+    const pinned = !!(hit && Number.isFinite(hit.x));
 
-    if (!close && this._rnd() < 0.38) {
+    if (!pinned && !close && this._rnd() < 0.38) {
       // intra-cloud: a horizontal sheet with hanging leaders
       const b = cloud.clone();
       b.x += (this._rnd() - 0.5) * 380;
@@ -252,33 +263,46 @@ export class Lightning {
         this._grow(hang, down, 18, 3, 0.55, 0.4, segs, 0.2);
       }
       this.lightPos.copy(cloud).add(b).multiplyScalar(0.5);
+      this.cloud.copy(cloud);
+      this.ground.copy(b);
     } else {
-      const wander = close ? 28 + this._rnd() * 70 : 40 + this._rnd() * 160;
-      const ang = this._rnd() * Math.PI * 2;
-      let gx = cloud.x + Math.cos(ang) * wander * 0.25;
-      let gz = cloud.z + Math.sin(ang) * wander * 0.25;
-      if (close) {
-        // pull the impact toward the camera so the channel crosses the frame
-        gx = THREE.MathUtils.lerp(gx, cam.x, 0.35);
-        gz = THREE.MathUtils.lerp(gz, cam.z, 0.35);
-        gx += (this._rnd() - 0.5) * 36;
-        gz += (this._rnd() - 0.5) * 36;
+      let gx, gz, gy;
+      if (pinned) {
+        gx = hit.x;
+        gz = hit.z;
+        gy = Number.isFinite(hit.y) ? hit.y : (maps.height?.(gx, gz) ?? 0);
+      } else {
+        const wander = close ? 28 + this._rnd() * 70 : 40 + this._rnd() * 160;
+        const ang = this._rnd() * Math.PI * 2;
+        gx = cloud.x + Math.cos(ang) * wander * 0.25;
+        gz = cloud.z + Math.sin(ang) * wander * 0.25;
+        if (close) {
+          // pull the impact toward the camera so the channel crosses the frame
+          gx = THREE.MathUtils.lerp(gx, cam.x, 0.35);
+          gz = THREE.MathUtils.lerp(gz, cam.z, 0.35);
+          gx += (this._rnd() - 0.5) * 36;
+          gz += (this._rnd() - 0.5) * 36;
+        }
+        gy = maps.height?.(gx, gz) ?? 0;
       }
-      const gy = maps.height?.(gx, gz) ?? 0;
-      const ground = new THREE.Vector3(gx, gy + 0.4, gz);
+      const ground = new THREE.Vector3(gx, gy + (pinned ? 0.0 : 0.4), gz);
+      this.cloud.copy(cloud);
+      this.ground.copy(ground);
       const gens = close ? 6 : 5;
       const width = close ? 1.7 + power * 1.15 : 2.2 + power * 1.4;
-      this._grow(cloud, ground, close ? 22 : 48, gens, width, 1.0, segs, close ? 0.42 : 0.32);
+      // pinned stills keep the jog small so the ribbon stays in the lens
+      const disp = pinned ? 10 : (close ? 22 : 48);
+      this._grow(cloud, ground, disp, gens, width, 1.0, segs, pinned ? 0.28 : (close ? 0.42 : 0.32));
 
       // a couple of return-stroke forks near the ground
       if (close && segs.length > 8) {
-        const hit = ground.clone();
-        hit.y += 8 + this._rnd() * 18;
-        const side = hit.clone();
+        const fork = ground.clone();
+        fork.y += 8 + this._rnd() * 18;
+        const side = fork.clone();
         side.x += (this._rnd() - 0.5) * 22;
         side.z += (this._rnd() - 0.5) * 22;
         side.y += 6;
-        this._grow(hit, side, 7, 3, width * 0.35, 0.45, segs, 0.15);
+        this._grow(fork, side, 7, 3, width * 0.35, 0.45, segs, 0.15);
       }
 
       // light the forest from a point on the lower third of the channel,

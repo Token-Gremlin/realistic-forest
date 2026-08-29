@@ -269,6 +269,7 @@ export class FallingBranches {
   constructor(forest, quality) {
     this.forest = forest;
     this.holdPhase = -1;
+    this.suppressed = false;
     this.burst = { pos: new THREE.Vector3(), t: -10 };
     this._fwd = new THREE.Vector3(0, 0, -1);
     const total = Math.max(36, Math.round((quality.rainParticles ?? 24000) * 0.01));
@@ -336,7 +337,7 @@ export class FallingBranches {
     const wind = U.uWind.value.z;
     const drive = Math.max(storm, THREE.MathUtils.smoothstep(wind, 8, 17));
     const forced = this.holdPhase >= 0;
-    const on = drive > 0.08 || forced;
+    const on = !this.suppressed && (drive > 0.08 || forced);
     if (this.burst.t >= 0) {
       this.burst.t += dt;
       if (this.burst.t > 1.8) this.burst.t = -10;

@@ -285,6 +285,8 @@ async function start() {
     U.uCamPos.value.copy(camera.position);
     U.uViewProj.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     U.uInvViewProj.value.copy(U.uViewProj.value).invert();
+    U.uProjScaleY.value = camera.projectionMatrix.elements[5] * pipeline.height * 0.5;
+    pipeline.resetTemporal();
     pipeline.render(camera, { nightAmount: weather.nightAmount });
   };
 

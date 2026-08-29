@@ -47,9 +47,19 @@ export class RenderPipeline {
     };
 
     this.dof = { focus: 12, aperture: 14, maxCoc: 12, enabled: true };
+    this._cutTemporal = false;
 
     this._buildTargets(2, 2);
     this._buildPasses();
+  }
+
+  /**
+   * Drop TAA and volumetric history after a camera cut. Capture stills call
+   * this so a held flash is not 10% of the new frame on 90% of the old view.
+   */
+  resetTemporal() {
+    this.taaPass.material.uniforms.uFirst.value = 1;
+    this._cutTemporal = true;
   }
 
   _disposeTargets() {
@@ -472,7 +482,7 @@ export class RenderPipeline {
       const vu = this.volPass.material.uniforms;
       vu.uSteps.value = s.volumetricSteps;
       vu.uHistory.value = this.volRT[1].texture;
-      vu.uHistoryBlend.value = this.frameIndex > 1 ? 0.90 : 0;
+      vu.uHistoryBlend.value = (this.frameIndex > 1 && !this._cutTemporal) ? 0.90 : 0;
       this.volPass.render(r, this.volRT[0]);
       const fu = this.fogPass.material.uniforms;
       fu.uColor.value = this.hdr.texture;
@@ -504,6 +514,7 @@ export class RenderPipeline {
       tu.uBlend.value = 0.90;
       this.taaPass.render(r, this.taaRT[0]);
       tu.uFirst.value = 0;
+      this._cutTemporal = false;
       lit = this.taaRT[0].texture;
       const t = this.taaRT[0]; this.taaRT[0] = this.taaRT[1]; this.taaRT[1] = t;
       lit = this.taaRT[1].texture;
@@ -579,6 +590,7 @@ export class RenderPipeline {
     else this.compositePass.render(r, null);
 
     r.autoClear = prevAutoClear;
+    this._cutTemporal = false;
     this.frameIndex++;
     U.uFrame.value = this.frameIndex;
   }
