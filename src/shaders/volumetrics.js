@@ -37,6 +37,8 @@ uniform vec4 uFog;        // x base density, y height falloff, z ground mist, w 
 uniform vec4 uWeather;    // x coverage, y storm, z rain, w wetness
 uniform vec4 uFlash;
 uniform vec3 uFlashColor;
+uniform vec4 uFire;
+uniform vec3 uFireColor;
 uniform vec4 uWind;
 uniform float uTime;
 uniform float uFrame;
@@ -75,6 +77,13 @@ float mediaDensity(vec3 p, out float mistFrac){
   float bank2 = fbm(p.xz * 0.031 + 17.0, 3, 2.1, 0.5) * 0.5 + 0.5;
   mist *= smoothstep(0.30, 0.80, bank) * 1.35 + 0.16;
   mist *= mix(0.55, 1.35, bank2);
+
+  if(uFire.w > 0.01){
+    vec2 fd = p.xz - uFire.xz;
+    float column = exp(-dot(fd, fd) * 0.0045) * uFire.w;
+    float rise = smoothstep(-0.4, 14.0, above) * (1.0 - smoothstep(16.0, 38.0, above));
+    mist += column * rise * 1.8;
+  }
 
   vec3 wind = vec3(uWind.x, 0.0, uWind.y) * uTime * (0.45 + uWind.z * 0.16);
   vec4 dt = texture(uDetailTex, (p + wind * 0.6) * 0.0125);
@@ -144,6 +153,11 @@ void main(){
       vec3 fv = uFlash.xyz - p;
       float fd2 = dot(fv, fv);
       S += uFlashColor * uFlash.w * 1.15 / (1.0 + fd2 * 0.00055);
+    }
+    if(uFire.w > 0.001){
+      vec3 rv = uFire.xyz - p;
+      float rd2 = dot(rv, rv);
+      S += uFireColor * uFire.w * 1.65 / (1.0 + rd2 * 0.0011);
     }
     S *= sigma;
     float Tstep = exp(-sigma * ds);

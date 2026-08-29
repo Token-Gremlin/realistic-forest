@@ -6,6 +6,7 @@ import { Rain } from '../fx/Rain.js';
 import { Lightning } from '../fx/Lightning.js';
 import { StormDebris } from '../fx/StormDebris.js';
 import { Life } from '../fx/Life.js';
+import { Fire } from '../fx/Fire.js';
 
 /**
  * Registers every vegetation and effect system with the world. Kept separate so
@@ -50,6 +51,10 @@ export async function registerSystems(forest, quality, progress) {
   const life = new Life(forest, quality);
   forest.addSystem(life);
   forest.life = life;
+
+  const fire = new Fire(forest, quality);
+  forest.addSystem(fire);
+  forest.fire = fire;
 
   progress(1, 'ready');
 }

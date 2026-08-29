@@ -26,6 +26,9 @@ export const Env = {
     // lightning: xyz flash world position, w intensity
     uFlash: { value: new THREE.Vector4(0, 0, 0, 0) },
     uFlashColor: { value: new THREE.Vector3(0.75, 0.83, 1.0) },
+    // forest fire: xyz world, w intensity. Warmer and longer-lived than a flash.
+    uFire: { value: new THREE.Vector4(0, 0, 0, 0) },
+    uFireColor: { value: new THREE.Vector3(1.0, 0.42, 0.10) },
 
     // --- wind (consumed by GLSL_WIND)
     uWind: { value: new THREE.Vector4(0.86, 0.51, 1.6, 0.35) },

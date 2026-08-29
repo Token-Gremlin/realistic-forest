@@ -18,7 +18,7 @@ const easeOut = (t) => 1 - (1 - t) * (1 - t) * (1 - t);
 const SHOTS = [
   'lowGlide', 'trunkTravelling', 'canopyRise', 'wideReveal', 'streamApproach',
   'mistDrift', 'towardSun', 'clearingOrbit', 'groundCrawl', 'stormWide', 'descendThroughCanopy',
-  'fallenStem', 'fireflyWalk', 'birdSky',
+  'fallenStem', 'fireflyWalk', 'birdSky', 'fireGlow',
 ];
 
 export class CameraDirector {
@@ -99,6 +99,7 @@ export class CameraDirector {
     if (!night && st.cover < 0.7) add('towardSun', 3);
     if (night && st.rain < 0.35) add('fireflyWalk', 5);
     if (!night && st.storm < 0.4 && st.rain < 0.35) add('birdSky', 2);
+    if ((this.forest.fire?.strength ?? 0) > 0.25) add('fireGlow', 6);
 
     // avoid repeating the previous two shots
     let pick = pool[(Math.random() * pool.length) | 0];
@@ -360,6 +361,25 @@ export class CameraDirector {
         this.shotDur = 18 + Math.random() * 8;
         this.fovTarget = 48 + Math.random() * 10;
         this.focus = 70;
+        break;
+      }
+      case 'fireGlow': {
+        const o = this.forest.fire?.origin;
+        if (!o || (this.forest.fire?.strength ?? 0) < 0.15) {
+          this.start('groundCrawl', weather);
+          return;
+        }
+        const gh = this._ground(o.x, o.z);
+        const a = Math.random() * Math.PI * 2;
+        const r = 6 + Math.random() * 5;
+        this.path = {
+          from: new THREE.Vector3(o.x + Math.cos(a) * r, gh + 1.4, o.z + Math.sin(a) * r),
+          to: new THREE.Vector3(o.x + Math.cos(a + 0.4) * (r * 0.7), gh + 1.7, o.z + Math.sin(a + 0.4) * (r * 0.7)),
+          lookAt: new THREE.Vector3(o.x, gh + 0.9, o.z),
+        };
+        this.shotDur = 14 + Math.random() * 6;
+        this.fovTarget = 34 + Math.random() * 8;
+        this.focus = 7;
         break;
       }
       default:

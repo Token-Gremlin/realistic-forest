@@ -56,6 +56,8 @@ uniform mat4 uInvViewProj;
 uniform vec4 uWeather;
 uniform vec4 uFlash;
 uniform vec3 uFlashColor;
+uniform vec4 uFire;
+uniform vec3 uFireColor;
 uniform vec2 uResolution;
 uniform vec2 uNearFar;
 uniform float uTime;
@@ -196,6 +198,16 @@ void main(){
     Lo += uFlashColor * uFlash.w * atten * fndl * diffCol * 0.95;
     Lo += uFlashColor * uFlash.w * atten * F_Schlick(f0, max(dot(normalize(fdir + V), V), 0.0))
           * D_GGX(max(dot(N, normalize(fdir + V)), 0.0), a) * 0.14;
+  }
+
+  if(uFire.w > 0.001){
+    vec3 fr = uFire.xyz - wp;
+    float rd2 = dot(fr, fr);
+    vec3 rdir = fr / max(sqrt(rd2), 1e-3);
+    float atten = uFire.w / (1.0 + rd2 * 0.0018);
+    float rndl = max(dot(N, rdir), 0.0) + (foliage ? 0.22 : 0.0);
+    Lo += uFireColor * atten * rndl * diffCol * 1.25;
+    Lo += uFireColor * atten * 0.08;
   }
 
   oColor = vec4(max(Lo, 0.0), 1.0);

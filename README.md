@@ -135,6 +135,11 @@ in wet air at dusk, fireflies pulse in the understorey at night, distant birds
 cross a clearing, and a calm leaf-fall answers season and wind. All four are
 hashed instances in a camera volume — no CPU particles.
 
+`src/fx/Fire.js` is a local burn: ground flames, rising embers and a smoke
+column around a world point. Deferred lighting and volumetrics take the same
+`uFire` so trunks, fog and wet ground pick up the glow. A strike on dry litter
+can start it; rain puts it out.
+
 `src/director/CameraDirector.js` scouts locations against the world maps so a
 stream shot finds water and a clearing shot finds an opening, then executes the
 shot with damped look-at, a hand-held micro-shake and auto-focus.
