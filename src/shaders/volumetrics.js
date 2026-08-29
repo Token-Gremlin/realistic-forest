@@ -143,7 +143,7 @@ void main(){
     if(uFlash.w > 0.001){
       vec3 fv = uFlash.xyz - p;
       float fd2 = dot(fv, fv);
-      S += uFlashColor * uFlash.w * 3.2 / (1.0 + fd2 * 0.0004);
+      S += uFlashColor * uFlash.w * 1.15 / (1.0 + fd2 * 0.00055);
     }
     S *= sigma;
     float Tstep = exp(-sigma * ds);

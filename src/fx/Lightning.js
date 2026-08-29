@@ -96,8 +96,8 @@ void main(){
   vec3 col = uFlashColor * (1.15 + vGlow * 0.15);
   float amp = uFlash.w * vBright * mask;
   // core is almost white; glow keeps the blue edge
-  col = mix(vec3(1.0, 1.0, 1.0), col, 0.35 + vGlow * 0.45);
-  oColor = vec4(col * amp * 2.4, amp);
+  col = mix(vec3(1.0, 1.0, 1.0), col, 0.18 + vGlow * 0.50);
+  oColor = vec4(col * amp * 7.5, clamp(amp * 1.4, 0.0, 1.0));
 }
 `;
 

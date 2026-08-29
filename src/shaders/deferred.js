@@ -191,9 +191,9 @@ void main(){
     vec3 fl = uFlash.xyz - wp;
     float fd2 = dot(fl, fl);
     vec3 fdir = fl / max(sqrt(fd2), 1e-3);
-    float atten = 1.0 / (1.0 + fd2 * 0.00012);
+    float atten = 1.0 / (1.0 + fd2 * 0.0002);
     float fndl = max(dot(N, fdir), 0.0) + (foliage ? 0.28 : 0.0);
-    Lo += uFlashColor * uFlash.w * atten * fndl * diffCol * 1.55;
+    Lo += uFlashColor * uFlash.w * atten * fndl * diffCol * 0.95;
     Lo += uFlashColor * uFlash.w * atten * F_Schlick(f0, max(dot(normalize(fdir + V), V), 0.0))
           * D_GGX(max(dot(N, normalize(fdir + V)), 0.0), a) * 0.14;
   }
