@@ -45,11 +45,15 @@ f.forest.lightning?.onLightning?.(f.weather.flash.pos, 1.5, true, 28);
 f.weather.update(0, p);
 f.forest.lightning?.update?.();
 
+// do not pack tumbling limbs into the lens — they ate the last skyward stills
 if (f.forest.falling) {
-  f.forest.falling.holdPhase = 0.32;
-  f.forest.falling.onLightning(p);
+  f.forest.falling.holdPhase = -1;
+  f.forest.falling.update(0, f.camera);
+  for (const layer of f.forest.falling._layers ?? []) {
+    layer.mesh.visible = false;
+    layer.shadowMesh.visible = false;
+  }
 }
-if (f.forest.debris) f.forest.debris.onLightning(p);
 
 return {
   act: f.weather.actName,
