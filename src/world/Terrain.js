@@ -105,13 +105,13 @@ Ground groundSurface(vec3 wp, vec3 N, vec4 eco, vec4 mapv, vec4 ao, float lodPx)
   float n4 = vnoise(p * 14.0) ;
 
   // ---------------------------------------------------------------- layers
-  vec3 humus = mix(vec3(0.0225, 0.0180, 0.0125), vec3(0.0420, 0.0330, 0.0215), n1);
-  vec3 soil  = mix(vec3(0.0520, 0.0390, 0.0250), vec3(0.0960, 0.0720, 0.0450), n2);
-  vec3 silt  = mix(vec3(0.0850, 0.0700, 0.0520), vec3(0.1300, 0.1080, 0.0800), n1);
+  vec3 humus = mix(vec3(0.0180, 0.0132, 0.0088), vec3(0.0360, 0.0262, 0.0158), n1);
+  vec3 soil  = mix(vec3(0.0405, 0.0288, 0.0172), vec3(0.0760, 0.0540, 0.0318), n2);
+  vec3 silt  = mix(vec3(0.0640, 0.0505, 0.0360), vec3(0.1010, 0.0810, 0.0575), n1);
   vec3 rockC = mix(vec3(0.0720, 0.0700, 0.0670), vec3(0.1250, 0.1220, 0.1140), n3);
   vec3 mossC = mix(vec3(0.0300, 0.0580, 0.0210), vec3(0.0620, 0.1020, 0.0330), n2);
 
-  vec3 alb = mix(soil, humus, clamp(canopy * 0.75 + litterM * 0.25, 0.0, 1.0));
+  vec3 alb = mix(soil, humus, clamp(canopy * 0.85 + litterM * 0.35, 0.0, 1.0));
   float rough = 0.86;
   vec2 grad = vec2(0.0);
   float occ = 1.0;
@@ -141,7 +141,7 @@ Ground groundSurface(vec3 wp, vec3 N, vec4 eco, vec4 mapv, vec4 ao, float lodPx)
   }
 
   // ---- leaf litter: individual elongated leaves with their own tilt
-  float litterAmt = clamp(litterM * 1.15 - smoothstep(0.35, 0.85, wetness) * 0.6, 0.0, 1.0);
+  float litterAmt = clamp(litterM * 1.55 - smoothstep(0.35, 0.85, wetness) * 0.6, 0.0, 1.0);
   if(litterAmt > 0.01 && det2 > 0.02){
     vec4 f = flakes(p * 7.6, 2.35);
     float leaf = 1.0 - smoothstep(0.16, 0.40, f.x);

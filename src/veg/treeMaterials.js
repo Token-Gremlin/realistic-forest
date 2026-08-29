@@ -210,23 +210,30 @@ float leafCluster(vec2 uv, float seed, out vec2 local, out float lid, out float 
   int n = int(uLeafParams.x);
   vec2 p = uv - vec2(0.5, 0.04);
 
+  // A needle or leaflet thinner than a pixel disappears, which is what makes a
+  // spruce read as a bare stick at thirty metres. Widen the analytic outline to
+  // at least a pixel; slight over-coverage is far less objectionable than a tree
+  // losing its foliage.
+  float pxW = max(fwidth(uv.x), fwidth(uv.y)) * 0.62;
+
   if(uLeafParams.y > 0.5){
-    // --- needles: a fan of thin blades from the card base
+    // --- needles: a dense fan of blades from the card base
     float best = 1.0;
-    for(int i = 0; i < 16; i++){
+    for(int i = 0; i < 20; i++){
       if(i >= n) break;
       float fi = (float(i) + 0.5) / float(n);
       float h = fract(sin(fi * 91.7 + seed * 53.1) * 43758.5453);
-      float ang = (fi - 0.5) * 1.55 + (h - 0.5) * 0.16;
-      float len = 0.72 + 0.30 * h;
+      float ang = (fi - 0.5) * 1.72 + (h - 0.5) * 0.22;
+      float len = 0.70 + 0.32 * h;
       float c = cos(ang), s = sin(ang);
       vec2 q = mat2(c, -s, s, c) * p;
       q.y /= len;
-      float d = abs(q.x) - (0.021 + 0.010 * (1.0 - q.y)) * (1.0 - smoothstep(0.85, 1.0, q.y));
+      float hw = max((0.052 + 0.024 * (1.0 - q.y)) * (1.0 - smoothstep(0.88, 1.0, q.y)), pxW);
+      float d = abs(q.x) - hw;
       if(q.y < 0.0 || q.y > 1.0) d = 1.0;
       if(d < best){ best = d; local = q; lid = fi; }
     }
-    rib = 1.0 - smoothstep(0.0, 0.008, abs(local.x));
+    rib = 1.0 - smoothstep(0.0, 0.020, abs(local.x));
     return -best;
   }
 
@@ -243,7 +250,7 @@ float leafCluster(vec2 uv, float seed, out vec2 local, out float lid, out float 
     float c = cos(ang), s = sin(ang);
     vec2 q = mat2(c, -s, s, c) * (p - vec2(0.0, baseY));
     q.y /= len;
-    float d = leafletSDF(q, 0.185 * (0.85 + 0.3 * h), 1.0, seed + fi);
+    float d = leafletSDF(q, max(0.185 * (0.85 + 0.3 * h), pxW * 1.6), 1.0, seed + fi);
     if(d < best){ best = d; local = q; lid = fi + h; }
   }
   // midrib and side veins
