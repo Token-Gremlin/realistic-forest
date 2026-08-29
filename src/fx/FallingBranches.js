@@ -107,7 +107,9 @@ Fall place(float tShift){
 
   float sc = mix(1.25, 2.55, h.z);
   vec3 ax1 = normalize(h3 - 0.5 + vec3(0.0, 0.2, 0.0));
-  vec3 ax2 = normalize(cross(ax1, vec3(wdir.x, 0.15, wdir.y)));
+  vec3 ax2 = cross(ax1, vec3(wdir.x, 0.15, wdir.y));
+  if(length(ax2) < 1e-4) ax2 = cross(ax1, vec3(0.0, 1.0, 0.0));
+  ax2 = normalize(ax2);
   float spin = mix(5.2, 11.0, h.y);
   float ang = drop * spin * (1.0 - settle * 0.92);
   vec3 q = rotateAxis(vec3(1.0, 0.0, 0.0), ax1, ang);
