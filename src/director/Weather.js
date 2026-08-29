@@ -69,12 +69,14 @@ export class Weather {
   setAct(i, snap = false) {
     this.actIndex = ((i % ACTS.length) + ACTS.length) % ACTS.length;
     this.actTime = 0;
+    const a = ACTS[this.actIndex];
+    const vals = {
+      dayT: a.dayT, cover: a.cover, storm: a.storm, rain: a.rain,
+      wind: a.wind, turb: a.turb, fog: a.fog, mist: a.mist, cirrus: a.cirrus,
+    };
+    Object.assign(this.target, vals);
     if (snap) {
-      const a = ACTS[this.actIndex];
-      Object.assign(this.state, {
-        dayT: a.dayT, cover: a.cover, storm: a.storm, rain: a.rain,
-        wind: a.wind, turb: a.turb, fog: a.fog, mist: a.mist, cirrus: a.cirrus,
-      });
+      Object.assign(this.state, vals);
       this.state.wetness = a.rain > 0.2 ? 0.8 : 0;
     }
   }

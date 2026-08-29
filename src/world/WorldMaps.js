@@ -12,20 +12,10 @@ import { GLSL_TERRAIN, GLSL_ECOLOGY } from './terrainShader.js';
  * leaves the middle of it. Everything shares one uv transform (`uMapInfo`) so
  * a single `mapUv()` call feeds all maps.
  *
- *   mapTex  RGBA32F  R height  G water height  B pack(wetness,flow)  A pack(steep,channel)
+ *   mapTex  RGBA32F  R height  G water surface height  B wetness  A flow
  *   ecoTex  RGBA8    R moisture  G canopy  B rock  A litter
  *   aoTex   RGBA8    R sky visibility  G macro AO  B canopy shade  A slope
  */
-
-const PACK = /* glsl */ `
-float pack2(float a, float b){
-  return floor(clamp(a,0.0,1.0)*4095.0) + floor(clamp(b,0.0,1.0)*4095.0)*4096.0;
-}
-vec2 unpack2(float p){
-  float b = floor(p * (1.0/4096.0));
-  return vec2((p - b*4096.0) * (1.0/4095.0), b * (1.0/4095.0));
-}
-`;
 
 export class WorldMaps {
   constructor(renderer, opts = {}) {
@@ -72,7 +62,7 @@ export class WorldMaps {
   }
 
   _buildPasses() {
-    const common = RAW_HEADER + GLSL_COMMON + PACK + GLSL_TERRAIN;
+    const common = RAW_HEADER + GLSL_COMMON + GLSL_TERRAIN;
 
     this.heightBlit = new Blit(fsMaterial(/* glsl */ `
       ${common}
@@ -87,8 +77,8 @@ export class WorldMaps {
         float wat = max(waterSurfaceAt(wp), h - 4.0);
         float depth = wat - h;
         float wetness = clamp(smoothstep(-0.75, 0.05, depth), 0.0, 1.0);
-        wetness = max(wetness, info.y * 0.35);
-        oMap = vec4(h, wat, pack2(wetness, info.w), pack2(info.x, info.y));
+        wetness = max(wetness, smoothstep(0.55, 0.95, info.y) * 0.45);
+        oMap = vec4(h, wat, wetness, clamp(info.w, 0.0, 1.0));
       }
     `, {
       uWin: { value: new THREE.Vector4() },
@@ -96,7 +86,7 @@ export class WorldMaps {
     }));
 
     this.ecoBlit = new Blit(fsMaterial(/* glsl */ `
-      ${RAW_HEADER}${GLSL_COMMON}${PACK}${GLSL_TERRAIN}${GLSL_ECOLOGY}
+      ${RAW_HEADER}${GLSL_COMMON}${GLSL_TERRAIN}${GLSL_ECOLOGY}
       uniform vec4 uWin;
       uniform sampler2D uMap;
       uniform float uTexel;
@@ -112,10 +102,10 @@ export class WorldMaps {
         float hU = texture(uMap, vUv + vec2(0.0,e)).r;
         float ws = uWin.z * e * 2.0;
         vec3 n = normalize(vec3(hL - hR, ws, hD - hU));
-        vec2 wf = unpack2(m.b);
-        vec2 sc = unpack2(m.a);
-        vec4 info = vec4(sc.x, sc.y, 0.0, wf.y);
-        oEco = ecologyField(wp, m.r, wf.x, info, n);
+        float steep = clamp((1.0 - n.y) * 2.2, 0.0, 1.0);
+        float channel = channelRaw(wp).x;
+        vec4 info = vec4(steep, smoothstep(0.615, 0.965, channel), 0.0, m.a);
+        oEco = ecologyField(wp, m.r, m.b, info, n);
       }
     `, {
       uWin: { value: new THREE.Vector4() },
@@ -125,7 +115,7 @@ export class WorldMaps {
     }));
 
     this.aoBlit = new Blit(fsMaterial(/* glsl */ `
-      ${RAW_HEADER}${GLSL_COMMON}${PACK}
+      ${RAW_HEADER}${GLSL_COMMON}
       uniform vec4 uWin;
       uniform sampler2D uMap;
       uniform sampler2D uEco;
@@ -164,8 +154,15 @@ export class WorldMaps {
           can += texture(uEco, vUv + o).g * w; wsum += w;
         }
         can /= wsum;
-        float slope = 1.0 - clamp(texture(uMap, vUv).r * 0.0 + 1.0, 0.0, 1.0);
-        oAo = vec4(skyVis, pow(skyVis, 1.6), can, slope);
+        float e2 = 1.5 / uWin.z * (uWin.z / 1024.0);
+        float t = 2.0 / 1024.0;
+        float hL = texture(uMap, vUv - vec2(t, 0.0)).r;
+        float hR = texture(uMap, vUv + vec2(t, 0.0)).r;
+        float hD = texture(uMap, vUv - vec2(0.0, t)).r;
+        float hU = texture(uMap, vUv + vec2(0.0, t)).r;
+        float ws = uWin.z * t * 2.0;
+        vec3 nrm = normalize(vec3(hL - hR, ws, hD - hU));
+        oAo = vec4(skyVis, pow(skyVis, 1.6), can, 1.0 - nrm.y);
       }
     `, {
       uWin: { value: new THREE.Vector4() },
@@ -175,7 +172,7 @@ export class WorldMaps {
     }));
 
     this.cpuBlit = new Blit(fsMaterial(/* glsl */ `
-      ${RAW_HEADER}${GLSL_COMMON}${PACK}
+      ${RAW_HEADER}${GLSL_COMMON}
       uniform vec4 uWin;
       uniform sampler2D uMap;
       uniform sampler2D uEco;
@@ -188,7 +185,6 @@ export class WorldMaps {
         vec4 m = texture(uMap, vUv);
         vec4 e = texture(uEco, vUv);
         vec4 a = texture(uAo, vUv);
-        vec2 wf = unpack2(m.b);
         float t = uTexel;
         float hL = texture(uMap, vUv - vec2(t,0.0)).r;
         float hR = texture(uMap, vUv + vec2(t,0.0)).r;
@@ -239,8 +235,9 @@ export class WorldMaps {
     this.cpuBlit.material.uniforms.uWin.value.copy(win);
     this.cpuBlit.render(r, this.cpuRT);
 
-    r.readRenderTargetPixels(this.cpuRT, 0, 0, this.cpuRes, this.cpuRes, this.cpuA, 0);
-    r.readRenderTargetPixels(this.cpuRT, 0, 0, this.cpuRes, this.cpuRes, this.cpuB, 1);
+    // the 7th argument is the cube face, the 8th selects the MRT attachment
+    r.readRenderTargetPixels(this.cpuRT, 0, 0, this.cpuRes, this.cpuRes, this.cpuA, 0, 0);
+    r.readRenderTargetPixels(this.cpuRT, 0, 0, this.cpuRes, this.cpuRes, this.cpuB, 0, 1);
 
     r.setRenderTarget(prevTarget);
     r.autoClear = prevAutoClear;

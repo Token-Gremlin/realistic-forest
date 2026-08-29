@@ -56,7 +56,7 @@ float mediaDensity(vec3 p, out float mistFrac){
   if(above < -1.5) { return 0.0; }
 
   vec4 m = mapSample(p.xz);
-  float wetness = clamp(m.a, 0.0, 1.0);
+  float wetness = clamp(m.b, 0.0, 1.0);
   float waterDepth = m.g - m.r;
 
   // --- ground mist: an exponential shell hugging the terrain
@@ -71,7 +71,7 @@ float mediaDensity(vec3 p, out float mistFrac){
   vec3 wind = vec3(uWind.x, 0.0, uWind.y) * uTime * (0.45 + uWind.z * 0.16);
   vec4 dt = texture(uDetailTex, (p + wind * 0.6) * 0.0125);
   vec4 dt2 = texture(uDetailTex, (p + wind * 1.7) * 0.052);
-  float wisp = mix(0.35, 1.65, dt.a) * mix(0.6, 1.4, dt2.r);
+  float wisp = mix(0.40, 1.50, dt.a) * mix(0.70, 1.28, dt2.r);
   mist *= wisp;
   mistFrac = mist;
 
@@ -82,7 +82,7 @@ float mediaDensity(vec3 p, out float mistFrac){
   // --- rain veiling
   float rain = uWeather.z * 0.030 * (0.7 + 0.6 * dt2.g);
 
-  return max(mist * 0.021 + hfog + haze + rain, 0.0);
+  return max(mist * 0.0145 + hfog + haze + rain, 0.0);
 }
 
 void main(){
@@ -101,11 +101,14 @@ void main(){
 
   vec3 scatter = vec3(0.0);
   float T = 1.0;
+  // uSunColor carries irradiance, so in-scattering is sigma * phase * E with no
+  // extra gain. Getting this wrong by 4x is what turns cinematic mist into a
+  // white screen filter.
   float mu = dot(rd, uSunDir);
-  float ph = mix(phaseHG(mu, 0.72), phaseHG(mu, -0.24), 0.28) * 4.0;
-  float phMoon = phaseHG(dot(rd, uMoonDir), 0.6) * 4.0;
-  vec3 ambTop = skyIrradiance(vec3(0.0, 1.0, 0.0)) * 0.115;
-  vec3 ambSide = skyIrradiance(rd) * 0.075;
+  float ph = mix(phaseHG(mu, 0.72), phaseHG(mu, -0.24), 0.28);
+  float phMoon = phaseHG(dot(rd, uMoonDir), 0.6);
+  vec3 ambTop = skyIrradiance(vec3(0.0, 1.0, 0.0)) * 0.062;
+  vec3 ambSide = skyIrradiance(rd) * 0.036;
 
   float prevT = 0.0;
   for(int i = 0; i < 64; i++){

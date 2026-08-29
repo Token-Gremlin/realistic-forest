@@ -25,6 +25,9 @@ export class Forest {
       horizonSteps: quality.horizonSteps,
       horizonDirs: quality.horizonDirs,
       seedX: 13.77, seedY: 91.31,
+      // more local relief than a gentle rolling heightfield: banks, ravines and
+      // real slopes are what make a forest interior feel three-dimensional
+      amp: 96, freq: 0.0019, detail: 1.30, valley: 14.5,
     });
     this.mapUniforms = this.maps.sharedUniforms;
 

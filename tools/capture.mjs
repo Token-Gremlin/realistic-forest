@@ -110,12 +110,21 @@ if (ready) {
   writeFileSync(resolve(outDir, 'perf.json'), JSON.stringify({ perf, args }, null, 2));
 
   if (args.js) {
-    console.log(`eval: ${args.js}`);
-    await page.evaluate((code) => {
+    const ret = await page.evaluate((code) => {
       // eslint-disable-next-line no-new-func
-      new Function('f', code)(window.__forest);
+      const r = new Function('f', code)(window.__forest);
+      return r === undefined ? null : r;
     }, args.js);
+    if (ret !== null) console.log(`js result: ${typeof ret === 'string' ? ret : JSON.stringify(ret, null, 2)}`);
     await new Promise((r) => setTimeout(r, parseInt(args.evalSettle ?? '2000', 10)));
+  }
+  if (args.js2) {
+    const ret = await page.evaluate((code) => {
+      // eslint-disable-next-line no-new-func
+      const r = new Function('f', code)(window.__forest);
+      return r === undefined ? null : r;
+    }, args.js2);
+    if (ret !== null) console.log(`js2 result: ${typeof ret === 'string' ? ret : JSON.stringify(ret, null, 2)}`);
   }
 
   const shotList = shots.length ? shots : ['00'];
@@ -129,8 +138,13 @@ if (ready) {
       }, actIdx);
       await new Promise((r) => setTimeout(r, 3000));
     }
+    // pause the render loop first: on a software rasteriser a fresh frame can
+    // take longer than the screenshot timeout
+    await page.evaluate(() => { if (window.__forest) window.__forest.state.running = false; });
+    await new Promise((r) => setTimeout(r, 400));
     const file = resolve(outDir, `frame_${s}.png`);
-    await page.screenshot({ path: file });
+    await page.screenshot({ path: file, timeout: 180000, animations: 'disabled' });
+    await page.evaluate(() => { if (window.__forest) window.__forest.state.running = true; });
     console.log(`wrote ${file}`);
   }
 } else {

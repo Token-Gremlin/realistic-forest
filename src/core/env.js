@@ -37,6 +37,9 @@ export const Env = {
     uResolution: { value: new THREE.Vector2(1, 1) },
     uNearFar: { value: new THREE.Vector2(0.1, 6000) },
     uJitter: { value: new THREE.Vector2(0, 0) },
+    // pixels per metre at one metre of view depth; lets thin geometry widen
+    // itself to stay above a pixel instead of sparkling
+    uProjScaleY: { value: 500 },
     uViewProj: { value: new THREE.Matrix4() },
     uInvViewProj: { value: new THREE.Matrix4() },
     uPrevViewProj: { value: new THREE.Matrix4() },

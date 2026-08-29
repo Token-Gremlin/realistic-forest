@@ -88,7 +88,7 @@ vec4 marchClouds(vec3 ro, vec3 rd, vec3 sunDir, vec3 sunCol, vec3 ambTop, vec3 a
 
   float ds = span / float(steps);
   float mu = dot(rd, sunDir);
-  float ph = mix(phaseHG(mu, 0.82), phaseHG(mu, -0.28), 0.32) * 4.0;
+  float ph = mix(phaseHG(mu, 0.82), phaseHG(mu, -0.28), 0.32);
   float phIso = 0.25 / PI;
 
   vec3 L = vec3(0.0);
@@ -147,9 +147,9 @@ vec3 cirrus(vec3 ro, vec3 rd, vec3 sunDir, vec3 sunCol, out float trans){
   float d = cmap(f, 1.0 - uCloud2.z * 0.85, 1.0);
   d = pow(d, 1.5) * 0.85;
   float mu = dot(rd, sunDir);
-  float ph = mix(phaseHG(mu, 0.65), 0.08, 0.5) * 3.0;
+  float ph = mix(phaseHG(mu, 0.65), 0.08, 0.5);
   trans = exp(-d * 2.2);
-  return sunCol * d * ph * 0.55;
+  return sunCol * d * ph * 2.2;
 }
 `;
 

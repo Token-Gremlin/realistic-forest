@@ -88,7 +88,7 @@ vec4 flakes(vec2 p, float aniso){
 Ground groundSurface(vec3 wp, vec3 N, vec4 eco, vec4 mapv, vec4 ao, float lodPx){
   Ground g;
   float moisture = eco.r, canopy = eco.g, rockM = eco.b, litterM = eco.a;
-  float wetness = clamp(mapv.a, 0.0, 1.0);
+  float wetness = clamp(mapv.b, 0.0, 1.0);
   float waterDepth = mapv.g - mapv.r;
   float slope = 1.0 - clamp(N.y, 0.0, 1.0);
   float steep = smoothstep(0.16, 0.62, slope);

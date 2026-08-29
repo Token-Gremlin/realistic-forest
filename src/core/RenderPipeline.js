@@ -38,7 +38,7 @@ export class RenderPipeline {
       vignette: 0.30,
       saturation: 1.03,
       punch: 1.0,
-      chroma: 0.14,
+      chroma: 0.09,
       sharpen: 0.22,
       aerial: 1.0,
       aoRadius: 1.35,
@@ -46,7 +46,7 @@ export class RenderPipeline {
       exposure: 1.0,
     };
 
-    this.dof = { focus: 12, aperture: 22, maxCoc: 16, enabled: true };
+    this.dof = { focus: 12, aperture: 14, maxCoc: 12, enabled: true };
 
     this._buildTargets(2, 2);
     this._buildPasses();
@@ -198,7 +198,7 @@ export class RenderPipeline {
     this.dofPass = new Blit(fsMaterial(dofFragment(), {
       uColor: { value: null }, uDepthTex: { value: null },
       uResolution: { value: new THREE.Vector2() }, uNearFar: U.uNearFar,
-      uDof: { value: new THREE.Vector4(12, 22, 16, 0) },
+      uDof: { value: new THREE.Vector4(12, 14, 12, 0) },
       uInvViewProj: U.uInvViewProj, uCamPos: U.uCamPos,
     }));
 
@@ -207,8 +207,8 @@ export class RenderPipeline {
       uDepthTex: { value: null }, uMiscTex: { value: null },
       uResolution: U.uResolution, uNearFar: U.uNearFar,
       uGrade: { value: new THREE.Vector4(1, 0.045, 0.028, 0.30) },
-      uGrade2: { value: new THREE.Vector4(1.03, 1.0, 0.14, 0.22) },
-      uDofParams: { value: new THREE.Vector4(12, 22, 16, 1) },
+      uGrade2: { value: new THREE.Vector4(1.03, 1.0, 0.09, 0.22) },
+      uDofParams: { value: new THREE.Vector4(12, 14, 12, 1) },
       uMotionBlur: { value: 0.55 },
       uTime: U.uTime, uInvViewProj: U.uInvViewProj, uCamPos: U.uCamPos,
       uWeather: U.uWeather,

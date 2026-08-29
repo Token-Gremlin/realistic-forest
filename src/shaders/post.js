@@ -22,8 +22,16 @@ vec3 rgb2ycocg(vec3 c){
 vec3 ycocg2rgb(vec3 c){
   return vec3(c.x + c.y - c.z, c.x + c.z, c.x - c.y - c.z);
 }
-vec3 tonemapT(vec3 c){ return c / (1.0 + maxc(c)); }
-vec3 tonemapInv(vec3 c){ return c / max(1.0 - maxc(c), 1e-4); }
+vec3 tonemapT(vec3 c){ return c / (1.0 + maxc(max(c, 0.0))); }
+/**
+ * The neighbourhood clamp happens in YCoCg and can push a channel past 1 after
+ * the round trip; without the guard the reciprocal blows up and single channels
+ * go negative, which shows up as magenta speckle in shadowed areas.
+ */
+vec3 tonemapInv(vec3 c){
+  c = clamp(c, vec3(0.0), vec3(0.994));
+  return c / max(1.0 - maxc(c), 6.0e-3);
+}
 
 void main(){
   vec2 texel = 1.0 / uResolution;
@@ -250,14 +258,18 @@ void main(){
   // ---- bloom
   col += texture(uBloom, uv).rgb * uGrade.y;
 
-  // ---- chromatic aberration toward the frame edge (linear, before tonemap)
+  // ---- lateral chromatic aberration toward the frame edge.
+  // Added as a *difference* so it does not discard the motion-blur and depth of
+  // field work already composed above; sampling raw colour per channel instead
+  // would make R and B come from a different image than G.
   float ca = uGrade2.z;
   if(ca > 0.0001){
-    vec2 dd = (uv - 0.5);
-    float r2 = dot(dd, dd);
-    vec2 off = dd * r2 * ca * 0.02;
-    col.r = texture(uColor, uv - off).r + texture(uBloom, uv - off).r * uGrade.y;
-    col.b = texture(uColor, uv + off).b + texture(uBloom, uv + off).b * uGrade.y;
+    vec2 dd = uv - 0.5;
+    vec2 off = dd * dot(dd, dd) * ca * 0.035;
+    vec3 c0 = texture(uColor, uv).rgb;
+    col.r += texture(uColor, uv - off).r - c0.r;
+    col.b += texture(uColor, uv + off).b - c0.b;
+    col = max(col, vec3(0.0));
   }
 
   // ---- optical vignette in linear light

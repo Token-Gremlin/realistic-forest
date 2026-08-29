@@ -243,7 +243,7 @@ vec4 ecologyField(vec2 wp, float h, float wetness, vec4 info, vec3 n){
  * analytic terrain: grass, clutter, water, volumetrics, wetness.
  */
 export const GLSL_MAPS = /* glsl */ `
-uniform sampler2D uMapTex;   // R height, G water height, B flow, A wetness
+uniform sampler2D uMapTex;   // R height, G water surface height, B wetness, A flow
 uniform sampler2D uEcoTex;   // R moisture, G canopy, B rock, A litter
 uniform sampler2D uAoTex;    // R sky visibility, G macro AO, B canopy shade, A slope
 uniform vec4 uMapInfo;       // xy centre, z span, w 1/span
@@ -258,6 +258,9 @@ vec4 mapSample(vec2 wp){ return texture(uMapTex, mapUv(wp)); }
 vec4 ecoSample(vec2 wp){ return texture(uEcoTex, mapUv(wp)); }
 vec4 aoSample(vec2 wp){ return texture(uAoTex, mapUv(wp)); }
 float groundHeight(vec2 wp){ return texture(uMapTex, mapUv(wp)).r; }
+float mapWetness(vec2 wp){ return clamp(texture(uMapTex, mapUv(wp)).b, 0.0, 1.0); }
+float mapFlow(vec2 wp){ return clamp(texture(uMapTex, mapUv(wp)).a, 0.0, 1.0); }
+float mapWaterDepth(vec2 wp){ vec4 m = texture(uMapTex, mapUv(wp)); return m.g - m.r; }
 vec3 groundNormalMap(vec2 wp, float e){
   float hL = groundHeight(wp - vec2(e, 0.0));
   float hR = groundHeight(wp + vec2(e, 0.0));

@@ -195,12 +195,14 @@ async function start() {
     // sky probe + exposure adaptation
     if (frames % 4 === 0) forest.sky.updateProbe(weather.nightAmount);
     if (state.exposureAuto) {
-      // metered off the lit frame, with slow eye-like adaptation and a
-      // deliberate bias toward the shadows so the forest interior stays readable
-      const luma = pipeline.sceneLuma;
-      const key = 0.115;
-      const target = THREE.MathUtils.clamp(key / Math.max(luma, 1e-4), 0.03, 60);
-      const rate = target < exposure ? 1.1 : 0.55;      // closing down is faster
+      // Partial adaptation: exposure follows key / luma^0.65 rather than
+      // key / luma. Full compensation would drag a dark forest interior up to
+      // mid grey, flattening it and making the mist read as milk; partial
+      // adaptation keeps the shade genuinely dark while still opening up when
+      // the camera breaks into a clearing.
+      const luma = Math.max(pipeline.sceneLuma, 1e-5);
+      const target = THREE.MathUtils.clamp(0.223 / Math.pow(luma, 0.65), 0.08, 12);
+      const rate = target < exposure ? 1.4 : 0.5;      // closing down is faster
       exposure = THREE.MathUtils.lerp(exposure, target, 1 - Math.exp(-dt * rate));
       pipeline.settings.exposure = exposure;
     }
@@ -214,7 +216,7 @@ async function start() {
       const target = THREE.MathUtils.clamp(measured * 0.72 + intent * 0.28, 0.5, 400);
       pipeline.dof.focus = THREE.MathUtils.lerp(pipeline.dof.focus, target, 1 - Math.exp(-dt * 2.2));
       // wider aperture up close, tighter for landscape shots
-      const ap = THREE.MathUtils.clamp(34 - Math.log2(Math.max(target, 1)) * 4.4, 4, 34);
+      const ap = THREE.MathUtils.clamp(21 - Math.log2(Math.max(target, 1)) * 3.1, 3, 21);
       pipeline.dof.aperture = THREE.MathUtils.lerp(pipeline.dof.aperture, ap, 1 - Math.exp(-dt * 1.5));
     }
 
@@ -226,6 +228,7 @@ async function start() {
     U.uInvViewProj.value.copy(U.uViewProj.value).invert();
     U.uPrevViewProj.value.copy(frames === 0 ? U.uViewProj.value : prevViewProj);
     U.uNearFar.value.set(camera.near, camera.far);
+    U.uProjScaleY.value = camera.projectionMatrix.elements[5] * pipeline.height * 0.5;
 
     renderer.info.reset();
     pipeline.render(camera, { nightAmount: weather.nightAmount });
