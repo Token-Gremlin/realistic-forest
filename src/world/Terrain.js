@@ -212,9 +212,10 @@ Ground groundSurface(vec3 wp, vec3 N, vec4 eco, vec4 mapv, vec4 ao, float lodPx)
   margin *= 1.0 - steep * 0.35;
   float wet = clamp(wetness * 1.05 + margin * 0.85, 0.0, 1.0);
   wet = max(wet, smoothstep(-0.08, 0.28, waterDepth));
-  alb *= mix(1.0, 0.38, wet);
+  alb = mix(alb, silt * 0.48, wet * 0.55);
+  alb *= mix(1.0, 0.42, wet);
   // darker still right at the meniscus so the waterline reads as a line
-  alb *= mix(1.0, 0.62, margin * 0.7);
+  alb *= mix(1.0, 0.58, margin * 0.75);
   rough = mix(rough, 0.10, wet * 0.9);
   rough = mix(rough, 0.055, margin * 0.65);
   grad *= mix(1.0, 0.32, wet);

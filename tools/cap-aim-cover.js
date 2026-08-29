@@ -49,7 +49,12 @@ const prefer = (typeof AIM === 'string' && AIM) ? AIM.split(',') : ['vine', 'lim
 let hit = nearestKind(f, [prefer[0]]);
 if (!hit && prefer.length > 1) hit = nearestKind(f, prefer.slice(1));
 if (hit) {
-  const midY = hit.y + (hit.key === 'vine' ? Math.max(hit.h * 0.55, 2.4) : Math.max(hit.h * 0.4, 0.35));
+  const p = f.camera.position;
+  const horiz = Math.hypot(hit.x - p.x, hit.z - p.z);
+  // look across the hanging strands, not up into the sun
+  const midY = hit.key === 'vine'
+    ? p.y + Math.min(2.4, horiz * 0.42 + 0.8)
+    : hit.y + Math.max(hit.h * 0.4, 0.35);
   f.camera.lookAt(hit.x, midY, hit.z);
   f.camera.updateMatrixWorld(true);
 }

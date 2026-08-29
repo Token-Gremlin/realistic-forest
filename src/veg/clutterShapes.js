@@ -412,7 +412,7 @@ export function buildVine(seed, opts = {}) {
         Math.sin(az + spin) * lean * hang * drop * 0.55 + Math.sin(az + 1.3) * wander,
       ));
     }
-    const rad = lerp(0.009, 0.022, r.f());
+    const rad = lerp(0.014, 0.032, r.f());
     const rads = [];
     for (let i = 0; i <= segs; i++) rads.push(rad * (1 - (i / segs) * 0.5));
     tube(mb, pts, rads, 5, PART.STEM, {
@@ -426,8 +426,8 @@ export function buildVine(seed, opts = {}) {
       const along = V().subVectors(pts[si + 1], pts[si]).normalize();
       const nb = { t: V(), b: V() };
       orthoBasis(along, nb);
-      const w = lerp(0.14, 0.34, r.f());
-      const hh = w * lerp(1.6, 2.6, r.f());
+      const w = lerp(0.22, 0.52, r.f());
+      const hh = w * lerp(1.7, 2.8, r.f());
       const roll = r.f() * Math.PI * 2;
       const cr = Math.cos(roll), sr = Math.sin(roll);
       const ax = V().addScaledVector(nb.t, cr).addScaledVector(nb.b, sr);

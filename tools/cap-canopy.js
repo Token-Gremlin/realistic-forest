@@ -26,7 +26,7 @@ f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.75);
 const p = f.camera.position;
 p.y = Math.max(p.y, maps.height(p.x, p.z) + 1.3);
 // look up into the closed canopy so hanging vines cross the frame
-f.camera.lookAt(p.x + 4.5, p.y + 4.8, p.z + 1.8);
+f.camera.lookAt(p.x + 6.5, p.y + 1.8, p.z + 2.4);
 f.camera.updateMatrixWorld(true);
 
 return {

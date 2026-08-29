@@ -122,8 +122,8 @@ export class Water {
       uCellSize: { value: CELL },
       uGrid: { value: GRID },
       uWaterWave: { value: new THREE.Vector4(1.0, 0.30, 0.5, 0.0) },
-      uAbsorb: { value: new THREE.Vector3(0.42, 0.20, 0.30) },
-      uScatter: { value: new THREE.Vector3(0.035, 0.062, 0.052) },
+      uAbsorb: { value: new THREE.Vector3(0.62, 0.26, 0.44) },
+      uScatter: { value: new THREE.Vector3(0.055, 0.088, 0.068) },
     };
 
     this.material = new THREE.RawShaderMaterial({
@@ -297,8 +297,9 @@ void main(){
 
   float f0 = 0.02;
   float fres = f0 + (1.0 - f0) * pow(1.0 - cosV, 5.0);
-  // roughen the Fresnel where the surface is choppy so it does not read as glass
-  fres = mix(fres, clamp(fres * 1.6, 0.0, 1.0), clamp(flowMag * 0.5, 0.0, 1.0));
+  // forest water is tannin-stained, not a lake of sky: keep Fresnel modest
+  fres = mix(fres, clamp(fres * 1.25, 0.0, 0.72), clamp(flowMag * 0.45, 0.0, 1.0));
+  fres = min(fres, 0.46);
 
   vec3 col = mix(bedLit + inScatter, refl, fres);
 
