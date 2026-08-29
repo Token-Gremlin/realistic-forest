@@ -137,9 +137,9 @@ in the litter, and the terrain shader draws a dark glossy wet margin plus
 small puddles along the waterline.
 
 `src/fx/Life.js` keeps the woods from looking empty between storms: midges mill
-in wet air at dusk, fireflies pulse in the understorey at night, distant birds
-cross a clearing, and a calm leaf-fall answers season and wind. All four are
-hashed instances in a camera volume — no CPU particles.
+in wet air at dusk, fireflies pulse as tight additive points in the understorey
+at night, distant birds cross a clearing, and a calm leaf-fall answers season
+and wind. All four are hashed instances in a camera volume — no CPU particles.
 
 `src/fx/Fire.js` is a local burn: ground flames, rising embers and a smoke
 column around a world point. Deferred lighting and volumetrics take the same
