@@ -56,6 +56,7 @@ export class Weather {
     this.target = { ...this.state };
 
     this.flash = { t: -10, intensity: 0, pos: new THREE.Vector3(), dur: 0, seq: [] };
+    this.holdFlash = false;
     this.nextStrike = 3;
     this.strikeCallbacks = [];
     this.nightAmount = 0;
@@ -172,7 +173,7 @@ export class Weather {
     }
     let flashAmp = 0;
     if (this.flash.t >= 0) {
-      this.flash.t += dt;
+      if (!this.holdFlash) this.flash.t += dt;
       for (const st of this.flash.seq) {
         const dt2 = this.flash.t - st.t;
         if (dt2 >= 0 && dt2 < st.dur * 5) {

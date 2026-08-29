@@ -122,6 +122,7 @@ export class Lightning {
     this.forest = forest;
     this.seed = 1;
     this.active = false;
+    this.sawFlash = false;
     this.lightPos = new THREE.Vector3();
     this.stats = { segs: 0 };
 
@@ -305,6 +306,7 @@ export class Lightning {
     this.bufMeta.needsUpdate = true;
     this.stats.segs = n;
     this.active = n > 0;
+    this.sawFlash = false;
     this.mesh.visible = this.active;
   }
 
@@ -314,13 +316,15 @@ export class Lightning {
       return;
     }
     const live = U.uFlash.value.w > 0.0008;
-    this.mesh.visible = live;
+    this.mesh.visible = live || !this.sawFlash;
     if (live) {
       U.uFlash.value.x = this.lightPos.x;
       U.uFlash.value.y = this.lightPos.y;
       U.uFlash.value.z = this.lightPos.z;
-    } else {
+      this.sawFlash = true;
+    } else if (this.sawFlash) {
       this.active = false;
+      this.mesh.visible = false;
     }
   }
 
