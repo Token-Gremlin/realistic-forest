@@ -125,8 +125,8 @@ async function start() {
     }
   };
 
-  weather.onStrike((pos, power, close) => {
-    for (const s of forest.systems) s.onLightning?.(pos, power, close);
+  weather.onStrike((pos, power, close, dist) => {
+    for (const s of forest.systems) s.onLightning?.(pos, power, close, dist);
   });
 
   const state = {

@@ -119,6 +119,11 @@ minus the camera's so a pan becomes a streak instead of a screen-space overlay.
 Hits become ground crowns, water rings and canopy ticks; the water shader
 already stirs its own rain ripples from the same weather uniform.
 
+`src/fx/Lightning.js` grows a fractal 3D channel on each strike — midpoint
+displacement with side leaders — and meshes it as a camera-facing ribbon. The
+deferred flash, volumetrics, sky and water already listen to the same uniform;
+the bolt just pulls that light down the channel so the forest actually sees it.
+
 `src/director/CameraDirector.js` scouts locations against the world maps so a
 stream shot finds water and a clearing shot finds an opening, then executes the
 shot with damped look-at, a hand-held micro-shake and auto-focus.

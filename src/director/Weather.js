@@ -84,11 +84,14 @@ export class Weather {
   _triggerStrike(camPos) {
     const s = this.state;
     const close = Math.random() < 0.35 + s.storm * 0.3;
-    const dist = close ? 60 + Math.random() * 220 : 500 + Math.random() * 2600;
+    const dist = close ? 40 + Math.random() * 160 : 500 + Math.random() * 2600;
     const ang = Math.random() * Math.PI * 2;
+    // close leaders start just above the canopy so the channel can cross a
+    // forest camera; distant ones stay in the storm deck
+    const h = close ? 88 + Math.random() * 150 : 380 + Math.random() * 720;
     this.flash.pos.set(
       camPos.x + Math.cos(ang) * dist,
-      420 + Math.random() * 900,
+      h,
       camPos.z + Math.sin(ang) * dist,
     );
     const power = (close ? 1.0 : 0.42) * (0.55 + Math.random() * 0.75) * (0.4 + s.storm);
