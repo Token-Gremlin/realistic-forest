@@ -77,8 +77,19 @@ Fall place(float tShift){
   vec3 vol = uVolume;
   vec2 adv = wdir * (0.08 + wind * 0.018) * (uPhase >= 0.0 ? 0.0 : uTime);
   vec3 base;
-  base.x = origin.x + (fract(h3.x + 0.5 + adv.x / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
-  base.z = origin.z + (fract(h3.z + 0.5 + adv.y / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
+  if(uPhase >= 0.0){
+    // stills: pack the field in front of the lens so wood actually crosses frame
+    vec3 fw = normalize(uCamFwd + vec3(1e-5, 0.0, 0.0));
+    vec3 rt = normalize(cross(fw, vec3(0.0, 1.0, 0.0)));
+    base = origin
+      + fw * mix(5.5, 17.0, h3.x)
+      + rt * (h3.z - 0.5) * 13.0;
+    base.y = origin.y;
+  } else {
+    base.x = origin.x + (fract(h3.x + 0.5 + adv.x / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
+    base.z = origin.z + (fract(h3.z + 0.5 + adv.y / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
+    base.y = origin.y;
+  }
 
   if(uBurst.w > 0.02 && h.w > 0.58){
     base.xz = mix(base.xz, uBurst.xz + (h3.xz - 0.5) * 10.0, uBurst.w * 0.65);
@@ -140,6 +151,7 @@ uniform float uDrive;
 uniform float uPhase;
 uniform vec3 uVolume;
 uniform vec4 uBurst;
+uniform vec3 uCamFwd;
 ${GLSL_COMMON}
 ${GLSL_WIND}
 ${GLSL_MAPS}
@@ -249,6 +261,7 @@ function makeUniforms(forest) {
     uPhase: { value: -1 },
     uVolume: { value: new THREE.Vector3(20, 18, 20) },
     uBurst: { value: new THREE.Vector4() },
+    uCamFwd: { value: new THREE.Vector3(0, 0, -1) },
   };
 }
 
@@ -257,6 +270,7 @@ export class FallingBranches {
     this.forest = forest;
     this.holdPhase = -1;
     this.burst = { pos: new THREE.Vector3(), t: -10 };
+    this._fwd = new THREE.Vector3(0, 0, -1);
     const total = Math.max(36, Math.round((quality.rainParticles ?? 24000) * 0.01));
     const variants = 3;
     const per = Math.ceil(total / variants);
@@ -316,7 +330,8 @@ export class FallingBranches {
     this.burst.t = 0;
   }
 
-  update(dt) {
+  update(dt, camera) {
+    if (camera) camera.getWorldDirection(this._fwd);
     const storm = U.uWeather.value.y;
     const wind = U.uWind.value.z;
     const drive = Math.max(storm, THREE.MathUtils.smoothstep(wind, 8, 17));
@@ -335,6 +350,7 @@ export class FallingBranches {
       layer.uniforms.uDrive.value = uDrive;
       layer.uniforms.uPhase.value = this.holdPhase;
       layer.uniforms.uBurst.value.set(this.burst.pos.x, this.burst.pos.y, this.burst.pos.z, burstW);
+      layer.uniforms.uCamFwd.value.copy(this._fwd);
       n += on ? layer.count : 0;
     }
     this.stats.falling = n;
