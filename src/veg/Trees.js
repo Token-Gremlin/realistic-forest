@@ -67,6 +67,7 @@ export class Trees {
     this._lastRebuild = new THREE.Vector3(1e9, 1e9, 1e9);
     this._frame = 0;
     this.stats = { trees: 0, lod: [0, 0, 0, 0], fallen: 0 };
+    this._wounds = new Map();
   }
 
   /* ------------------------------------------------------------- geometry */
@@ -257,7 +258,7 @@ export class Trees {
         const lean = (0.02 + eco.slope * 0.14) * (1 - eco.canopy * 0.4);
         const leanDir = rng.f() * Math.PI * 2;
 
-        trees.push({
+        const rec = {
           x, z, y: eco.height,
           scale,
           cos: Math.cos(yaw), sin: Math.sin(yaw),
@@ -268,7 +269,14 @@ export class Trees {
           variant: vi,
           height: variant.height * scale,
           crown: variant.crownRadius * scale,
-        });
+        };
+        const wound = this._wounds.get(`${x.toFixed(2)},${z.toFixed(2)}`);
+        if (wound) {
+          rec.damage = wound.damage;
+          rec.fallDirX = wound.fallDirX;
+          rec.fallDirZ = wound.fallDirZ;
+        }
+        trees.push(rec);
       }
     }
     return trees;
@@ -370,7 +378,27 @@ export class Trees {
         }
       }
     }
-    if (changed) this._damageDirty = true;
+    if (changed) {
+      this._damageDirty = true;
+      this._rememberWounds();
+    }
+  }
+
+  _rememberWounds() {
+    for (const list of this.chunks.values()) {
+      for (const t of list) {
+        if ((t.damage ?? 0) > 0.001) {
+          this._wounds.set(`${t.x.toFixed(2)},${t.z.toFixed(2)}`, {
+            damage: t.damage, fallDirX: t.fallDirX, fallDirZ: t.fallDirZ,
+          });
+        }
+      }
+    }
+    if (this._wounds.size > 4000) {
+      const extra = this._wounds.size - 3000;
+      const it = this._wounds.keys();
+      for (let i = 0; i < extra; i++) this._wounds.delete(it.next().value);
+    }
   }
 
   onLightning(pos) {
@@ -389,7 +417,10 @@ export class Trees {
         changed++;
       }
     }
-    if (changed) this._damageDirty = true;
+    if (changed) {
+      this._damageDirty = true;
+      this._rememberWounds();
+    }
   }
 
   _rebuildBuckets(camera) {
@@ -438,6 +469,9 @@ export class Trees {
           const ang = Math.hypot(t.tiltX, t.tiltZ) + k * 1.56;
           vals[6] = (t.fallDirX ?? 1) * ang;
           vals[7] = (t.fallDirZ ?? 0) * ang;
+          this._wounds.set(`${t.x.toFixed(2)},${t.z.toFixed(2)}`, {
+            damage: dmg, fallDirX: t.fallDirX, fallDirZ: t.fallDirZ,
+          });
         } else {
           vals[6] = t.tiltX; vals[7] = t.tiltZ;
         }

@@ -190,6 +190,7 @@ uniform vec4 uWeather;
 uniform float uTime;
 uniform float uNightAmount;
 uniform vec3 uVolume;
+uniform vec3 uCamFwd;
 uniform float uProjScaleY;
 
 in vec3 position;
@@ -214,7 +215,7 @@ void main(){
     return;
   }
 
-  vec3 origin = uCamPos;
+  vec3 origin = uCamPos + uCamFwd * 5.5;
   vec3 vol = uVolume;
   vec2 wander = vec2(sin(uTime * 0.11 + h.z * 5.0), cos(uTime * 0.09 + h.w * 4.2)) * 0.08;
   vec3 p;
@@ -238,8 +239,8 @@ void main(){
   p.y = ground + hover
     + sin(uTime * mix(0.4, 1.1, h.w) + h.z * 8.0) * 0.18;
 
-  float pulse = pow(0.5 + 0.5 * sin(uTime * mix(1.5, 3.8, h.w) + h.z * 14.0), 5.0);
-  pulse = mix(0.04, 1.0, pulse);
+  float pulse = pow(0.5 + 0.5 * sin(uTime * mix(1.5, 3.8, h.w) + h.z * 14.0), 3.2);
+  pulse = mix(0.28, 1.0, pulse);
 
   vec3 view = p - uCamPos;
   float dist = length(view);
@@ -566,12 +567,12 @@ export class Life {
       forest,
       Math.max(220, Math.round(rain * 0.045)),
       FIREFLY_VERT, FIREFLY_FRAG,
-      { uVolume: { value: new THREE.Vector3(12, 4.5, 12) } },
+      { uVolume: { value: new THREE.Vector3(12, 4.5, 12) }, uCamFwd: { value: new THREE.Vector3(0, 0, -1) } },
       true,
     );
     this.birds = makeLayer(
       forest,
-      Math.max(18, Math.round(rain * 0.0022)),
+      Math.max(28, Math.round(rain * 0.004)),
       BIRD_VERT, BIRD_FRAG,
       {},
       false,
@@ -590,7 +591,10 @@ export class Life {
     this.stats = { insects: 0, fireflies: 0, birds: 0, leaves: 0 };
   }
 
-  update() {
+  update(_dt, camera) {
+    if (camera) {
+      camera.getWorldDirection(this.fireflies.uniforms.uCamFwd.value);
+    }
     const night = U.uNightAmount.value;
     const rain = U.uWeather.value.z;
     const storm = U.uWeather.value.y;
