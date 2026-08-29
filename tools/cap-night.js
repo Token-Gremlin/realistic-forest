@@ -15,7 +15,8 @@ for (let i = 0; i < 130; i++) {
   const x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
   const s = maps.sample(x, z, {});
   if (!s.inside) continue;
-  const score = s.canopy * 1.1 + s.moisture * 1.3 + s.litter * 0.5
+  // a small opening so fireflies sit in air in front of dark trunks
+  const score = (1 - s.canopy) * 2.0 + s.moisture * 0.8 + (s.skyVis ?? 0) * 0.6
     - s.slope * 1.8 - (s.waterDepth > 0.12 ? 4 : 0);
   if (score > bestS) { bestS = score; best = { x, z, s }; }
 }
@@ -26,7 +27,7 @@ f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.75);
 const p = f.camera.position;
 p.y = Math.max(p.y, maps.height(p.x, p.z) + 1.35);
 // look across the understorey so fireflies sit in front of dark trunks
-f.camera.lookAt(p.x + 8.5, p.y + 0.55, p.z + 2.4);
+f.camera.lookAt(p.x + 10, p.y + 0.85, p.z + 2.2);
 f.camera.updateMatrixWorld(true);
 
 if (f.forest.life) {

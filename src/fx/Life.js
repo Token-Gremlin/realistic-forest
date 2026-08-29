@@ -251,8 +251,8 @@ void main(){
   vec3 side = normalize(cross(up, viewN));
   vec3 fwd = normalize(cross(viewN, side));
 
-  float size = mix(0.034, 0.068, h.z);
-  float minW = 1.55 / max(uProjScaleY / max(dist, 1.0), 1.0);
+  float size = mix(0.042, 0.080, h.z);
+  float minW = 2.2 / max(uProjScaleY / max(dist, 1.0), 1.0);
   size = max(size, minW);
 
   vec3 world = p + side * (position.x * size) + fwd * (position.y * size);

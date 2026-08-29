@@ -22,11 +22,11 @@ for (let i = 0; i < 110; i++) {
 const x = best?.x ?? c.x, z = best?.z ?? c.z;
 const gh = maps.height(x, z);
 f.forest.fire.ignite({ x, y: gh, z }, 1);
-f.camera.position.set(x - 13, gh + 2.4, z + 9.5);
+f.camera.position.set(x - 8.5, gh + 1.85, z + 6.2);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.8);
 const p = f.camera.position;
-p.y = Math.max(p.y, maps.height(p.x, p.z) + 2.1);
-f.camera.lookAt(x, gh + 1.15, z);
+p.y = Math.max(p.y, maps.height(p.x, p.z) + 1.65);
+f.camera.lookAt(x, gh + 0.85, z);
 f.camera.updateMatrixWorld(true);
 if (f.forest.fire) f.forest.fire.update(0.016);
 

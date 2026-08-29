@@ -44,12 +44,11 @@ if (near && nd < 14) {
 const nl = Math.hypot(lx, lz) || 1;
 lx /= nl; lz /= nl;
 p.y = Math.max(p.y, maps.height(p.x, p.z) + 5.2);
-f.camera.lookAt(p.x + lx * 18, p.y + 8.5, p.z + lz * 18);
+const sx = p.x + lx * 24;
+const sz = p.z + lz * 24;
+const strikeY = maps.height(sx, sz) + 46;
+f.camera.lookAt(sx, p.y + 16, sz);
 f.camera.updateMatrixWorld(true);
-
-const sx = p.x + lx * 38;
-const sz = p.z + lz * 38;
-const strikeY = maps.height(sx, sz) + 92;
 f.weather.holdFlash = true;
 f.weather.flash.pos.set(sx, strikeY, sz);
 f.weather.flash.seq = [{ t: 0, amp: 1.65, dur: 0.16 }];
