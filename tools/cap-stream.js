@@ -30,10 +30,10 @@ let x = best?.x ?? c.x, z = best?.z ?? c.z;
 let bank = { x, z, s: best?.s };
 for (let k = 0; k < 16; k++) {
   const a = k * 0.393;
-  const tx = x + Math.cos(a) * 5.2, tz = z + Math.sin(a) * 5.2;
+  const tx = x + Math.cos(a) * 3.4, tz = z + Math.sin(a) * 3.4;
   const s = maps.sample(tx, tz, {});
   if (!s.inside) continue;
-  if (s.waterDepth < 0.04 && s.waterDepth > -0.55) {
+  if (s.waterDepth < 0.03 && s.waterDepth > -0.28) {
     bank = { x: tx, z: tz, s };
     break;
   }
@@ -43,11 +43,14 @@ const gh = maps.height(bx, bz);
 const lookX = x, lookZ = z;
 const lookH = maps.height(lookX, lookZ);
 const lookW = Math.max(0, best?.s.waterDepth ?? 0);
-f.camera.position.set(bx - (lookX - bx) * 0.15, gh + 1.62, bz - (lookZ - bz) * 0.15);
-f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.65);
+const vx = lookX - bx, vz = lookZ - bz;
+const vl = Math.hypot(vx, vz) || 1;
+// stand back and up so GPU grass does not eat the waterline
+f.camera.position.set(bx - (vx / vl) * 5.8, gh + 2.25, bz - (vz / vl) * 5.8);
+f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.7);
 const p = f.camera.position;
-p.y = Math.max(p.y, maps.height(p.x, p.z) + 1.48);
-f.camera.lookAt(lookX, lookH + 0.08 + lookW * 0.2, lookZ);
+p.y = Math.max(p.y, maps.height(p.x, p.z) + 2.05);
+f.camera.lookAt(lookX, lookH + 0.04 + lookW * 0.15, lookZ);
 f.camera.updateMatrixWorld(true);
 
 return {
