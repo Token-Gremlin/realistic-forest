@@ -291,12 +291,12 @@ export class Lightning {
       const o = n * 3, m = n * 2;
       A[o] = s.a.x; A[o + 1] = s.a.y; A[o + 2] = s.a.z;
       B[o] = s.b.x; B[o + 1] = s.b.y; B[o + 2] = s.b.z;
-      M[m] = s.width * 0.22; M[m + 1] = s.bright;
+      M[m] = Math.max(s.width * 0.38, 0.12); M[m + 1] = s.bright;
       n++;
       const o2 = n * 3, m2 = n * 2;
       A[o2] = s.a.x; A[o2 + 1] = s.a.y; A[o2 + 2] = s.a.z;
       B[o2] = s.b.x; B[o2 + 1] = s.b.y; B[o2 + 2] = s.b.z;
-      M[m2] = s.width * 1.55; M[m2 + 1] = s.bright * 0.28;
+      M[m2] = Math.max(s.width * 2.4, 0.85); M[m2 + 1] = s.bright * 0.38;
       n++;
     }
     this.geometry.instanceCount = n;

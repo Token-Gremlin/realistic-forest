@@ -127,6 +127,12 @@ if (ready) {
     if (ret !== null) console.log(`js2 result: ${typeof ret === 'string' ? ret : JSON.stringify(ret, null, 2)}`);
   }
 
+  // draw one frame with the post-js2 state so the screenshot is not a stale
+  // framebuffer from the settle period (flashes, rain, camera aims, etc.)
+  await page.evaluate(() => {
+    window.__forest?.drawOnce?.();
+  });
+
   const shotList = shots.length ? shots : ['00'];
   for (const s of shotList) {
     if (s !== '00') {

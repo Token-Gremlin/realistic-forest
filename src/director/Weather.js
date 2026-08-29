@@ -100,11 +100,11 @@ export class Weather {
     this.flash.seq = [];
     let t = 0;
     for (let i = 0; i < strokes; i++) {
-      this.flash.seq.push({ t, amp: power * (i === 0 ? 1 : 0.35 + Math.random() * 0.5), dur: 0.055 + Math.random() * 0.09 });
-      t += 0.045 + Math.random() * 0.14;
+      this.flash.seq.push({ t, amp: power * (i === 0 ? 1 : 0.35 + Math.random() * 0.5), dur: 0.07 + Math.random() * 0.11 });
+      t += 0.05 + Math.random() * 0.16;
     }
     this.flash.t = 0;
-    this.flash.dur = t + 0.3;
+    this.flash.dur = t + 0.45;
     for (const cb of this.strikeCallbacks) {
       cb(this.flash.pos, power, close, dist);
     }

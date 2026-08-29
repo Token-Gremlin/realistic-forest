@@ -277,7 +277,17 @@ async function start() {
     }
   }
 
-  window.__forest = { forest, pipeline, weather, director, camera, renderer, controls, state };
+  const drawOnce = () => {
+    camera.updateMatrixWorld(true);
+    camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+    camera.updateProjectionMatrix();
+    U.uCamPos.value.copy(camera.position);
+    U.uViewProj.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    U.uInvViewProj.value.copy(U.uViewProj.value).invert();
+    pipeline.render(camera, { nightAmount: weather.nightAmount });
+  };
+
+  window.__forest = { forest, pipeline, weather, director, camera, renderer, controls, state, drawOnce };
   frame();
 }
 
