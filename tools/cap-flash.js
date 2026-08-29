@@ -3,7 +3,7 @@ f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
 f.state.exposureAuto = false;
-f.pipeline.settings.exposure = 1.35;
+f.pipeline.settings.exposure = 0.78;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
@@ -47,7 +47,7 @@ p.y = Math.max(p.y, maps.height(p.x, p.z) + 5.2);
 const sx = p.x + lx * 24;
 const sz = p.z + lz * 24;
 const strikeY = maps.height(sx, sz) + 46;
-f.camera.lookAt(sx, p.y + 16, sz);
+f.camera.lookAt(sx, (p.y + strikeY) * 0.5, sz);
 f.camera.updateMatrixWorld(true);
 f.weather.holdFlash = true;
 f.weather.flash.pos.set(sx, strikeY, sz);
