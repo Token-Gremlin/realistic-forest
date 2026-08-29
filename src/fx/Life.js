@@ -215,7 +215,7 @@ void main(){
     return;
   }
 
-  vec3 origin = uCamPos + uCamFwd * 5.5;
+  vec3 origin = uCamPos + uCamFwd * 4.2;
   vec3 vol = uVolume;
   vec2 wander = vec2(sin(uTime * 0.11 + h.z * 5.0), cos(uTime * 0.09 + h.w * 4.2)) * 0.08;
   vec3 p;
@@ -249,8 +249,8 @@ void main(){
   vec3 side = normalize(cross(up, viewN));
   vec3 fwd = normalize(cross(viewN, side));
 
-  float size = mix(0.07, 0.16, h.z);
-  float minW = 3.4 / max(uProjScaleY / max(dist, 1.0), 1.0);
+  float size = mix(0.11, 0.22, h.z);
+  float minW = 4.2 / max(uProjScaleY / max(dist, 1.0), 1.0);
   size = max(size, minW);
 
   vec3 world = p + side * (position.x * size) + fwd * (position.y * size);
@@ -567,7 +567,7 @@ export class Life {
       forest,
       Math.max(220, Math.round(rain * 0.045)),
       FIREFLY_VERT, FIREFLY_FRAG,
-      { uVolume: { value: new THREE.Vector3(12, 4.5, 12) }, uCamFwd: { value: new THREE.Vector3(0, 0, -1) } },
+      { uVolume: { value: new THREE.Vector3(7, 3.2, 7) }, uCamFwd: { value: new THREE.Vector3(0, 0, -1) } },
       true,
     );
     this.birds = makeLayer(
