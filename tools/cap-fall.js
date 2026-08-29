@@ -22,12 +22,31 @@ for (let i = 0; i < 120; i++) {
 }
 const x = best?.x ?? c.x, z = best?.z ?? c.z;
 const gh = maps.height(x, z);
-// stand in the opening, above the undergrowth, looking into the fall volume
 f.camera.position.set(x, gh + 5.8, z);
-f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.9);
+f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.1);
 const p = f.camera.position;
+// back away from the nearest large stem so the frame is air, not bark
+let near = null, nd = 1e9;
+for (const list of f.forest.trees?.chunks?.values?.() ?? []) {
+  for (const t of list) {
+    if (t.scale < 0.4) continue;
+    const d = Math.hypot(t.x - p.x, t.z - p.z);
+    if (d < nd) { nd = d; near = t; }
+  }
+}
+let lx = 16, lz = 4;
+if (near && nd < 14) {
+  const ax = p.x - near.x, az = p.z - near.z;
+  const al = Math.hypot(ax, az) || 1;
+  p.x += (ax / al) * 7.5;
+  p.z += (az / al) * 7.5;
+  lx = (ax / al) * 16;
+  lz = (az / al) * 16;
+}
+p.y = Math.max(p.y, maps.height(p.x, p.z) + 5.4);
+f.forest.trees?.pushOutOfTrunks?.(p, 1.0);
 p.y = Math.max(p.y, maps.height(p.x, p.z) + 5.2);
-f.camera.lookAt(p.x + 16, p.y + 5.8, p.z + 4);
+f.camera.lookAt(p.x + lx, p.y + 5.5, p.z + lz);
 f.camera.updateMatrixWorld(true);
 
 if (f.forest.falling) {
@@ -39,5 +58,7 @@ if (f.forest.debris) f.forest.debris.onLightning(p);
 return {
   act: f.weather.actName,
   canopy: +(best?.s.canopy ?? 0).toFixed(2),
+  sky: +(best?.s.skyVis ?? 0).toFixed(2),
+  nearTree: near ? +nd.toFixed(1) : null,
   falling: f.forest.falling?.stats ?? null,
 };
