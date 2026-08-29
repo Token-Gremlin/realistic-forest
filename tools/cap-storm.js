@@ -2,6 +2,10 @@ f.weather.setAct(7, true);
 f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
+f.state.exposureAuto = false;
+f.pipeline.settings.exposure = 1.85;
+f.pipeline.dof.aperture = 8;
+f.pipeline.dof.focus = 14;
 
 const cam = f.camera.position;
 let n = 0;
@@ -9,17 +13,17 @@ let stem = null;
 for (const list of f.forest.trees.chunks.values()) {
   for (const t of list) {
     const dx = t.x - cam.x, dz = t.z - cam.z;
-    if (dx * dx + dz * dz > 80 * 80) continue;
-    if (t.scale < 0.32) continue;
-    if (t.rnd > 0.70) {
+    if (dx * dx + dz * dz > 90 * 90) continue;
+    if (t.scale < 0.34) continue;
+    if (t.rnd > 0.68) {
       t.fallDirX = 0.82;
       t.fallDirZ = 0.48;
       const nn = Math.hypot(t.fallDirX, t.fallDirZ) || 1;
       t.fallDirX /= nn;
       t.fallDirZ /= nn;
-      t.damage = t.rnd > 0.86 ? 0.97 : 0.58;
+      t.damage = t.rnd > 0.84 ? 0.98 : 0.62;
       n++;
-      if (!stem || t.damage > stem.damage) stem = t;
+      if (!stem || t.height * t.damage > (stem.height * stem.damage)) stem = t;
     }
   }
 }
@@ -29,14 +33,15 @@ f.forest.trees._rebuildBuckets(f.camera);
 if (stem) {
   const gh = f.forest.maps.height(stem.x, stem.z);
   f.camera.position.set(
-    stem.x - stem.fallDirX * 9 + stem.fallDirZ * 5.5,
-    gh + 1.85,
-    stem.z - stem.fallDirZ * 9 - stem.fallDirX * 5.5,
+    stem.x - stem.fallDirX * 16 + stem.fallDirZ * 7,
+    gh + 3.4,
+    stem.z - stem.fallDirZ * 16 - stem.fallDirX * 7,
   );
+  f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.7);
   f.camera.lookAt(
-    stem.x + stem.fallDirX * stem.height * 0.38,
-    gh + 1.15,
-    stem.z + stem.fallDirZ * stem.height * 0.38,
+    stem.x + stem.fallDirX * stem.height * 0.42,
+    gh + 1.35,
+    stem.z + stem.fallDirZ * stem.height * 0.42,
   );
   f.camera.updateMatrixWorld(true);
 }

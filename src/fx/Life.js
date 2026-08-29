@@ -228,7 +228,7 @@ void main(){
   float canopy = eco.g;
   float rock = eco.b;
   float fit = clamp(wet * 0.5 + canopy * 0.4 + (1.0 - rock) * 0.25, 0.0, 1.0);
-  if(h.y > fit * 0.9 + 0.12){
+  if(h.y > fit * 0.96 + 0.22){
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vAlpha = 0.0; vUv = vec2(0.0); vPulse = 0.0;
     return;
@@ -248,8 +248,8 @@ void main(){
   vec3 side = normalize(cross(up, viewN));
   vec3 fwd = normalize(cross(viewN, side));
 
-  float size = mix(0.04, 0.09, h.z);
-  float minW = 2.1 / max(uProjScaleY / max(dist, 1.0), 1.0);
+  float size = mix(0.07, 0.16, h.z);
+  float minW = 3.4 / max(uProjScaleY / max(dist, 1.0), 1.0);
   size = max(size, minW);
 
   vec3 world = p + side * (position.x * size) + fwd * (position.y * size);
@@ -286,8 +286,8 @@ void main(){
   float core = exp(-d * d * 7.5);
   float halo = exp(-d * d * 1.8);
   if(core + halo < 0.02) discard;
-  vec3 col = mix(vec3(0.12, 0.55, 0.06), vec3(0.95, 1.15, 0.28), core);
-  col *= 1.4 + vPulse * 4.6;
+  vec3 col = mix(vec3(0.18, 0.70, 0.08), vec3(1.35, 1.55, 0.32), core);
+  col *= 3.2 + vPulse * 10.0;
   col += uFlashColor * uFlash.w * 0.15;
   float a = (core + halo * 0.4) * vAlpha;
   oColor = vec4(col * a, a);
@@ -358,8 +358,8 @@ void main(){
   vec3 fwd = normalize(cross(viewN, side));
 
   float flap = 0.45 + 0.55 * abs(sin(uTime * mix(5.5, 10.0, h.w) + h.z * 9.0));
-  float span = mix(0.55, 1.35, h.y);
-  float minW = 1.8 / max(uProjScaleY / max(dist, 1.0), 1.0);
+  float span = mix(1.1, 2.4, h.y);
+  float minW = 2.6 / max(uProjScaleY / max(dist, 1.0), 1.0);
   float wid = max(span, minW);
   float len = max(span * mix(0.22, 0.42, flap), minW * 0.6);
 
@@ -482,9 +482,9 @@ void main(){
   vec3 r1 = side * cs + fwd * sn;
   vec3 r2 = -side * sn + fwd * cs;
 
-  float len = mix(0.07, 0.16, h.z);
-  float wid = len * 0.58;
-  float minW = 1.4 / max(uProjScaleY / max(dist, 1.0), 1.0);
+  float len = mix(0.10, 0.22, h.z);
+  float wid = len * 0.62;
+  float minW = 1.8 / max(uProjScaleY / max(dist, 1.0), 1.0);
   wid = max(wid, minW);
 
   vec3 world = p + r1 * (position.x * wid) + r2 * (position.y * len);
@@ -566,7 +566,7 @@ export class Life {
       forest,
       Math.max(220, Math.round(rain * 0.045)),
       FIREFLY_VERT, FIREFLY_FRAG,
-      { uVolume: { value: new THREE.Vector3(16, 5, 16) } },
+      { uVolume: { value: new THREE.Vector3(12, 4.5, 12) } },
       true,
     );
     this.birds = makeLayer(

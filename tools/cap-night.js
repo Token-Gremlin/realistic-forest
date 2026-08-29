@@ -2,12 +2,30 @@ f.weather.setAct(11, true);
 f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
+f.state.exposureAuto = false;
+f.pipeline.settings.exposure = 5.2;
+f.pipeline.dof.aperture = 5.6;
+f.pipeline.dof.focus = 6;
 
-const cam = f.camera.position;
-const s = f.forest.maps.sample(cam.x, cam.z, {});
-const gh = s.height ?? f.forest.maps.height(cam.x, cam.z);
-f.camera.position.set(cam.x, gh + 1.15, cam.z);
-f.camera.lookAt(cam.x + 8, gh + 1.6, cam.z + 4);
+const maps = f.forest.maps;
+const c = f.camera.position;
+let best = null, bestS = -1e9;
+for (let i = 0; i < 96; i++) {
+  const a = Math.random() * Math.PI * 2;
+  const r = 6 + Math.random() * 50;
+  const x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
+  const s = maps.sample(x, z, {});
+  if (!s.inside) continue;
+  const score = s.moisture * 2.2 + s.canopy * 0.7 - s.slope * 2.4 - (s.waterDepth > 0.12 ? 4 : 0) + s.litter * 0.4;
+  if (score > bestS) { bestS = score; best = { x, z, s }; }
+}
+const x = best?.x ?? c.x, z = best?.z ?? c.z;
+const gh = maps.height(x, z);
+f.camera.position.set(x, gh + 1.65, z);
+f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.6);
+const p = f.camera.position;
+p.y = Math.max(p.y, maps.height(p.x, p.z) + 1.45);
+f.camera.lookAt(p.x + 7, p.y + 0.55, p.z + 4);
 f.camera.updateMatrixWorld(true);
 
 return {
@@ -15,4 +33,5 @@ return {
   night: +f.weather.nightAmount.toFixed(2),
   fireflies: f.forest.life?.stats.fireflies ?? 0,
   insects: f.forest.life?.stats.insects ?? 0,
+  pos: p.toArray().map((v) => +v.toFixed(1)),
 };

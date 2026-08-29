@@ -201,7 +201,7 @@ export class Weather {
     U.uMoonDir.value.copy(moonDir);
     const moonUp = clamp01((moonDir.y + 0.03) / 0.15);
     const mT = Sky.sunTransmittance(moonDir, 2);
-    const moonScale = 0.0074 * moonUp * lerp(1, 0.25, clamp01(s.cover));
+    const moonScale = 0.016 * moonUp * lerp(1, 0.28, clamp01(s.cover));
     U.uMoonColor.value.set(mT[0] * moonScale * 0.86, mT[1] * moonScale * 0.92, mT[2] * moonScale * 1.12);
 
     this.nightAmount = clamp01(1 - (sunDir.y + 0.12) / 0.20);
