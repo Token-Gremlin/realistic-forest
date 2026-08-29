@@ -82,7 +82,7 @@ float mediaDensity(vec3 p, out float mistFrac){
     vec2 fd = p.xz - uFire.xz;
     float column = exp(-dot(fd, fd) * 0.038) * uFire.w;
     float rise = smoothstep(-0.4, 10.0, above) * (1.0 - smoothstep(12.0, 26.0, above));
-    mist += column * rise * 0.16;
+    mist += column * rise * 0.045;
   }
 
   vec3 wind = vec3(uWind.x, 0.0, uWind.y) * uTime * (0.45 + uWind.z * 0.16);
@@ -157,7 +157,7 @@ void main(){
     if(uFire.w > 0.001){
       vec3 rv = uFire.xyz - p;
       float rd2 = dot(rv, rv);
-      S += uFireColor * uFire.w * 0.55 / (1.0 + rd2 * 0.012);
+      S += uFireColor * uFire.w * 0.22 / (1.0 + rd2 * 0.028);
     }
     S *= sigma;
     float Tstep = exp(-sigma * ds);

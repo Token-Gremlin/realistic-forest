@@ -103,7 +103,7 @@ void main(){
 
   p.y = ground + 0.04;
   float flick = 0.7 + 0.3 * sin(uTime * mix(9.0, 18.0, h.z) + h.w * 20.0);
-  float ht = mix(0.7, 2.6, h.z) * uFire.w * flick * (0.65 + litter * 0.6);
+  float ht = mix(1.1, 3.4, h.z) * uFire.w * flick * (0.7 + litter * 0.5);
 
   vec3 view = p - uCamPos;
   float dist = length(view);
