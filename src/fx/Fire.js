@@ -103,7 +103,7 @@ void main(){
 
   p.y = ground + 0.04;
   float flick = 0.7 + 0.3 * sin(uTime * mix(9.0, 18.0, h.z) + h.w * 20.0);
-  float ht = mix(0.45, 1.8, h.z) * uFire.w * flick * (0.55 + litter * 0.7);
+  float ht = mix(0.7, 2.6, h.z) * uFire.w * flick * (0.65 + litter * 0.6);
 
   vec3 view = p - uCamPos;
   float dist = length(view);
@@ -382,7 +382,7 @@ export class Fire {
       forest,
       Math.max(180, Math.round(rain * 0.03)),
       FLAME_VERT, FLAME_FRAG,
-      { uRadius: { value: 7.5 } },
+      { uRadius: { value: 5.2 } },
       true,
     );
     this.embers = layer(

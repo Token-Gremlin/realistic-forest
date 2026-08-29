@@ -1,9 +1,9 @@
-f.weather.setAct(3, true);
+f.weather.setAct(10, true);
 f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
 f.state.exposureAuto = false;
-f.pipeline.settings.exposure = 1.35;
+f.pipeline.settings.exposure = 2.1;
 f.pipeline.dof.aperture = 5.6;
 f.pipeline.dof.focus = 8;
 
@@ -22,11 +22,11 @@ for (let i = 0; i < 90; i++) {
 const x = best?.x ?? c.x, z = best?.z ?? c.z;
 const gh = maps.height(x, z);
 f.forest.fire.ignite({ x, y: gh, z }, 1);
-f.camera.position.set(x - 7, gh + 1.8, z + 5);
-f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.6);
+f.camera.position.set(x - 9, gh + 2.4, z + 6.5);
+f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.7);
 const p = f.camera.position;
-p.y = Math.max(p.y, maps.height(p.x, p.z) + 1.5);
-f.camera.lookAt(x, gh + 1.1, z);
+p.y = Math.max(p.y, maps.height(p.x, p.z) + 1.9);
+f.camera.lookAt(x, gh + 1.35, z);
 f.camera.updateMatrixWorld(true);
 
 return {
