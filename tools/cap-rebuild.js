@@ -11,7 +11,7 @@ function catchUp(f) {
   }
   if (f.forest.water) f.forest.water.update(0.016, f.camera);
   if (f.forest.debris) f.forest.debris.update(0.016);
-  if (f.forest.falling) f.forest.falling.update(0.016);
+  if (f.forest.falling) f.forest.falling.update(0.016, f.camera);
   if (f.forest.life) f.forest.life.update(0.016, f.camera);
   if (f.forest.fire) f.forest.fire.update(0.016);
 }
