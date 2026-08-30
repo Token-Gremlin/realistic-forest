@@ -120,22 +120,40 @@ function placeAlong(maps, stem, fx, fz, side) {
   const gh = maps.height(stem.x, stem.z);
   const H = stem.height;
   const px = -fz * side, pz = fx * side;
-  const fxw = stem.x - fx * 4.3 + px * 2.75;
-  const fzw = stem.z - fz * 4.3 + pz * 2.75;
-  const lx = stem.x + fx * H * 0.15;
-  const lz = stem.z + fz * H * 0.15;
+  const fxw = stem.x - fx * 7.4 + px * 4.2;
+  const fzw = stem.z - fz * 7.4 + pz * 4.2;
+  const lx = stem.x + fx * H * 0.18;
+  const lz = stem.z + fz * H * 0.18;
   return {
-    from: [fxw, maps.height(fxw, fzw) + 1.62, fzw],
-    look: [lx, maps.height(lx, lz) + 0.66, lz],
+    from: [fxw, maps.height(fxw, fzw) + 1.72, fzw],
+    look: [lx, maps.height(lx, lz) + 0.70, lz],
     gh, H, px, pz,
   };
 }
 
+function pushOutOfFallen(pos, maps, stem, fx, fz) {
+  const H = stem.height;
+  let along = (pos.x - stem.x) * fx + (pos.z - stem.z) * fz;
+  if (along < -1.2) along = -1.2;
+  if (along > H) along = H;
+  const px = stem.x + fx * along;
+  const pz = stem.z + fz * along;
+  const dx = pos.x - px, dz = pos.z - pz;
+  let d = Math.hypot(dx, dz);
+  const rad = Math.max(2.6, H * 0.055) + 2.1;
+  if (d < rad) {
+    if (d < 1e-4) { pos.x = px + 1; pos.z = pz; d = 1; }
+    pos.x = px + (dx / d) * rad;
+    pos.z = pz + (dz / d) * rad;
+    pos.y = maps.height(pos.x, pos.z) + 1.72;
+  }
+}
+
 function scoreView(trees, cam, scratch, stem, fx, fz, place) {
   cam.position.set(place.from[0], place.from[1], place.from[2]);
-  trees.pushOutOfTrunks(cam.position, 2.2);
-  const pg = trees.forest.maps.height(cam.position.x, cam.position.z);
-  cam.position.y = pg + 1.62;
+  trees.pushOutOfTrunks(cam.position, 1.8);
+  pushOutOfFallen(cam.position, trees.forest.maps, stem, fx, fz);
+  cam.position.y = trees.forest.maps.height(cam.position.x, cam.position.z) + 1.72;
   cam.lookAt(place.look[0], place.look[1], place.look[2]);
   cam.updateMatrixWorld(true);
 
@@ -321,12 +339,14 @@ if (stem) {
   trees._rebuildBuckets(cam);
 
   const place = best?.place ?? placeAlong(maps, stem, FX, FZ, side);
-  cam.fov = 36;
+  cam.fov = 42;
   cam.position.set(place.from[0], place.from[1], place.from[2]);
-  trees.pushOutOfTrunks(cam.position, 2.2);
-  cam.position.y = maps.height(cam.position.x, cam.position.z) + 1.62;
+  trees.pushOutOfTrunks(cam.position, 1.8);
+  pushOutOfFallen(cam.position, maps, stem, FX, FZ);
+  cam.position.y = maps.height(cam.position.x, cam.position.z) + 1.72;
   hits = dodgeStanding(trees, cam, place.look, [place.px, place.pz]);
-  cam.position.y = maps.height(cam.position.x, cam.position.z) + 1.62;
+  pushOutOfFallen(cam.position, maps, stem, FX, FZ);
+  cam.position.y = maps.height(cam.position.x, cam.position.z) + 1.72;
   cam.lookAt(place.look[0], place.look[1], place.look[2]);
   cam.updateMatrixWorld(true);
   cam.updateProjectionMatrix();
