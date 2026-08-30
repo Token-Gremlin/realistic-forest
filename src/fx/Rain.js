@@ -481,7 +481,7 @@ export class Rain {
     const dropN = Math.max(1, Math.floor(this.dropCount * THREE.MathUtils.smoothstep(rain, 0.02, 0.95)));
     const splashN = Math.max(1, Math.floor(this.splashCount * THREE.MathUtils.smoothstep(rain, 0.04, 0.95)));
     this.dropGeo.instanceCount = held ? 0 : dropN;
-    this.splashGeo.instanceCount = held ? 8 : splashN;
+    this.splashGeo.instanceCount = held ? 6 : splashN;
     this.stats.drops = held ? 0 : dropN;
     this.stats.splashes = held ? 4 : splashN;
   }

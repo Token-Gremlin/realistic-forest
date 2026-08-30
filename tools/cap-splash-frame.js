@@ -66,6 +66,22 @@ if (f.forest.grass) {
     r.shadowMesh.visible = false;
   }
 }
+if (f.forest.trees) {
+  // near leaf cards eat the run at 5 m AGL. For this still, drop them
+  // so the rings sit on tea instead of a bush wall.
+  for (const v of f.forest.trees.variants) {
+    for (const d of v.draws) {
+      if (d.leaf) {
+        d.mesh.visible = false;
+        if (d.shadow) d.shadow.visible = false;
+      }
+    }
+  }
+  for (const bb of f.forest.trees.billboards ?? []) {
+    if (bb.mesh) bb.mesh.visible = false;
+    if (bb.shadow) bb.shadow.visible = false;
+  }
+}
 if (f.forest.rain) {
   f.forest.rain.holdSplash = 0.32;
   f.forest.rain.update(0.016, f.camera);
