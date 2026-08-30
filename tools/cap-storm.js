@@ -46,8 +46,8 @@ f.camera.updateProjectionMatrix();
 
 if (f.forest.life) f.forest.life.leavesSuppressed = true;
 if (f.forest.falling) {
-  f.forest.falling.suppressed = false;
-  f.forest.falling.holdPhase = 0.50;
+  f.forest.falling.suppressed = true;
+  f.forest.falling.holdPhase = -1;
 }
 if (f.forest.debris) f.forest.debris.suppressed = false;
 f.state.running = false;

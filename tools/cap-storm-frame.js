@@ -85,10 +85,37 @@ if (stem) {
     f.forest.debris.update(0.016);
   }
   if (f.forest.falling) {
-    f.forest.falling.suppressed = false;
-    f.forest.falling.holdPhase = 0.50;
-    f.forest.falling.onLightning({ x: stem.x, y: gh + 8, z: stem.z });
+    // a full held field packs 80 limbs into the lens and hides the log
+    f.forest.falling.suppressed = true;
+    f.forest.falling.holdPhase = -1;
     f.forest.falling.update(0.016, f.camera);
+  }
+
+  if (f.forest.clutter) {
+    f.forest.clutter.pending.length = 0;
+    for (let i = 0; i < 8; i++) f.forest.clutter.update(0.016, f.camera);
+    const fwd = p.clone();
+    f.camera.getWorldDirection(fwd);
+    const hide = new Set(['fern', 'bush', 'bramble', 'vine']);
+    for (const k of f.forest.clutter.kinds) {
+      if (!hide.has(k.arch.key)) continue;
+      for (const v of k.variants) {
+        const d = v.bucket.data;
+        let w = 0;
+        for (let i = 0; i < v.bucket.count; i++) {
+          const o = i * 12;
+          const dx = d[o] - p.x, dy = d[o + 1] - p.y, dz = d[o + 2] - p.z;
+          const dist = Math.hypot(dx, dy, dz);
+          const facing = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / (dist || 1);
+          if (dist < 5.2 && facing > 0.12) continue;
+          if (w !== i) d.copyWithin(w * 12, o, o + 12);
+          w++;
+        }
+        v.bucket.count = w;
+        v.geo.instanceCount = w;
+        v.buf.needsUpdate = true;
+      }
+    }
   }
 }
 
