@@ -46,11 +46,13 @@ layout(location = 0) out vec4 oColor;
 
 void main(){
   float ax = abs(vSide);
-  float core = exp(-ax * ax * 6.0);
-  float halo = exp(-ax * ax * 1.1);
-  float mask = vGlow > 0.5 ? max(halo, 0.35) : max(core * 1.4 + halo * 0.45, 0.55);
-  vec3 col = mix(vec3(1.75, 1.82, 2.05), uFlashColor, 0.18 + vGlow * 0.35);
-  oColor = vec4(col * max(uAmp, 1.0) * mask * 16.0, 1.0);
+  float core = exp(-ax * ax * 5.2);
+  float halo = exp(-ax * ax * 0.95);
+  float mask = vGlow > 0.5 ? max(halo, 0.28) : max(core * 1.6 + halo * 0.4, 0.72);
+  // same HDR league as the still that read (unconditional ~40). AgX + 0.05
+  // bloom turns a 16-nit line into fog.
+  vec3 hot = mix(vec3(38.0, 42.0, 54.0), vec3(12.0, 14.0, 20.0), vGlow);
+  oColor = vec4(hot * mask * max(uAmp, 1.0), 1.0);
 }
 `;
 
@@ -119,7 +121,7 @@ export class Lightning {
       uniforms: this.uniforms,
       vertexShader: VERT,
       fragmentShader: FRAG,
-      transparent: true,
+      transparent: false,
       depthTest: false,
       depthWrite: false,
       blending: THREE.NoBlending,
@@ -310,15 +312,19 @@ export class Lightning {
         ndc.set(P[o], P[o + 1], P[o + 2]).project(camObj);
         P[o] = ndc.x; P[o + 1] = ndc.y; P[o + 2] = 0.0;
       }
-      // a slim NDC spine so the still always has a readable channel
-      if (n + 6 <= P.length / 3 && this.cloud && this.ground) {
-        const a = ndc.copy(this.cloud).project(camObj);
+      // jagged NDC spine along the hot trunk so a 528-wide frame can resolve
+      // the channel (a 1.4 m world ribbon is one pixel after the far divide)
+      const halfW = 0.034;
+      for (const s of this._segs) {
+        if (s.bright < 0.72 || n + 6 > P.length / 3) continue;
+        const a = ndc.copy(s.a).project(camObj);
         const ax = a.x, ay = a.y;
-        const b = ndc.copy(this.cloud).lerp(this.ground, 0.48).project(camObj);
+        const b = ndc.copy(s.b).project(camObj);
         const bx = b.x, by = b.y;
+        if ((ay < -1.15 && by < -1.15) || (ay > 1.15 && by > 1.15)) continue;
         const dx = bx - ax, dy = by - ay;
         const len = Math.hypot(dx, dy) || 1;
-        const sx = -dy / len * 0.04, sy = dx / len * 0.04;
+        const sx = -dy / len * halfW, sy = dx / len * halfW;
         const pts = [
           ax - sx, ay - sy, ax + sx, ay + sy, bx - sx, by - sy,
           bx - sx, by - sy, ax + sx, ay + sy, bx + sx, by + sy,
@@ -326,7 +332,8 @@ export class Lightning {
         for (let k = 0; k < 6; k++) {
           const o = n * 3, m = n * 2;
           P[o] = pts[k * 2]; P[o + 1] = pts[k * 2 + 1]; P[o + 2] = 0;
-          M[m] = 0; M[m + 1] = 1;
+          M[m] = k === 0 || k === 2 || k === 3 ? -1 : 1;
+          M[m + 1] = 1;
           n++;
         }
       }

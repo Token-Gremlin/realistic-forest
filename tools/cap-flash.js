@@ -3,7 +3,8 @@ f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
 f.state.exposureAuto = false;
-f.pipeline.settings.exposure = 0.68;
+f.pipeline.settings.exposure = 0.50;
+f.pipeline.settings.bloom = 0.10;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
