@@ -29,16 +29,14 @@ f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.2);
 const p = f.camera.position;
 p.y = Math.max(p.y, maps.height(p.x, p.z) + 40);
 
-// 42° vertical FOV: a ~75 m strike has to sit ahead, not overhead, or the
-// cloud end leaves the frame. Look slightly up so the channel crosses sky.
-f.camera.lookAt(p.x + 62, p.y + 18, p.z + 18);
+const cx = p.x + 68, cz = p.z + 20;
+const cloudY = maps.height(cx, cz) + 82;
+const gx = p.x + 74, gz = p.z + 22;
+const gy = maps.height(gx, gz) + 0.4;
+// aim at the upper channel so a 42° lens holds cloud-to-mid against sky
+f.camera.lookAt(cx, (cloudY + p.y) * 0.5, cz);
 f.camera.updateMatrixWorld(true);
 f.forest.camPos = p;
-
-const cx = p.x + 72, cz = p.z + 22;
-const cloudY = maps.height(cx, cz) + 70;
-const gx = p.x + 78, gz = p.z + 24;
-const gy = maps.height(gx, gz) + 0.4;
 
 f.weather.state.rain = 0.08;
 f.weather.target.rain = 0.08;
@@ -79,8 +77,8 @@ const mid = {
 };
 
 const P = f.forest.lightning._pos;
-const v0 = P ? ndc(P[0], P[1], P[2]) : null;
-const v1 = P ? ndc(P[6], P[7], P[8]) : null;
+const v0 = P ? [+P[0].toFixed(2), +P[1].toFixed(2), +P[2].toFixed(2)] : null;
+const v1 = P ? [+P[6].toFixed(2), +P[7].toFixed(2), +P[8].toFixed(2)] : null;
 
 return {
   act: f.weather.actName,
