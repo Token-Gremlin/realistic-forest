@@ -74,8 +74,9 @@ function fellCorridor(trees, stem, fx, fz, H) {
       const vx = t.x - stem.x, vz = t.z - stem.z;
       const along = vx * fx + vz * fz;
       const across = vx * px + vz * pz;
-      if (along < -2.4 || along > H + 5) continue;
-      if (Math.abs(across) > 3.7) continue;
+      // only the bole zone — felling the whole 20 m run dumps crowns on the log
+      if (along < -2.2 || along > H * 0.28 + 1.5) continue;
+      if (Math.abs(across) > 3.2) continue;
       t.fallDirX = fx;
       t.fallDirZ = fz;
       t.damage = Math.max(t.damage ?? 0, 0.88 + (t.rnd || 0) * 0.12);
@@ -85,18 +86,27 @@ function fellCorridor(trees, stem, fx, fz, H) {
   return n;
 }
 
-function fellOpticalAxis(trees, cam, scratch, midZ) {
+function fellOpticalAxis(trees, cam, stem, fx, fz) {
+  const cx = cam.position.x, cz = cam.position.z;
+  const midX = stem.x + fx * stem.height * 0.18;
+  const midZ = stem.z + fz * stem.height * 0.18;
+  const logDist = Math.hypot(midX - cx, midZ - cz);
+  const fwd = cam.position.clone();
+  cam.getWorldDirection(fwd);
   let n = 0;
   for (const list of trees.chunks.values()) {
     for (const t of list) {
+      if (t === stem) continue;
       if ((t.damage ?? 0) > 0.3) continue;
-      if (t.height < 8) continue;
-      const v = ndcOf(cam, scratch, t.x, t.y + t.height * 0.34, t.z);
-      if (v[2] <= 0.02 || v[2] > midZ + 0.06) continue;
-      if (Math.abs(v[0]) > 0.30 || v[1] < -0.18 || v[1] > 0.78) continue;
-      const nn = Math.hypot(t.x - cam.position.x, t.z - cam.position.z) || 1;
-      t.fallDirX = (t.x - cam.position.x) / nn;
-      t.fallDirZ = (t.z - cam.position.z) / nn;
+      if (t.height < 9) continue;
+      const vx = t.x - cx, vz = t.z - cz;
+      const along = vx * fwd.x + vz * fwd.z;
+      if (along < 1.1 || along > logDist + 1.2) continue;
+      const across = Math.hypot(vx - fwd.x * along, vz - fwd.z * along);
+      if (across > 1.65) continue;
+      const nn = Math.hypot(vx, vz) || 1;
+      t.fallDirX = vx / nn;
+      t.fallDirZ = vz / nn;
       t.damage = 1;
       n++;
     }
@@ -105,18 +115,20 @@ function fellOpticalAxis(trees, cam, scratch, midZ) {
 }
 
 function placeAlong(maps, stem, fx, fz, side) {
+  // sit on the clear bole (oak branches start ~0.28 H). Looking at the leafy
+  // mid-stem turns the hero into a green mound.
   const gh = maps.height(stem.x, stem.z);
   const H = stem.height;
   const px = -fz * side, pz = fx * side;
   const from = [
-    stem.x - fx * 6.5 + px * 4.15,
-    gh + 2.05,
-    stem.z - fz * 6.5 + pz * 4.15,
+    stem.x - fx * 5.1 + px * 3.15,
+    gh + 1.92,
+    stem.z - fz * 5.1 + pz * 3.15,
   ];
   const look = [
-    stem.x + fx * H * 0.38,
-    gh + 1.28,
-    stem.z + fz * H * 0.38,
+    stem.x + fx * H * 0.16,
+    gh + 0.78,
+    stem.z + fz * H * 0.16,
   ];
   return { from, look, gh, H, px, pz };
 }
@@ -136,9 +148,9 @@ function scoreView(trees, cam, scratch, stem, fx, fz, place) {
 
   const gh = place.gh;
   const H = place.H;
-  const base = ndcOf(cam, scratch, stem.x, gh + 0.45, stem.z);
-  const mid = ndcOf(cam, scratch, stem.x + fx * H * 0.42, gh + 0.55, stem.z + fz * H * 0.42);
-  const tip = ndcOf(cam, scratch, stem.x + fx * H * 0.88, gh + 0.7, stem.z + fz * H * 0.88);
+  const base = ndcOf(cam, scratch, stem.x, gh + 0.55, stem.z);
+  const mid = ndcOf(cam, scratch, stem.x + fx * H * 0.16, gh + 0.72, stem.z + fz * H * 0.16);
+  const tip = ndcOf(cam, scratch, stem.x + fx * H * 0.42, gh + 0.70, stem.z + fz * H * 0.42);
   let score = 0;
   if (inFrame(mid)) score += 12;
   if (inFrame(base)) score += 7;
@@ -150,17 +162,18 @@ function scoreView(trees, cam, scratch, stem, fx, fz, place) {
   return { score, hits, base, mid, tip };
 }
 
-function clearNearPlants(f) {
+function clearNearPlants(f, stem, fx, fz) {
   const clutter = f.forest.clutter;
   if (!clutter) return 0;
   const p = f.camera.position;
   const fwd = p.clone();
   f.camera.getWorldDirection(fwd);
-  const hide = new Set(['fern', 'bush', 'bramble', 'vine']);
+  const hide = new Set(['fern', 'bush', 'bramble', 'vine', 'sedge', 'flower']);
+  const px = stem ? -fz : 0, pz = stem ? fx : 0;
+  const H = stem ? stem.height : 0;
   let dropped = 0;
   for (const k of clutter.kinds) {
     if (!hide.has(k.arch.key)) continue;
-    const near = k.arch.key === 'vine' ? 14 : 10.5;
     for (const v of k.variants) {
       const d = v.bucket.data;
       let w = 0;
@@ -169,7 +182,15 @@ function clearNearPlants(f) {
         const dx = d[o] - p.x, dy = d[o + 1] - p.y, dz = d[o + 2] - p.z;
         const dist = Math.hypot(dx, dy, dz);
         const facing = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / (dist || 1);
-        const eat = (dist < 6.2 && facing > -0.22) || (dist < near && facing > 0.08);
+        let onLog = false;
+        if (stem) {
+          const along = (d[o] - stem.x) * fx + (d[o + 2] - stem.z) * fz;
+          const across = (d[o] - stem.x) * px + (d[o + 2] - stem.z) * pz;
+          onLog = along > -3.2 && along < H + 3 && Math.abs(across) < 4.4;
+        }
+        const eat = onLog
+          || (dist < 7.5 && facing > -0.28)
+          || (dist < 20 && facing > 0.04);
         if (eat) { dropped++; continue; }
         if (w !== i) d.copyWithin(w * 12, o, o + 12);
         w++;
@@ -284,18 +305,10 @@ if (stem) {
   cam.updateMatrixWorld(true);
   cam.updateProjectionMatrix();
 
-  const mid = ndcOf(
-    cam, scratch,
-    stem.x + FX * stem.height * 0.42,
-    place.gh + 0.55,
-    stem.z + FZ * stem.height * 0.42,
-  );
-  axisFell = fellOpticalAxis(trees, cam, scratch, mid[2]);
+  axisFell = fellOpticalAxis(trees, cam, stem, FX, FZ);
   trees._damageDirty = true;
   trees._rememberWounds();
-
-  trees.pending.length = 0;
-  for (let i = 0; i < 16; i++) trees.update(0.016, cam, f.forest);
+  trees._rebuildBuckets(cam);
 
   if (f.forest.debris) {
     f.forest.debris.onLightning({ x: stem.x, y: place.gh + 2, z: stem.z });
@@ -312,7 +325,7 @@ if (stem) {
     f.forest.clutter.pending.length = 0;
     for (let i = 0; i < 16; i++) f.forest.clutter.update(0.016, cam);
   }
-  plants = clearNearPlants(f);
+  plants = clearNearPlants(f, stem, FX, FZ);
 }
 
 const fmt = (v) => v && v.map((n) => +n.toFixed(2));
@@ -325,9 +338,9 @@ if (stem) {
     dmg: +stem.damage.toFixed(2),
     side,
     camY: +(cam.position.y - maps.height(cam.position.x, cam.position.z)).toFixed(2),
-    base: fmt(ndcOf(cam, scratch, stem.x, gh + 0.45, stem.z)),
-    mid: fmt(ndcOf(cam, scratch, stem.x + FX * H * 0.42, gh + 0.55, stem.z + FZ * H * 0.42)),
-    tip: fmt(ndcOf(cam, scratch, stem.x + FX * H * 0.88, gh + 0.7, stem.z + FZ * H * 0.88)),
+    base: fmt(ndcOf(cam, scratch, stem.x, gh + 0.55, stem.z)),
+    mid: fmt(ndcOf(cam, scratch, stem.x + FX * H * 0.16, gh + 0.72, stem.z + FZ * H * 0.16)),
+    tip: fmt(ndcOf(cam, scratch, stem.x + FX * H * 0.42, gh + 0.70, stem.z + FZ * H * 0.42)),
     view: best ? +best.view.score.toFixed(2) : null,
     hits: +hits.toFixed(2),
   };

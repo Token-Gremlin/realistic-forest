@@ -461,7 +461,7 @@ uniform mat4 projectionMatrix; uniform mat4 viewMatrix;
 uniform mat4 uViewProj; uniform mat4 uPrevViewProj;
 in vec3 position; in vec3 normal; in vec2 uv; in vec4 aExtra; in vec2 aSway;
 out vec3 vWorld; out vec3 vNormal; out vec2 vUv; out vec4 vExtra;
-out vec4 vCur; out vec4 vPrev; out float vFade;
+out vec4 vCur; out vec4 vPrev; out float vFade; out float vFallen;
 
 /** Card-local flutter: twist and flap about the card centre. */
 vec3 leafFlutter(vec3 local, vec3 world, float phase, float flex, float t){
@@ -489,6 +489,7 @@ void main(){
   vUv = uv;
   vExtra = aExtra;
   vFade = iVar.w;
+  vFallen = smoothstep(0.34, 1.12, length(vec2(iRot.z, iRot.w)));
   vCur = uViewProj * vec4(world, 1.0);
   vPrev = uPrevViewProj * vec4(prevWorld, 1.0);
   gl_Position = ${opts.shadow ? 'projectionMatrix * (viewMatrix * vec4(world, 1.0))' : 'vCur'};
@@ -503,11 +504,12 @@ ${GLSL_COMMON}
 ${LEAF_SURFACE}
 layout(location = 0) out vec4 oCol;
 in vec3 vWorld; in vec3 vNormal; in vec2 vUv; in vec4 vExtra;
-in vec4 vCur; in vec4 vPrev; in float vFade;
+in vec4 vCur; in vec4 vPrev; in float vFade; in float vFallen;
 void main(){
   vec2 local; float lid, rib;
   float cov = leafCluster(vUv, vExtra.x, local, lid, rib);
   if(cov < 0.002) discard;
+  if(vFallen > 0.55 && ign(vWorld.xz * 11.0, vExtra.x) > mix(0.88, 0.30, vFallen)) discard;
   oCol = vec4(1.0);
 }
 `;
@@ -531,12 +533,14 @@ ${GLSL_MAPS}
 ${LEAF_SURFACE}
 ${GLSL_GBUFFER_OUT}
 in vec3 vWorld; in vec3 vNormal; in vec2 vUv; in vec4 vExtra;
-in vec4 vCur; in vec4 vPrev; in float vFade;
+in vec4 vCur; in vec4 vPrev; in float vFade; in float vFallen;
 void main(){
   if(vFade < 0.999){
     float d = ign(gl_FragCoord.xy, uTime * 0.31 + 3.1);
     if(d > vFade) discard;
   }
+  // a stem on the ground keeps some crown, but not a standing leaf wall
+  if(vFallen > 0.55 && ign(vWorld.xz * 11.0, vExtra.x) > mix(0.88, 0.30, vFallen)) discard;
   vec3 dp1 = dFdx(vWorld), dp2 = dFdy(vWorld);
   vec2 du1 = dFdx(vUv), du2 = dFdy(vUv);
   vec3 T = dp1 * du2.y - dp2 * du1.y;
