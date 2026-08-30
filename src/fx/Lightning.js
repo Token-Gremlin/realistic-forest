@@ -45,16 +45,12 @@ in float vGlow;
 layout(location = 0) out vec4 oColor;
 
 void main(){
-  if(uAmp < 0.0008 || vBright < 0.001) discard;
-
   float ax = abs(vSide);
-  float core = exp(-ax * ax * 9.0);
-  float halo = exp(-ax * ax * 1.35);
-  float mask = vGlow > 0.5 ? halo * 0.78 : (core * 1.65 + halo * 0.38);
-  if(mask < 0.012) discard;
-
-  vec3 col = mix(vec3(1.65, 1.72, 1.95), uFlashColor, 0.12 + vGlow * 0.40);
-  oColor = vec4(col * uAmp * vBright * mask * 22.0, 1.0);
+  float core = exp(-ax * ax * 6.0);
+  float halo = exp(-ax * ax * 1.1);
+  float mask = vGlow > 0.5 ? max(halo, 0.35) : max(core * 1.4 + halo * 0.45, 0.55);
+  vec3 col = mix(vec3(1.75, 1.82, 2.05), uFlashColor, 0.18 + vGlow * 0.35);
+  oColor = vec4(col * max(uAmp, 1.0) * mask * 16.0, 1.0);
 }
 `;
 
@@ -322,7 +318,7 @@ export class Lightning {
         const bx = b.x, by = b.y;
         const dx = bx - ax, dy = by - ay;
         const len = Math.hypot(dx, dy) || 1;
-        const sx = -dy / len * 0.018, sy = dx / len * 0.018;
+        const sx = -dy / len * 0.04, sy = dx / len * 0.04;
         const pts = [
           ax - sx, ay - sy, ax + sx, ay + sy, bx - sx, by - sy,
           bx - sx, by - sy, ax + sx, ay + sy, bx + sx, by + sy,
