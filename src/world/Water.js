@@ -86,7 +86,9 @@ vec3 rippleNormal(vec2 p, vec2 flow, float flowMag, float depth, float lodPx){
 float rippleHeight(vec2 p, vec2 flow, float flowMag, float depth){
   float t = uTime;
   vec2 fdir = flowMag > 1e-4 ? flow / flowMag : vec2(0.0, 1.0);
-  float amp = uWaterWave.y * mix(0.016, 0.052, smoothstep(0.0, 0.42, depth));
+  // centimetre chop dies at 528 px. Riffle-scale displacement is what
+  // still reads as a surface when the camera sits on the bank.
+  float amp = uWaterWave.y * mix(0.14, 0.52, smoothstep(0.0, 0.42, depth));
   vec2 q1 = p * (0.85 * uWaterWave.x) - fdir * t * (0.35 + flowMag * 1.6);
   vec2 q2 = p * (2.30 * uWaterWave.x) - fdir * t * (0.62 + flowMag * 2.9) + 11.0;
   float h = (noised(q1).x * 2.0 - 1.0) * 0.64 + (noised(q2).x * 2.0 - 1.0) * 0.30;
