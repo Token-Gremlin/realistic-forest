@@ -33,7 +33,7 @@ f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.1);
 const p = f.camera.position;
 p.y = maps.height(p.x, p.z) + 1.88;
 // look up so falling cards sit on sky, not on a bush wall
-f.camera.lookAt(x + 1.8, gh + 10.5, z - 1.4);
+f.camera.lookAt(x + 3.2, gh + 5.6, z - 2.2);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 

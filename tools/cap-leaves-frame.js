@@ -47,7 +47,7 @@ function clearNearPlants(f) {
         const dx = d[o] - p.x, dy = d[o + 1] - p.y, dz = d[o + 2] - p.z;
         const dist = Math.hypot(dx, dy, dz);
         const facing = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / (dist || 1);
-        if (dist < 8.5 && facing > 0.06) { dropped++; continue; }
+        if (dist < 11 && facing > 0.02) { dropped++; continue; }
         if (w !== i) d.copyWithin(w * 12, o, o + 12);
         w++;
       }
@@ -93,17 +93,51 @@ function clearNearTreeLeaves(f) {
   return dropped;
 }
 
+function clearNearBillboards(f) {
+  const trees = f.forest.trees;
+  if (!trees?.billboards) return 0;
+  const p = f.camera.position;
+  const fwd = p.clone();
+  f.camera.getWorldDirection(fwd);
+  let dropped = 0;
+  for (const bb of trees.billboards) {
+    const data = bb.bucket.data;
+    let w = 0;
+    for (let i = 0; i < bb.bucket.count; i++) {
+      const o = i * 12;
+      const dx = data[o] - p.x, dz = data[o + 2] - p.z;
+      const dist = Math.hypot(dx, dz);
+      const facing = (dx * fwd.x + dz * fwd.z) / (dist || 1);
+      if (dist < 22 && facing > -0.05) { dropped++; continue; }
+      if (w !== i) data.copyWithin(w * 12, o, o + 12);
+      w++;
+    }
+    bb.bucket.count = w;
+    bb.geo.instanceCount = w;
+    bb.buf.needsUpdate = true;
+    bb.mesh.visible = w > 0;
+    if (bb.shadow) bb.shadow.visible = w > 0;
+  }
+  return dropped;
+}
+
 catchUp(f);
 const plants = clearNearPlants(f);
 const leaves = clearNearTreeLeaves(f);
+const bills = clearNearBillboards(f);
 if (f.forest.life) {
   f.forest.life.holdLeaves = 0.38;
   f.forest.life.update(0.016, f.camera);
+  // gnats become sky speckle on a still; keep the eight tumbling cards
+  f.forest.life.insects.mesh.visible = false;
+  f.forest.life.insects.geo.instanceCount = 0;
+  f.forest.life.stats.insects = 0;
 }
 
 return {
   plants,
   treeLeaves: leaves,
+  bills,
   holdLeaves: f.forest.life?.holdLeaves ?? -1,
   life: f.forest.life?.stats ?? null,
   trees: f.forest.trees?.stats.trees ?? 0,
