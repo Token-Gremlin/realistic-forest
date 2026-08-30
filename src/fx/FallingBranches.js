@@ -263,8 +263,8 @@ void main(){
   float ridge = r1 * 0.68 + r2 * 0.32;
   float fissure = smoothstep(0.28, 0.86, ridge);
   float grain = fbm(vec3(vWorld.x * 2.4, vWorld.y * 28.0, vWorld.z * 2.4) + idv * 13.0, 3, 2.1, 0.5) * 0.5 + 0.5;
-  vec3 woodA = vec3(0.118, 0.082, 0.048);
-  vec3 woodB = vec3(0.235, 0.170, 0.100);
+  vec3 woodA = vec3(0.145, 0.098, 0.058);
+  vec3 woodB = vec3(0.270, 0.195, 0.118);
   vec3 alb = mix(woodA, woodB, grain * 0.55 + fissure * 0.45);
   alb *= mix(0.48, 1.08, smoothstep(0.0, 0.62, ridge));
   float rot = smoothstep(0.55, 0.94, fbm(vWorld * 1.5 + 61.0, 3, 2.1, 0.5) * 0.5 + 0.5);

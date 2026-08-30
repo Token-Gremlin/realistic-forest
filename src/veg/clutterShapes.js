@@ -466,7 +466,8 @@ export function buildLimb(seed, opts = {}) {
     const t = i / segs;
     radii.push(rad * (1.0 - t * 0.62) * (1 + 0.06 * Math.sin(t * 7.0)));
   }
-  tube(mb, pts, radii, 10, PART.WOOD, {
+  // start the tube inset so the snap has no open rim to see through
+  tube(mb, pts.slice(2), radii.slice(2), 10, PART.WOOD, {
     totalHeight: rad * 2, rnd: r.f(), lumpy: 0.26, cap: true, vScale: 4.2,
   });
   const snap = pts[0];
@@ -493,8 +494,9 @@ export function buildLimb(seed, opts = {}) {
     }
     for (let k = at / 3; k < mb.extra.length / 4; k++) mb.extra[k * 4 + 2] = 2;
   };
-  placeKnob(0, 0, -rad * 0.20, rad * 1.28, rad * 1.28, rad * 1.55);
-  placeKnob(rad * 0.18, rad * 0.12, -rad * 0.55, rad * 0.62, rad * 0.55, rad * 0.85);
+  placeKnob(0, 0, rad * 0.35, rad * 1.35, rad * 1.35, rad * 1.85);
+  placeKnob(rad * 0.20, rad * 0.08, -rad * 0.25, rad * 0.72, rad * 0.62, rad * 0.95);
+  placeKnob(-rad * 0.16, -rad * 0.10, rad * 0.85, rad * 0.85, rad * 0.78, rad * 1.10);
   const splinters = 2;
   for (let k = 0; k < splinters; k++) {
     const sa = r.f() * Math.PI * 2;
