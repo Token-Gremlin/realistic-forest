@@ -5,7 +5,7 @@ f.director.enabled = false;
 f.state.autoQuality = false;
 f.state.exposureAuto = false;
 f.pipeline.settings.exposure = 1.00;
-f.pipeline.settings.aerial = 0.38;
+f.pipeline.settings.aerial = 0.30;
 f.pipeline.settings.motionBlur = 0;
 f.pipeline.settings.chroma = 0;
 f.pipeline.settings.sharpen = 0.10;
@@ -36,7 +36,8 @@ function place(bank, look, pull, rise, side = 0) {
   p.y = Math.max(p.y, maps.height(p.x, p.z) + rise * 0.86);
   const lookH = maps.height(look.x, look.z);
   const lookW = Math.max(0, look.s?.waterDepth ?? 0);
-  f.camera.lookAt(look.x, lookH + lookW * 0.10 + 0.92, look.z);
+  // look into the column so tea and caustics read. +0.92 skimmed sky.
+  f.camera.lookAt(look.x, lookH + lookW * 0.08 + 0.38, look.z);
   f.camera.updateMatrixWorld(true);
   f.camera.updateProjectionMatrix();
 }
@@ -44,8 +45,8 @@ function place(bank, look, pull, rise, side = 0) {
 const PIN = {
   bank: { x: 33.9, z: -184.6 },
   look: { x: 23.6, z: -185.3 },
-  pull: 6.6,
-  rise: 2.15,
+  pull: 5.8,
+  rise: 2.35,
   side: -1.8,
 };
 

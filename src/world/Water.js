@@ -95,14 +95,15 @@ float rippleHeight(vec2 p, vec2 flow, float flowMag, float depth){
   return h * amp * (1.0 + flowMag * 1.55);
 }
 
-/** Procedural caustics: interference of two rotating worley fields. */
+/** Procedural caustics: interference of two rotating worley fields.
+ *  3–8 m cells. Finer worley died as speckle on the close tiny plate. */
 float caustics(vec2 p, float t){
-  float a = worley2(p * 3.1 + vec2(t * 0.16, -t * 0.11), 1.0).x;
-  float b = worley2(p * 4.8 + vec2(-t * 0.13, t * 0.19) + 7.0, 1.0).x;
+  float a = worley2(p * 0.72 + vec2(t * 0.16, -t * 0.11), 1.0).x;
+  float b = worley2(p * 1.15 + vec2(-t * 0.13, t * 0.19) + 7.0, 1.0).x;
   float c = 1.0 - min(a, b);
-  c = pow(clamp(c, 0.0, 1.0), 3.15);
-  float d = worley2(p * 8.6 + vec2(t * 0.29, t * 0.07) + 19.0, 1.0).x;
-  c += pow(clamp(1.0 - d, 0.0, 1.0), 4.0) * 0.42;
+  c = pow(clamp(c, 0.0, 1.0), 2.45);
+  float d = worley2(p * 1.95 + vec2(t * 0.29, t * 0.07) + 19.0, 1.0).x;
+  c += pow(clamp(1.0 - d, 0.0, 1.0), 3.2) * 0.38;
   return c;
 }
 `;
@@ -321,11 +322,12 @@ void main(){
   vec2 rnd = vec2(ign(gl_FragCoord.xy, uTime), ign(gl_FragCoord.yx + 7.0, uTime));
   float sunShadowK = sunShadow(vWorld, vec3(0.0, 1.0, 0.0), 1.0, viewDist, rnd, 1.0);
   float skyOpen = 0.38 + 0.62 * max(uSunDir.y, 0.0);
-  float causAmt = caus * exp(-depth * 0.52) * mix(0.42, sunShadowK, 0.58) * skyOpen;
-  vec3 bedLit = bed * (1.0 + causAmt * 3.5) * trans;
+  float causAmt = caus * exp(-depth * 0.38) * mix(0.55, sunShadowK, 0.45) * skyOpen;
+  vec3 bedLit = bed * (1.0 + causAmt * 2.4) * trans;
 
   // ---- in-water scattering (turbidity) builds up with depth
-  vec3 inScatter = uScatter * skyIrradiance(vec3(0.0, 1.0, 0.0)) * (1.0 - trans) * 2.7;
+  vec3 inScatter = uScatter * vec3(1.18, 0.78, 0.40)
+    * (0.45 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0)))) * (1.0 - trans) * 2.7;
 
   // ---- reflection
   vec3 R = reflect(-V, N);
@@ -337,7 +339,7 @@ void main(){
   float fres = f0 + (1.0 - f0) * pow(1.0 - cosV, 5.0);
   // forest water is tannin-stained, not a lake of sky: keep Fresnel modest
   fres = mix(fres, clamp(fres * 1.25, 0.0, 0.72), clamp(flowMag * 0.45, 0.0, 1.0));
-  fres = min(fres, 0.36);
+  fres = min(fres, 0.20);
 
   vec3 col = mix(bedLit + inScatter, refl, fres);
 
@@ -376,8 +378,10 @@ void main(){
   // tannin stain after refraction: the bed lookup is often green bank, and
   // Beer-Lambert alone cannot retint that into tea. Foam is mixed after
   // so the lace stays pale on the stained column.
-  float stain = smoothstep(0.05, 0.62, depth);
-  col *= mix(vec3(1.0), vec3(1.16, 0.86, 0.58), stain * 0.62);
+  float stain = smoothstep(0.04, 0.55, depth);
+  col *= mix(vec3(1.0), vec3(1.30, 0.68, 0.32), stain * 0.90);
+  // metre-scale gold on the bed so caustics survive AgX at 528 px
+  col += vec3(0.46, 0.34, 0.12) * causAmt * 0.80;
   vec3 foamCol = vec3(0.42, 0.44, 0.42) * (0.88 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.40)
                + uSkyAmbient * 0.40 + uSunColor * sunShadowK * 0.10;
   col = mix(col, foamCol, foam * 0.40);
