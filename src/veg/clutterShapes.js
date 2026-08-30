@@ -416,7 +416,7 @@ export function buildSedge(seed, opts = {}) {
 export function buildLily(seed, opts = {}) {
   const r = new Rng(seed);
   const mb = new MeshBuilder();
-  const pads = 1 + r.int(2);
+  const pads = 2 + r.int(2);
   let span = 0.12;
   for (let i = 0; i < pads; i++) {
     const w = lerp(0.30, 0.56, r.f()) * (opts.scale ?? 1);
@@ -676,7 +676,7 @@ export const ARCHETYPES = [
       - e.rock * 1.0 - e.slope * 1.2,
   },
   {
-    key: 'lily', build: buildLily, variants: 3, density: 0.055, maxDist: 20,
+    key: 'lily', build: buildLily, variants: 3, density: 0.16, maxDist: 22,
     score: (e) => {
       const wd = e.waterDepth;
       if (wd < 0.12 || wd > 0.90) return 0;

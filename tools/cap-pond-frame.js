@@ -38,7 +38,7 @@ function catchUp(f) {
 
 function clearNearClutter(f) {
   const clutter = f.forest.clutter;
-  if (!clutter) return { plants: 0, lilies: 0 };
+  if (!clutter) return { plants: 0, lilies: 0, nearLilies: 0 };
   const p = f.camera.position;
   const fwd = p.clone();
   f.camera.getWorldDirection(fwd);
@@ -46,10 +46,18 @@ function clearNearClutter(f) {
     'fern', 'bush', 'bramble', 'vine', 'herb',
     'mushroom', 'flower', 'log', 'limb',
   ]);
-  let dropped = 0, lilies = 0;
+  let dropped = 0, lilies = 0, nearLilies = 0;
+  const lookX = -113.9, lookZ = 110.5;
   for (const k of clutter.kinds) {
     if (k.arch.key === 'lily') {
-      for (const v of k.variants) lilies += v.bucket.count;
+      for (const v of k.variants) {
+        lilies += v.bucket.count;
+        const d = v.bucket.data;
+        for (let i = 0; i < v.bucket.count; i++) {
+          const o = i * 12;
+          if (Math.hypot(d[o] - lookX, d[o + 2] - lookZ) < 16) nearLilies++;
+        }
+      }
     }
     if (!hide.has(k.arch.key)) continue;
     const bulky = k.arch.key === 'log' || k.arch.key === 'limb' || k.arch.key === 'bush';
@@ -73,7 +81,7 @@ function clearNearClutter(f) {
       if (v.shadowMesh) v.shadowMesh.visible = w > 0;
     }
   }
-  return { plants: dropped, lilies };
+  return { plants: dropped, lilies, nearLilies };
 }
 
 function stripLookCone(f) {
@@ -117,6 +125,7 @@ const treesDropped = stripLookCone(f);
 return {
   plants: cleared.plants,
   lilies: cleared.lilies,
+  nearLilies: cleared.nearLilies,
   treesDropped,
   trees: f.forest.trees?.stats.trees ?? 0,
   cells: f.forest.water?.stats?.cells ?? 0,
