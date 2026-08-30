@@ -20,18 +20,18 @@ for (let i = 0; i < 150; i++) {
   const s = maps.sample(x, z, {});
   if (!s.inside) continue;
   if (s.waterDepth > 0.02) continue;
-  if (s.skyVis < 0.28) continue;
-  if (s.canopy < 0.18) continue;
-  const score = s.skyVis * 2.6 + s.canopy * 0.5 - s.slope * 0.6;
+  if (s.skyVis < 0.40) continue;
+  if (s.canopy < 0.15 || s.canopy > 0.72) continue;
+  const score = s.skyVis * 3.0 + (1 - Math.abs(s.canopy - 0.4)) * 1.2 - s.slope * 0.5;
   if (score > bestS) { bestS = score; best = { x, z, s }; }
 }
 const x = best?.x ?? c.x, z = best?.z ?? c.z;
 const gh = maps.height(x, z);
-f.camera.position.set(x - 5.2, gh + 3.15, z + 5.6);
-f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.6);
+f.camera.position.set(x - 4.4, gh + 4.2, z + 4.8);
+f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.8);
 const p = f.camera.position;
-p.y = maps.height(p.x, p.z) + 3.05;
-f.camera.lookAt(x + 6.0, gh + 14.5, z - 3.2);
+p.y = maps.height(p.x, p.z) + 4.05;
+f.camera.lookAt(x + 8.0, gh + 22.0, z - 4.0);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 

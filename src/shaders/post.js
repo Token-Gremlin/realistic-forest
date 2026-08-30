@@ -528,16 +528,14 @@ void main(){
       float z = c4.z / c4.w * 0.5 + 0.5;
       if(z > sceneZ + 0.006) continue;
       float ang = (hash11(sd + 5.0) - 0.5) * 1.8;
-      float sz = mix(0.0075, 0.0135, hash11(sd + 6.2));
+      float sz = mix(0.018, 0.032, hash11(sd + 6.2));
       float body = insectMote(vUv, c, ang, sz);
-      if(body < 0.05) continue;
-      vec3 bug = vec3(0.07, 0.075, 0.045);
-      mapped = mix(mapped, bug, clamp(body * 0.78, 0.0, 1.0));
-      if(hash11(sd + 9.0) > 0.62){
-        vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
-        float glint = exp(-length((vUv - c) * aspect) / max(sz * 0.28, 1.0e-4));
-        mapped = max(mapped, uSunColor * glint * 0.55);
-      }
+      if(body < 0.04) continue;
+      vec3 bug = vec3(0.11, 0.10, 0.06);
+      mapped = mix(mapped, bug, clamp(body * 0.72, 0.0, 1.0));
+      vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+      float glint = exp(-length((vUv - c) * aspect) / max(sz * 0.22, 1.0e-4));
+      mapped = max(mapped, uSunColor * glint * mix(0.35, 0.85, step(0.45, hash11(sd + 9.0))));
     }
   }
 
@@ -558,10 +556,10 @@ void main(){
       vec2 c = c4.xy / c4.w * 0.5 + 0.5;
       if(c.x < -0.02 || c.x > 1.02 || c.y < 0.08 || c.y > 0.98) continue;
       float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
-      float z = c4.z / c4.w * 0.5 + 0.5;
-      if(z > sceneZ + 0.004) continue;
+      // distant flock lives on sky; skip only when a near limb covers the UV
+      if(sceneZ < 0.80) continue;
       float ang = -0.18 + side * 0.12;
-      float sz = mix(0.022, 0.034, hash11(20.0 + idb));
+      float sz = mix(0.038, 0.058, hash11(20.0 + idb));
       float flap = mix(0.55, 1.0, hash11(24.0 + idb));
       float body = birdV(vUv, c, ang, sz, flap);
       if(body < 0.06) continue;

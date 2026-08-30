@@ -27,11 +27,11 @@ for (let i = 0; i < 150; i++) {
 }
 const x = best?.x ?? c.x, z = best?.z ?? c.z;
 const gh = maps.height(x, z);
-f.camera.position.set(x - 3.4, gh + 1.72, z + 3.8);
-f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.0);
+f.camera.position.set(x - 4.2, gh + 2.25, z + 4.4);
+f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.2);
 const p = f.camera.position;
-p.y = maps.height(p.x, p.z) + 1.65;
-f.camera.lookAt(x + 2.2, gh + 1.35, z - 1.4);
+p.y = maps.height(p.x, p.z) + 2.15;
+f.camera.lookAt(x + 3.0, gh + 1.85, z - 1.8);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 
