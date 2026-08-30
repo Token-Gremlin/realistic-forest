@@ -15,7 +15,7 @@ export const PRESETS = {
     shadowSize: 512, shadowSplits: [12, 34, 90, 220],
     volumetricSteps: 8,
     grassCount: 192, grassSpacing: 0.07, grassDensity: 1.12, grassRings: 3, grassRadius: 22,
-    treeDensity: 0.38, treeRadius: 120, treeDetail: 0,
+    treeDensity: 0.50, treeRadius: 140, treeDetail: 1,
     clutterDensity: 0.70, clutterRadius: 28,
     rainParticles: 8000,
     ao: true, dof: true, taa: true, volumetrics: true,

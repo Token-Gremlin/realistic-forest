@@ -53,6 +53,9 @@ export class Trees {
     this.maps = forest.maps;
     this.quality = quality;
     this.radius = quality.treeRadius;
+    this.detail = quality.treeDetail ?? 0;
+    // hold mesh LODs a little farther when the preset paid for them
+    this.lodScale = 1 + Math.min(this.detail, 2) * 0.16;
     // stems per square metre before the ecology filter thins it; a temperate
     // mixed forest including saplings and shrubs sits around 0.10–0.25
     this.density = 0.105 * quality.treeDensity;
@@ -81,7 +84,10 @@ export class Trees {
       const sp = SPECIES[key];
       for (let v = 0; v < VARIANTS_PER_SPECIES; v++) {
         const seed = hash2i(key.length * 7919 + v * 104729, 13);
-        const built = buildTreeLods(sp, seed, { age: 0.62 + 0.38 * ((v * 41) % 100) / 100 });
+        const built = buildTreeLods(sp, seed, {
+          age: 0.62 + 0.38 * ((v * 41) % 100) / 100,
+          detail: this.detail,
+        });
         const variant = {
           species: sp, key, seed,
           height: built.height, radius: built.radius, crownRadius: built.crownRadius,
@@ -479,7 +485,7 @@ export class Trees {
 
         // scale the LOD distances with the tree size: a 30 m beech deserves
         // real geometry further out than a 2 m sapling
-        const sizeK = clamp(t.height / 18, 0.42, 1.7);
+        const sizeK = clamp(t.height / 18, 0.42, 1.7) * this.lodScale;
         const b0 = LOD_BOUNDS[0] * sizeK, b1 = LOD_BOUNDS[1] * sizeK, b2 = LOD_BOUNDS[2] * sizeK;
 
         const emit = (lod, fade) => {

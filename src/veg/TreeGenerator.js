@@ -363,6 +363,19 @@ const LOD_PROFILE = [
   { radial: 0.42, segStride: 3, prune: 0.0180, keep: 0.34, cross: false },
 ];
 
+function profileFor(lod, detail) {
+  const base = LOD_PROFILE[lod];
+  const k = Math.max(0, detail | 0);
+  if (k <= 0) return base;
+  return {
+    radial: base.radial + (lod === 0 ? 0 : 0.10 * k),
+    segStride: lod === 1 && k >= 2 ? 1 : base.segStride,
+    prune: base.prune * (1 - 0.18 * Math.min(k, 2)),
+    keep: Math.min(1, base.keep + 0.10 * k),
+    cross: base.cross || (lod === 1 && k >= 2),
+  };
+}
+
 function radialFor(level, radius, scale) {
   if (level === 0) return Math.max(4, Math.round(clamp(radius * 42, 7, 14) * scale));
   if (level === 1) return Math.max(3, Math.round(7 * scale));
@@ -370,8 +383,8 @@ function radialFor(level, radius, scale) {
   return 3;
 }
 
-function emitBranches(sk, lod) {
-  const prof = LOD_PROFILE[lod];
+function emitBranches(sk, lod, detail = 0) {
+  const prof = profileFor(lod, detail);
   const mb = new MeshBuilder();
   const sp = sk.sp;
   const basis = { t: V(), b: V() };
@@ -440,8 +453,8 @@ function emitBranches(sk, lod) {
   return mb;
 }
 
-function emitLeaves(sk, lod) {
-  const prof = LOD_PROFILE[lod];
+function emitLeaves(sk, lod, detail = 0) {
+  const prof = profileFor(lod, detail);
   const mb = new MeshBuilder();
   if (!sk.clusters.length) return mb;
   const keep = prof.keep;
@@ -487,10 +500,11 @@ function emitLeaves(sk, lod) {
  */
 export function buildTreeLods(species, seed, opts = {}) {
   const sk = new Skeleton(species, seed, opts).grow();
+  const detail = opts.detail ?? 0;
   const lods = [];
   for (let lod = 0; lod < LOD_PROFILE.length; lod++) {
-    const branches = emitBranches(sk, lod);
-    const leaves = emitLeaves(sk, lod);
+    const branches = emitBranches(sk, lod, detail);
+    const leaves = emitLeaves(sk, lod, detail);
     lods.push({
       branchGeometry: branches.toGeometry(),
       leafGeometry: leaves.toGeometry(),
