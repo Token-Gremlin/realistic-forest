@@ -187,8 +187,10 @@ void main(){
   flow = fl > 1e-4 ? flow / fl : vec2(0.0, 1.0);
   float fade = 1.0 - smoothstep(22.0, 64.0, length(vec3(wp.x, surf, wp.y) - uCamPos));
   float chop = rippleHeight(wp, flow, clamp(m.a, 0.0, 1.0), depth) * fade;
-  // lift the skirt slightly so the surface never z-fights the bed
-  vec3 world = vec3(wp.x, max(surf + chop, ground - 0.35), wp.y);
+  // Dry verts stay on the bank. Sinking them 0.35 m made black wedges
+  // along the waterline on the close still.
+  float y = depth > 0.0 ? max(surf + chop, ground + 0.01) : ground + 0.02;
+  vec3 world = vec3(wp.x, y, wp.y);
   vWorld = world;
   vLodPx = length(world - uCamPos);
   vCur = uViewProj * vec4(world, 1.0);

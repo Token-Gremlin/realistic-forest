@@ -39,7 +39,7 @@ function clearNearFerns(f) {
   const p = f.camera.position;
   const fwd = p.clone();
   f.camera.getWorldDirection(fwd);
-  const hide = new Set(['fern', 'bush', 'bramble', 'vine', 'herb', 'sedge']);
+  const hide = new Set(['fern', 'bush', 'bramble', 'vine', 'herb', 'sedge', 'log', 'limb']);
   let dropped = 0;
   for (const k of clutter.kinds) {
     if (!hide.has(k.arch.key)) continue;
