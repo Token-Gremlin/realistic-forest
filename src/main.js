@@ -41,6 +41,8 @@ async function start() {
     stencil: false,
     depth: true,
     preserveDrawingBuffer: false,
+    // lower input latency when the browser allows it; ignored if unsupported
+    desynchronized: true,
   });
   const gl = renderer.getContext();
   if (!renderer.capabilities.isWebGL2) {
@@ -53,8 +55,6 @@ async function start() {
     return;
   }
   gl.getExtension('OES_texture_float_linear');
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
   renderer.toneMapping = THREE.NoToneMapping;
   renderer.autoClear = false;
@@ -63,12 +63,14 @@ async function start() {
 
   const params = new URLSearchParams(location.search);
   const presetName = params.get('q') ?? guessPreset();
-  const quality = { ...(PRESETS[presetName] ?? PRESETS.high) };
+  const quality = { ...(PRESETS[presetName] ?? PRESETS.play) };
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality.pixelRatio ?? 1.5));
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
 
   boot(0.05, 'baking noise volumes');
   await nextFrame();
 
-  const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.08, 7000);
+  const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.08, quality.camFar ?? 520);
   camera.position.set(0, 30, 0);
 
   let forest;
@@ -134,7 +136,7 @@ async function start() {
     freeCam: false,
     showPanel: false,
     autoQuality: true,
-    fpsTarget: 55,
+    fpsTarget: 50,
     exposureAuto: true,
     autoFocus: true,
   };
@@ -253,10 +255,18 @@ async function start() {
         else if (fps > state.fpsTarget * 1.15) { fastFrames++; slowFrames = 0; }
         else { slowFrames = 0; fastFrames = 0; }
         if (slowFrames >= 2) {
-          pipeline.setScale(Math.max(0.55, pipeline.scale - 0.08));
+          pipeline.setScale(Math.max(0.50, pipeline.scale - 0.10));
+          pipeline.settings.volumetricSteps = Math.max(
+            quality.volMin ?? 8,
+            (pipeline.settings.volumetricSteps | 0) - 4,
+          );
           slowFrames = 0;
         } else if (fastFrames >= 4 && pipeline.scale < quality.renderScale) {
           pipeline.setScale(Math.min(quality.renderScale, pipeline.scale + 0.05));
+          pipeline.settings.volumetricSteps = Math.min(
+            quality.volumetricSteps,
+            (pipeline.settings.volumetricSteps | 0) + 2,
+          );
           fastFrames = 0;
         }
       }
@@ -272,11 +282,11 @@ async function start() {
   const writeHud = () => {
     const info = renderer.info.render;
     hudEl.innerHTML = `
-      <b>${fps.toFixed(0)} fps</b> <span class="k">· ${pipeline.width}×${pipeline.height} (${(pipeline.scale * 100) | 0}%)</span><br/>
+      <b>${fps.toFixed(0)} fps</b> <span class="k">· ${quality.name}</span> <span class="k">· ${pipeline.width}×${pipeline.height} (${(pipeline.scale * 100) | 0}%)</span><br/>
       <span class="k">act</span> ${weather.actName} <span class="k">· day</span> ${(weather.state.dayT * 24).toFixed(1)}h<br/>
       <span class="k">wind</span> ${weather.state.wind.toFixed(1)} <span class="k">rain</span> ${weather.state.rain.toFixed(2)} <span class="k">storm</span> ${weather.state.storm.toFixed(2)} <span class="k">drops</span> ${forest.rain?.stats.drops ?? 0} <span class="k">debris</span> ${forest.debris?.stats.debris ?? 0} <span class="k">fall</span> ${forest.falling?.stats.falling ?? 0} <span class="k">down</span> ${forest.trees?.stats.fallen ?? 0}<br/>
       <span class="k">life</span> i${forest.life?.stats.insects ?? 0} f${forest.life?.stats.fireflies ?? 0} b${forest.life?.stats.birds ?? 0} l${forest.life?.stats.leaves ?? 0} <span class="k">fire</span> ${((forest.fire?.stats.strength ?? 0) * 100) | 0}% e${forest.fire?.stats.embers ?? 0}<br/>
-      <span class="k">draws</span> ${info.calls} <span class="k">tris</span> ${(info.triangles / 1e6).toFixed(2)}M <span class="k">patches</span> ${forest.stats.patches}<br/>
+      <span class="k">draws</span> ${info.calls} <span class="k">tris</span> ${(info.triangles / 1e6).toFixed(2)}M <span class="k">patches</span> ${forest.stats.patches} <span class="k">·</span> webgl2${navigator.gpu ? '+webgpu' : ''}<br/>
       <span class="k">${director.enabled ? `shot: ${director.shot}` : 'free camera (WASD, mouse, shift, wheel)'}</span><br/>
       <span class="k">H panel · C camera · N/B act · G walk · F dof · P pause</span>
     `;

@@ -56,6 +56,7 @@ export class Trees {
     this.detail = quality.treeDetail ?? 0;
     // hold mesh LODs a little farther when the preset paid for them
     this.lodScale = 1 + Math.min(this.detail, 2) * 0.16;
+    this.lodBounds = quality.lodBounds ?? LOD_BOUNDS;
     // stems per square metre before the ecology filter thins it; a temperate
     // mixed forest including saplings and shrubs sits around 0.10–0.25
     this.density = 0.105 * quality.treeDensity;
@@ -486,7 +487,7 @@ export class Trees {
         // scale the LOD distances with the tree size: a 30 m beech deserves
         // real geometry further out than a 2 m sapling
         const sizeK = clamp(t.height / 18, 0.42, 1.7) * this.lodScale;
-        const b0 = LOD_BOUNDS[0] * sizeK, b1 = LOD_BOUNDS[1] * sizeK, b2 = LOD_BOUNDS[2] * sizeK;
+        const b0 = this.lodBounds[0] * sizeK, b1 = this.lodBounds[1] * sizeK, b2 = this.lodBounds[2] * sizeK;
 
         const emit = (lod, fade) => {
           vals[11] = fade;

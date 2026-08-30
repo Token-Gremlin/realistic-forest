@@ -176,7 +176,7 @@ Ground groundSurface(vec3 wp, vec3 N, vec4 eco, vec4 mapv, vec4 ao, float lodPx)
   float mossAmt = smoothstep(0.42, 0.86, moisture) * (1.0 - steep * 0.75)
                 * (0.35 + 0.65 * canopy) * (1.0 - smoothstep(0.55, 0.95, waterDepth + 0.5));
   mossAmt *= smoothstep(0.35, 0.75, fbm(p * 0.55 + 61.0, 4, 2.1, 0.5) * 0.5 + 0.5);
-  mossAmt = clamp(mossAmt * 1.35, 0.0, 1.0);
+  mossAmt = clamp(mossAmt * 1.62, 0.0, 1.0);
   if(mossAmt > 0.01){
     float mb = fbm(p * 6.5 + 5.0, 3, 2.1, 0.5) * 0.5 + 0.5;
     vec3 mc = mossC * (0.72 + 0.55 * mb);
