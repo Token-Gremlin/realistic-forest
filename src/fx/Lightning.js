@@ -29,7 +29,8 @@ void main(){
   vSide = uv.x;
   vBright = max(abs(uv.y), 0.2);
   vGlow = 1.0 - step(0.0, uv.y);
-  gl_Position = uViewProj * vec4(position, 1.0);
+  // position is already NDC — same path as the clip-space canary that drew
+  gl_Position = vec4(position, 1.0);
 }
 `;
 
@@ -104,9 +105,11 @@ export class Lightning {
     this.geometry = g;
 
     this.uniforms = {
-      ...Env.pick('uViewProj', 'uFlashColor'),
+      ...Env.pick('uFlashColor'),
       uAmp: { value: 0 },
     };
+    this._camera = null;
+    this._ndc = new THREE.Vector3();
     this._segs = [];
     this._dir = new THREE.Vector3();
     this._view = new THREE.Vector3();
@@ -268,11 +271,12 @@ export class Lightning {
     this.sawFlash = false;
     this.mesh.visible = this.active;
     this.uniforms.uAmp.value = Math.max(U.uFlash.value.w, 1.25);
-    this._rebuild(cam);
+    this._rebuild(this._camera);
   }
 
-  _rebuild(cam) {
-    const c = cam ?? this.forest.camPos ?? U.uCamPos.value;
+  _rebuild(camera) {
+    const camObj = camera && camera.isCamera ? camera : this._camera;
+    const c = camObj ? camObj.position : (this.forest.camPos ?? U.uCamPos.value);
     const P = this._pos, M = this._meta;
     const dir = this._dir, view = this._view, side = this._side;
     const p0 = this._p0, p1 = this._p1, p2 = this._p2, p3 = this._p3;
@@ -304,6 +308,15 @@ export class Lightning {
       ribbon(s.a, s.b, Math.max(s.width * 0.40, 1.4), s.bright);
       ribbon(s.a, s.b, Math.max(s.width * 2.8, 4.2), -(s.bright * 0.48));
     }
+    if (camObj) {
+      const ndc = this._ndc;
+      camObj.updateMatrixWorld(true);
+      for (let i = 0; i < n; i++) {
+        const o = i * 3;
+        ndc.set(P[o], P[o + 1], P[o + 2]).project(camObj);
+        P[o] = ndc.x; P[o + 1] = ndc.y; P[o + 2] = ndc.z;
+      }
+    }
     this.geometry.setDrawRange(0, n);
     this.bufPos.needsUpdate = true;
     this.bufMeta.needsUpdate = true;
@@ -311,7 +324,8 @@ export class Lightning {
     this.stats.verts = n;
   }
 
-  update() {
+  update(_dt, camera) {
+    if (camera && camera.isCamera) this._camera = camera;
     if (!this.active) {
       this.mesh.visible = false;
       this.uniforms.uAmp.value = 0;
@@ -332,7 +346,7 @@ export class Lightning {
       this.mesh.visible = false;
       this.uniforms.uAmp.value = 0;
     }
-    if (this.mesh.visible) this._rebuild(this.forest.camPos ?? U.uCamPos.value);
+    if (this.mesh.visible) this._rebuild(this._camera);
   }
 
 }

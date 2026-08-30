@@ -17,7 +17,7 @@ function catchUp(f) {
   }
   if (f.weather.holdFlash) {
     f.weather.update(0, f.camera.position);
-    f.forest.lightning?.update?.();
+    f.forest.lightning?.update?.(0, f.camera);
   }
   if (f.forest.life) f.forest.life.update(0.016, f.camera);
   if (f.forest.fire) f.forest.fire.update(0.016);
