@@ -139,8 +139,8 @@ export class Water {
       uGrid: { value: this.grid },
       uWaterWave: { value: new THREE.Vector4(1.0, 0.30, 0.5, 0.0) },
       // clear lake water: red dies first, blue travels, so the column reads cyan.
-      uAbsorb: { value: new THREE.Vector3(0.48, 0.14, 0.055) },
-      uScatter: { value: new THREE.Vector3(0.030, 0.062, 0.110) },
+      uAbsorb: { value: new THREE.Vector3(0.40, 0.13, 0.062) },
+      uScatter: { value: new THREE.Vector3(0.018, 0.038, 0.070) },
     };
 
     this.material = new THREE.RawShaderMaterial({
@@ -331,8 +331,8 @@ void main(){
   vec3 bedLit = bed * (1.0 + causAmt * 1.6) * trans;
 
   // ---- in-water scattering (turbidity) builds up with depth
-  vec3 inScatter = uScatter * vec3(0.55, 0.88, 1.28)
-    * (0.50 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0)))) * (1.0 - trans) * 1.35;
+  vec3 inScatter = uScatter * vec3(0.48, 0.78, 1.18)
+    * (0.32 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0)))) * (1.0 - trans) * 0.82;
 
   // ---- reflection
   vec3 R = reflect(-V, N);
@@ -344,7 +344,7 @@ void main(){
   float fres = f0 + (1.0 - f0) * pow(1.0 - cosV, 5.0);
   fres = mix(fres, clamp(fres * 1.35, 0.0, 0.82), clamp(flowMag * 0.45, 0.0, 1.0));
   float still = 1.0 - smoothstep(0.06, 0.40, flowMag);
-  fres = min(fres, mix(0.48, 0.38, 1.0 - still));
+  fres = min(fres, mix(0.36, 0.26, 1.0 - still));
 
   vec3 col = mix(bedLit + inScatter, refl, fres);
 
@@ -384,9 +384,9 @@ void main(){
   foam *= mix(0.06, 1.0, lace);
   foam = clamp(foam, 0.0, 1.0);
   // a cool body tint so deep water reads as lake, not stained tea
-  float body = smoothstep(0.08, 0.70, depth);
-  col *= mix(vec3(1.0), vec3(0.72, 0.90, 1.12), body * 0.55);
-  col += vec3(0.42, 0.72, 1.0) * causAmt * 0.95;
+  float body = smoothstep(0.12, 0.85, depth);
+  col *= mix(vec3(1.0), vec3(0.80, 0.93, 1.08), body * 0.38);
+  col += vec3(0.32, 0.58, 0.92) * causAmt * 0.42;
   vec3 foamCol = vec3(0.58, 0.57, 0.50) * (0.90 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.32)
                + uSkyAmbient * 0.28 + uSunColor * sunShadowK * 0.10;
   col = mix(col, foamCol, foam * 0.44);
@@ -416,10 +416,10 @@ void main(){
     float ring2 = 1.0 - smoothstep(0.022, 0.080, abs(rw2.x - rad2));
     col += vec3(0.84, 0.88, 0.80) * ring2 * exp(-rw2.x * 1.8) * uWaterWave.w * 1.15;
   }
-  col += vec3(0.05, 0.08, 0.12) * uWeather.z;
+  col += vec3(0.04, 0.06, 0.09) * uWeather.z;
   float sunUp = clamp(uSunDir.y, 0.0, 1.0);
-  col += uSkyAmbient * mix(0.32, 0.12, sunUp);
-  col += vec3(0.018, 0.042, 0.078) * mix(0.55, 0.10, sunUp);
+  col += uSkyAmbient * mix(0.22, 0.08, sunUp);
+  col += vec3(0.012, 0.028, 0.052) * mix(0.40, 0.06, sunUp);
 
   // soften the very edge so the waterline is not a hard cut
   float edgeFade = smoothstep(0.006, 0.05, depth);
