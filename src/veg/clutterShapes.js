@@ -554,8 +554,9 @@ export const ARCHETYPES = [
       - Math.max(0, e.waterDepth + 0.2) * 4,
   },
   {
-    key: 'rock', build: buildRock, variants: 4, density: 0.12, maxDist: 78,
-    score: (e) => 0.06 + e.rock * 2.6 + e.slope * 1.1 - e.litter * 0.4,
+    key: 'rock', build: buildRock, variants: 4, density: 0.14, maxDist: 78,
+    score: (e) => 0.06 + e.rock * 2.6 + e.slope * 1.1 - e.litter * 0.4
+      + Math.max(0, 0.38 - Math.abs(e.waterDepth + 0.06)) * 4.2,
   },
   {
     key: 'twig', build: buildTwig, variants: 3, density: 0.65, maxDist: 22,
@@ -566,7 +567,7 @@ export const ARCHETYPES = [
     score: (e) => -0.05 + e.litter * 2.3 + e.canopy * 0.7 - Math.max(0, e.waterDepth + 0.1) * 5,
   },
   {
-    key: 'sedge', build: buildSedge, variants: 3, density: 0.2, maxDist: 44,
+    key: 'sedge', build: buildSedge, variants: 3, density: 0.28, maxDist: 44,
     score: (e) => -0.35 + e.moisture * 1.9 + Math.max(0, 0.4 - Math.abs(e.waterDepth + 0.15)) * 6
       - e.rock * 1.0 - e.slope * 1.2,
   },

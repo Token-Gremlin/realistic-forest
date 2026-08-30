@@ -233,7 +233,8 @@ void main(){
   dens -= eco.b * 1.00;
   dens -= smoothstep(0.30, 0.80, slope) * 0.55;
   dens -= smoothstep(0.50, 0.95, eco.a) * 0.32;
-  dens *= 1.0 - smoothstep(-0.12, 0.22, waterDepth);
+  // pull the sward back from the wet line so the waterline is gravel, not lawn
+  dens *= 1.0 - smoothstep(-0.28, 0.06, waterDepth);
   // tussocks: two scales of clumping so the sward is patchy, never a lawn
   float clump = fbm(p * 0.105, 4, 2.1, 0.55) * 0.5 + 0.5;
   float clump2 = fbm(p * 0.58 + 31.0, 3, 2.1, 0.5) * 0.5 + 0.5;

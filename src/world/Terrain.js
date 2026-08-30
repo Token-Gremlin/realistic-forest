@@ -208,18 +208,18 @@ Ground groundSurface(vec3 wp, vec3 N, vec4 eco, vec4 mapv, vec4 ao, float lodPx)
 
   // ---- wet margin: a dark glossy strip along the shoreline, then drier bank
   // waterDepth > 0 is submerged; the readable band is a few decimetres above
-  float margin = smoothstep(-0.62, -0.04, waterDepth) * (1.0 - smoothstep(0.02, 0.22, waterDepth));
-  margin *= 1.0 - steep * 0.35;
-  float wet = clamp(wetness * 1.05 + margin * 0.85, 0.0, 1.0);
-  wet = max(wet, smoothstep(-0.08, 0.28, waterDepth));
-  alb = mix(alb, silt * 0.48, wet * 0.55);
-  alb *= mix(1.0, 0.42, wet);
+  float margin = smoothstep(-0.85, -0.02, waterDepth) * (1.0 - smoothstep(0.01, 0.18, waterDepth));
+  margin *= 1.0 - steep * 0.28;
+  float wet = clamp(wetness * 1.12 + margin * 1.05, 0.0, 1.0);
+  wet = max(wet, smoothstep(-0.10, 0.32, waterDepth));
+  alb = mix(alb, silt * 0.42, wet * 0.62);
+  alb *= mix(1.0, 0.34, wet);
   // darker still right at the meniscus so the waterline reads as a line
-  alb *= mix(1.0, 0.58, margin * 0.75);
+  alb *= mix(1.0, 0.46, margin * 0.88);
   // wet dirt, not chrome: keep enough roughness that morning shafts do not blow the bank
-  rough = mix(rough, 0.22, wet * 0.85);
-  rough = mix(rough, 0.16, margin * 0.6);
-  grad *= mix(1.0, 0.40, wet);
+  rough = mix(rough, 0.18, wet * 0.90);
+  rough = mix(rough, 0.12, margin * 0.72);
+  grad *= mix(1.0, 0.32, wet);
 
   // ---- puddles: small flattened mirrors in hollows of the wet band
   if(wet > 0.25 && det2 > 0.04){

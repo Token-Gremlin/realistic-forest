@@ -84,10 +84,12 @@ vec3 rippleNormal(vec2 p, vec2 flow, float flowMag, float depth, float lodPx){
 
 /** Procedural caustics: interference of two rotating worley fields. */
 float caustics(vec2 p, float t){
-  float a = worley2(p * 2.6 + vec2(t * 0.13, -t * 0.09), 1.0).x;
-  float b = worley2(p * 3.9 + vec2(-t * 0.11, t * 0.16) + 7.0, 1.0).x;
+  float a = worley2(p * 3.1 + vec2(t * 0.16, -t * 0.11), 1.0).x;
+  float b = worley2(p * 4.8 + vec2(-t * 0.13, t * 0.19) + 7.0, 1.0).x;
   float c = 1.0 - min(a, b);
-  c = pow(clamp(c, 0.0, 1.0), 5.5);
+  c = pow(clamp(c, 0.0, 1.0), 3.15);
+  float d = worley2(p * 8.6 + vec2(t * 0.29, t * 0.07) + 19.0, 1.0).x;
+  c += pow(clamp(1.0 - d, 0.0, 1.0), 4.0) * 0.42;
   return c;
 }
 `;
@@ -261,30 +263,39 @@ void main(){
   vec2 uv = uvScreen;
 
   // ---- refraction: offset the lookup by the surface slope, scaled by depth
-  float refrScale = clamp(depth * 0.35, 0.0, 0.6) * (18.0 / max(viewDist, 1.0));
-  vec2 refrOff = N.xz * refrScale * 0.06;
+  float refrScale = clamp(depth * 0.42, 0.0, 0.72) * (22.0 / max(viewDist, 1.0));
+  vec2 refrOff = N.xz * refrScale * 0.075;
   vec2 ruv = clamp(uv + refrOff, vec2(0.002), vec2(0.998));
   float bedDepthTex = texture(uSceneDepth, ruv).r;
   vec3 bedPos = worldFromDepth(ruv, bedDepthTex, uInvViewProj);
   // reject samples that are actually in front of the water
   if(bedDepthTex < 0.999999 && length(bedPos - uCamPos) < viewDist - 0.05){
     ruv = uv;
+    refrOff = vec2(0.0);
     bedPos = worldFromDepth(uv, texture(uSceneDepth, uv).r, uInvViewProj);
   }
-  vec3 bed = sceneAt(ruv);
+  // a little lateral chromatic split so the column reads as a thick medium
+  vec3 bed;
+  bed.r = sceneAt(clamp(uv + refrOff * 1.14, vec2(0.002), vec2(0.998))).r;
+  bed.g = sceneAt(ruv).g;
+  bed.b = sceneAt(clamp(uv + refrOff * 0.86, vec2(0.002), vec2(0.998))).b;
 
   // ---- path length through the water for absorption
   float cosV = max(dot(N, V), 0.08);
   float pathLen = min(depth / cosV, 6.0) + min(depth, 3.0);
-  vec3 trans = exp(-uAbsorb * pathLen * 1.6);
+  // shallows stay clear so the bed and caustics read; pools go tea-brown
+  vec3 absorb = uAbsorb * mix(0.48, 1.38, smoothstep(0.07, 0.95, depth));
+  vec3 trans = exp(-absorb * pathLen * 1.55);
 
-  // ---- caustics on the bed, brightest where the surface is flat and shallow
+  // ---- caustics on the bed. Keep a floor in canopy shade so a forest
+  // stream is not a dead brown slab the moment a trunk shadows it.
   vec2 causticP = bedPos.xz + N.xz * depth * 1.6;
   float caus = caustics(causticP, uTime);
   vec2 rnd = vec2(ign(gl_FragCoord.xy, uTime), ign(gl_FragCoord.yx + 7.0, uTime));
   float sunShadowK = sunShadow(vWorld, vec3(0.0, 1.0, 0.0), 1.0, viewDist, rnd, 1.0);
-  float causAmt = caus * exp(-depth * 0.48) * sunShadowK * max(uSunDir.y, 0.0);
-  vec3 bedLit = bed * (1.0 + causAmt * 4.4) * trans;
+  float skyOpen = 0.38 + 0.62 * max(uSunDir.y, 0.0);
+  float causAmt = caus * exp(-depth * 0.52) * mix(0.42, sunShadowK, 0.58) * skyOpen;
+  vec3 bedLit = bed * (1.0 + causAmt * 6.8) * trans;
 
   // ---- in-water scattering (turbidity) builds up with depth
   vec3 inScatter = uScatter * skyIrradiance(vec3(0.0, 1.0, 0.0)) * (1.0 - trans) * 3.4;
@@ -322,17 +333,25 @@ void main(){
     col += uFireColor * atten * pow(max(dot(N, normalize(fd + V)), 0.0), 48.0) * 3.2;
   }
 
-  // ---- foam: shallow edges, fast flow, and rain agitation
-  float shore = 1.0 - smoothstep(0.0, 0.36, depth);
-  float fastFoam = smoothstep(0.38, 1.05, flowMag);
-  float foamNoise = fbm(wxz * 5.5 - flow * uTime * 1.4, 3, 2.1, 0.5) * 0.5 + 0.5;
-  float foamNoise2 = fbm(wxz * 16.0 - flow * uTime * 2.6 + 9.0, 2, 2.1, 0.5) * 0.5 + 0.5;
-  float rainFoam = uWeather.z * (0.12 + foamNoise2 * 0.22);
-  float foam = clamp(shore * 1.55 + fastFoam + rainFoam, 0.0, 1.4);
-  foam *= smoothstep(0.42, 0.86, foamNoise * 0.65 + foamNoise2 * 0.45);
+  // ---- foam: meniscus, riffle streaks along the flow, rain agitation
+  float shore = 1.0 - smoothstep(0.0, 0.24, depth);
+  float riffle = smoothstep(0.20, 0.72, flowMag) * (1.0 - smoothstep(0.50, 1.35, depth));
+  float across = dot(wxz, vec2(-flow.y, flow.x));
+  float along = dot(wxz, flow);
+  float streak = fbm(vec2(across * 4.4, along * 0.62 - uTime * (0.85 + flowMag * 2.4)), 4, 2.15, 0.5);
+  streak = smoothstep(0.22, 0.70, streak * 0.5 + 0.5);
+  float foamNoise = fbm(wxz * 5.8 - flow * uTime * 1.5, 3, 2.1, 0.5) * 0.5 + 0.5;
+  float foamNoise2 = fbm(wxz * 15.0 - flow * uTime * 2.7 + 9.0, 2, 2.1, 0.5) * 0.5 + 0.5;
+  float rainFoam = uWeather.z * (0.14 + foamNoise2 * 0.28);
+  float foam = shore * 0.95 + riffle * 0.78 * streak + rainFoam;
+  foam *= mix(0.40, 1.0, smoothstep(0.16, 0.62, foamNoise * 0.6 + foamNoise2 * 0.45));
   foam = clamp(foam, 0.0, 1.0);
-  vec3 foamCol = (skyIrradiance(vec3(0.0, 1.0, 0.0)) * 0.55 + uSunColor * sunShadowK * 0.18);
-  col = mix(col, foamCol, foam * 0.85);
+  // scene-referred foam that still grades above tannin after AgX
+  vec3 foamCol = vec3(0.62, 0.66, 0.64) * (0.55 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 1.6)
+               + uSunColor * sunShadowK * 0.28;
+  col = mix(col, foamCol, foam * 0.90);
+  float meniscus = exp(-depth * depth * 90.0) * (1.0 - smoothstep(0.10, 0.26, depth));
+  col = mix(col, foamCol * 1.12, meniscus * 0.70);
 
   // ---- sediment plume near the banks
   float silt = shore * smoothstep(0.35, 0.85, foamNoise) * 0.5;
