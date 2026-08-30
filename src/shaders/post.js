@@ -359,12 +359,11 @@ float causticKnot(vec2 uv, vec2 c, float ang, float sz){
   vec2 d = (uv - c) * aspect;
   float ca = cos(ang), sa = sin(ang);
   vec2 q = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y) / max(sz, 1.0e-4);
-  q.x *= 1.55;
+  q.x *= 2.05;
   float r = length(q);
-  float body = 1.0 - smoothstep(0.28, 0.92, r);
-  body *= 1.0 - smoothstep(0.14, 0.40, abs(q.x) * abs(q.y) * 5.2);
-  body *= 1.0 - smoothstep(0.52, 1.02, abs(q.y));
-  return pow(clamp(body, 0.0, 1.0), 1.18);
+  float body = 1.0 - smoothstep(0.42, 0.98, r);
+  body *= 1.0 - smoothstep(0.48, 1.02, abs(q.y));
+  return pow(clamp(body, 0.0, 1.0), 1.22);
 }
 
 float emberSpark(vec2 uv, vec2 c, float ang, float sz){
@@ -549,9 +548,9 @@ void main(){
       if(kuv.x > 0.06 && kuv.x < 0.94 && kuv.y > 0.12 && kuv.y < 0.82){
         for(int i = 0; i < 6; i++){
           float sd = 41.0 + float(i) * 9.3;
-          float rad = mix(0.034, 0.13, hash11(sd));
+          float rad = mix(0.028, 0.10, hash11(sd));
           float phi = hash11(sd + 1.7) * 6.2831853;
-          vec2 c = kuv + vec2(cos(phi) * rad * 1.25, sin(phi) * rad * 0.55);
+          vec2 c = kuv + vec2(cos(phi) * rad * 1.55, sin(phi) * rad * 0.22);
           if(c.x < 0.10 || c.x > 0.90 || c.y < 0.16 || c.y > 0.78) continue;
           float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
           if(sceneZ < 0.16) continue;
