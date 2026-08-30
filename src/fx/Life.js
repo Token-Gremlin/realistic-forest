@@ -470,8 +470,8 @@ void main(){
     if(length(rt) < 0.08) rt = cross(look, vec3(1.0, 0.0, 0.0));
     rt = normalize(rt);
     vec3 up = normalize(cross(rt, look));
-    float along = mix(2.4, 6.4, h3.x);
-    p = uCamPos + look * along + rt * (h3.z - 0.5) * 2.2 + up * (h3.y - 0.18) * 1.6;
+    float along = mix(2.8, 7.2, h3.x);
+    p = uCamPos + look * along + rt * (h3.z - 0.5) * 1.8 + up * (h3.y - 0.35) * 1.35;
   } else {
     p.x = origin.x + (fract(h3.x + 0.5 + adv.x / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
     p.z = origin.z + (fract(h3.z + 0.5 + adv.y / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
@@ -480,7 +480,7 @@ void main(){
 
   vec4 mapv = mapSample(p.xz);
   float ground = mapv.r;
-  if(p.y < ground + 0.03){
+  if(uHold < 0.0 && p.y < ground + 0.03){
     float rest = fract(h3.y + uTime * fall / max(vol.y, 0.01));
     if(rest > 0.78){
       gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
@@ -494,7 +494,9 @@ void main(){
   float dist = length(view);
   vec3 viewN = view / max(dist, 1e-4);
   vec3 up = vec3(0.0, 1.0, 0.0);
-  vec3 side = normalize(cross(up, viewN));
+  vec3 side = cross(up, viewN);
+  if(length(side) < 0.08) side = cross(vec3(1.0, 0.0, 0.0), viewN);
+  side = normalize(side);
   vec3 fwd = normalize(cross(viewN, side));
   float spin = (uHold >= 0.0 ? uHold * 6.4 : uTime * mix(1.4, 4.2, h.w)) + h.z * 10.0;
   float cs = cos(spin), sn = sin(spin);
