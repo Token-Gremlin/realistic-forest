@@ -288,6 +288,8 @@ async function start() {
     U.uProjScaleY.value = camera.projectionMatrix.elements[5] * pipeline.height * 0.5;
     if (weather.holdFlash) weather.update(0, camera.position);
     forest.lightning?.update?.(0, camera);
+    // do not republish the bolt after pipeline.render — scene draws leave
+    // the camera in a state where project() writes off-screen UVs
     pipeline.resetTemporal();
     pipeline.render(camera, { nightAmount: weather.nightAmount });
     window.__boltAfter = {
