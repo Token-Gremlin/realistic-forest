@@ -4,8 +4,8 @@ f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
 f.state.exposureAuto = false;
-f.pipeline.settings.exposure = 1.08;
-f.pipeline.settings.aerial = 0.36;
+f.pipeline.settings.exposure = 1.16;
+f.pipeline.settings.aerial = 0.28;
 f.pipeline.settings.motionBlur = 0;
 f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
@@ -18,12 +18,12 @@ const pinned = maps.sample(PIN.x, PIN.z, {});
 const x = PIN.x;
 const z = PIN.z;
 const gh = maps.height(x, z);
-f.camera.position.set(x - 5.2, gh + 2.15, z + 6.4);
-f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.6);
+f.camera.position.set(x - 6.4, gh + 3.45, z + 7.2);
+f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.8);
 const p = f.camera.position;
-p.y = maps.height(p.x, p.z) + 2.05;
-// into the stand: trunks recede, crowns layer, sky in the upper third
-f.camera.lookAt(x + 16.0, gh + 5.8, z - 7.0);
+p.y = maps.height(p.x, p.z) + 3.30;
+// almost horizontal, into the stand — not up into a leaf wall
+f.camera.lookAt(x + 22.0, gh + 4.1, z - 10.0);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 
