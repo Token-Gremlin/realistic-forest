@@ -82,7 +82,8 @@ function place(bank, look, pull, rise) {
   p.y = Math.max(p.y, maps.height(p.x, p.z) + rise * 0.86);
   const lookH = maps.height(look.x, look.z);
   const lookW = Math.max(0, look.s?.waterDepth ?? 0);
-  f.camera.lookAt(look.x, lookH + lookW * 0.10, look.z);
+  // aim above the run so water sits in the lower third, not on the horizon
+  f.camera.lookAt(look.x, lookH + lookW * 0.08 + rise * 0.38, look.z);
   f.camera.updateMatrixWorld(true);
   f.camera.updateProjectionMatrix();
 }
@@ -112,7 +113,7 @@ function scoreShot(run, look, mid) {
     n++;
   }
   const avgY = waterY / inFrame;
-  return inFrame * 9 - Math.abs(avgY + 0.08) * 7 - (canopy / n) * 11
+  return inFrame * 9 - Math.abs(avgY + 0.24) * 14 - (canopy / n) * 8
     + maps.skyVis(p.x, p.z) * 2
     + Math.min(lookW, 0.55) * 24 + Math.min(midW, 0.55) * 16;
 }
@@ -134,8 +135,8 @@ for (let i = 0; i < 90; i++) {
 origins.sort((a, b) => b.rank - a.rank);
 
 let best = null, bestS = -1e9;
-const pulls = [8.2, 10.0, 7.0];
-const rises = [6.6, 7.4];
+const pulls = [9.4, 11.2, 8.0];
+const rises = [8.8, 10.0];
 for (const origin of origins.slice(0, 16)) {
   const run = walkStream(origin.x, origin.z);
   if (run.length < 4) continue;
@@ -160,7 +161,7 @@ if (!best) {
   const run = walkStream(origin.x, origin.z);
   const mid = run[Math.max(0, (run.length >> 1) - 1)] ?? origin;
   const look = run[Math.min(run.length - 1, Math.max(2, run.length - 3))] ?? mid;
-  best = { origin, run, mid, look, bank: findBank(mid.x, mid.z), pull: 8.4, rise: 6.0 };
+  best = { origin, run, mid, look, bank: findBank(mid.x, mid.z), pull: 9.6, rise: 8.8 };
 }
 
 place(best.bank, best.look, best.pull, best.rise);

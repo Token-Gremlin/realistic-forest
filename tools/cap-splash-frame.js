@@ -36,6 +36,7 @@ function clearNearPlants(f) {
   let dropped = 0;
   for (const k of clutter.kinds) {
     if (!hide.has(k.arch.key)) continue;
+    const reach = k.arch.key === 'vine' ? 16 : 9;
     for (const v of k.variants) {
       const d = v.bucket.data;
       let w = 0;
@@ -44,7 +45,7 @@ function clearNearPlants(f) {
         const dx = d[o] - p.x, dy = d[o + 1] - p.y, dz = d[o + 2] - p.z;
         const dist = Math.hypot(dx, dy, dz);
         const facing = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / (dist || 1);
-        if (dist < 7 && facing > 0.08) { dropped++; continue; }
+        if (dist < reach && facing > 0.02) { dropped++; continue; }
         if (w !== i) d.copyWithin(w * 12, o, o + 12);
         w++;
       }
@@ -58,8 +59,41 @@ function clearNearPlants(f) {
   return dropped;
 }
 
+function clearNearTreeLeaves(f) {
+  const trees = f.forest.trees;
+  if (!trees) return 0;
+  const p = f.camera.position;
+  const fwd = p.clone();
+  f.camera.getWorldDirection(fwd);
+  let dropped = 0;
+  for (const v of trees.variants) {
+    for (const d of v.draws) {
+      if (!d.leaf || d.lod > 0) continue;
+      const bucket = v.buckets[d.lod];
+      const data = bucket.data;
+      let w = 0;
+      for (let i = 0; i < bucket.count; i++) {
+        const o = i * 12;
+        const dx = data[o] - p.x, dz = data[o + 2] - p.z;
+        const dist = Math.hypot(dx, dz);
+        const facing = (dx * fwd.x + dz * fwd.z) / (dist || 1);
+        if (dist < 15 && facing > -0.05) { dropped++; continue; }
+        if (w !== i) data.copyWithin(w * 12, o, o + 12);
+        w++;
+      }
+      bucket.count = w;
+      d.geo.instanceCount = w;
+      d.buf.needsUpdate = true;
+      d.mesh.visible = w > 0;
+      if (d.shadow) d.shadow.visible = w > 0;
+    }
+  }
+  return dropped;
+}
+
 catchUp(f);
 const plants = clearNearPlants(f);
+const leaves = clearNearTreeLeaves(f);
 if (f.forest.grass) {
   for (const r of f.forest.grass.rings) {
     r.mesh.visible = false;
@@ -79,6 +113,7 @@ const probe = maps.sample(p.x + fwd.x * 9, p.z + fwd.z * 9, {});
 
 return {
   plants,
+  leaves,
   holdSplash: f.forest.rain?.holdSplash ?? -1,
   rain: f.forest.rain?.stats ?? null,
   waterCells: f.forest.water?.stats?.cells ?? 0,
