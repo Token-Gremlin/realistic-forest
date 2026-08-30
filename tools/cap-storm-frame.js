@@ -63,13 +63,13 @@ if (stem) {
   const H = stem.height;
   const px = -stem.fallDirZ, pz = stem.fallDirX;
   f.camera.position.set(
-    stem.x + stem.fallDirX * H * 0.28 - px * 11.4,
-    gh + 3.45,
-    stem.z + stem.fallDirZ * H * 0.28 - pz * 11.4,
+    stem.x + stem.fallDirX * H * 0.28 - px * 12.6,
+    gh + 5.4,
+    stem.z + stem.fallDirZ * H * 0.28 - pz * 12.6,
   );
   f.forest.trees.pushOutOfTrunks(f.camera.position, 1.4);
   const p = f.camera.position;
-  p.y = Math.max(p.y, maps.height(p.x, p.z) + 2.35);
+  p.y = Math.max(p.y, maps.height(p.x, p.z) + 4.6);
   f.camera.lookAt(
     stem.x + stem.fallDirX * H * 0.48,
     gh + 0.85,
@@ -93,7 +93,7 @@ if (stem) {
 
   if (f.forest.clutter) {
     f.forest.clutter.pending.length = 0;
-    for (let i = 0; i < 8; i++) f.forest.clutter.update(0.016, f.camera);
+    for (let i = 0; i < 16; i++) f.forest.clutter.update(0.016, f.camera);
     const fwd = p.clone();
     f.camera.getWorldDirection(fwd);
     const hide = new Set(['fern', 'bush', 'bramble', 'vine']);
@@ -107,7 +107,7 @@ if (stem) {
           const dx = d[o] - p.x, dy = d[o + 1] - p.y, dz = d[o + 2] - p.z;
           const dist = Math.hypot(dx, dy, dz);
           const facing = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / (dist || 1);
-          if (dist < 5.2 && facing > 0.12) continue;
+          if (dist < 8.5 && facing > 0.08) continue;
           if (w !== i) d.copyWithin(w * 12, o, o + 12);
           w++;
         }

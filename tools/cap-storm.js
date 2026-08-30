@@ -30,7 +30,7 @@ for (let i = 0; i < 80; i++) {
   if (s.slope > 0.55) continue;
   origins.push({
     x, z, s,
-    score: s.canopy * 1.8 + s.litter * 0.8 + s.skyVis * 0.6 - s.slope * 1.2,
+    score: s.canopy * 1.1 + s.skyVis * 1.8 + s.litter * 0.6 - s.slope * 1.2,
   });
 }
 origins.sort((a, b) => b.score - a.score);
