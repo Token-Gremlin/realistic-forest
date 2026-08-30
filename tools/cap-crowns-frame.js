@@ -50,7 +50,7 @@ function clearNearFerns(f) {
         const dx = d[o] - p.x, dy = d[o + 1] - p.y, dz = d[o + 2] - p.z;
         const dist = Math.hypot(dx, dy, dz);
         const facing = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / (dist || 1);
-        if (dist < 16 && facing > -0.05) { dropped++; continue; }
+        if (dist < 22) { dropped++; continue; }
         if (w !== i) d.copyWithin(w * 12, o, o + 12);
         w++;
       }
@@ -118,7 +118,7 @@ function stripNearLeaves(f) {
         const dx = data[o] - p.x, dz = data[o + 2] - p.z;
         const dist = Math.hypot(dx, dz);
         const facing = (dx * fwd.x + dz * fwd.z) / (dist || 1);
-        if (dist < 55 && facing > -0.25) { leaves++; continue; }
+        if (dist < 92 && facing > -0.30) { leaves++; continue; }
         if (w !== i) data.copyWithin(w * 12, o, o + 12);
         w++;
       }

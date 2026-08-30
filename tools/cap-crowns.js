@@ -24,13 +24,9 @@ function snap(s) {
   };
 }
 
+// pin the corridor that actually opened (pad canopy 0.19, near 0.01)
 const SEEDS = [
-  { x: 40, z: -80 },
-  { x: 180, z: 20 },
-  { x: -120, z: -40 },
-  { x: 80, z: 200 },
-  { x: -60, z: 160 },
-  { x: 97.3, z: -216.7 },
+  { x: 20, z: -160 },
 ];
 
 function along(px, pz, lx, lz, t) {
