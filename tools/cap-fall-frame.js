@@ -147,6 +147,14 @@ if (f.forest.clutter) {
   for (let i = 0; i < 8; i++) f.forest.clutter.update(0.016, f.camera);
 }
 const plants = clearNearPlants(f);
+if (f.forest.clutter) {
+  for (const k of f.forest.clutter.kinds) {
+    for (const v of k.variants) {
+      if (v.mesh) v.mesh.visible = false;
+      if (v.shadowMesh) v.shadowMesh.visible = false;
+    }
+  }
+}
 if (f.forest.grass) {
   for (const r of f.forest.grass.rings) {
     r.mesh.visible = false;

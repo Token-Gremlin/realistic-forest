@@ -56,8 +56,8 @@ Fall place(float tShift){
 
   float drive = max(uDrive, uBurst.w * 1.4);
   float alive = step(h.x, mix(0.10, 1.0, smoothstep(0.10, 0.88, drive)));
-  // a held still wants one or two metre-plus forks, not a cone swarm
-  if(uPhase >= 0.0) alive *= step(h.x, 0.026);
+  // a held still wants one forked limb, not a cone swarm
+  if(uPhase >= 0.0) alive *= step(h.x, 0.045);
   if(alive < 0.5 || drive < 0.07){
     return o;
   }
@@ -88,9 +88,9 @@ Fall place(float tShift){
     rt = normalize(rt);
     vec3 lift = normalize(cross(rt, look));
     base = origin
-      + look * mix(7.8, 11.2, h3.x)
-      + rt * (h3.z - 0.5) * 1.8
-      + lift * (h3.y - 0.5) * 1.2;
+      + look * mix(7.4, 9.6, h3.x)
+      + rt * (h3.z - 0.5) * 0.9
+      + lift * (h3.y - 0.5) * 0.7;
   } else {
     base.x = origin.x + (fract(h3.x + 0.5 + adv.x / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
     base.z = origin.z + (fract(h3.z + 0.5 + adv.y / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
@@ -126,7 +126,7 @@ Fall place(float tShift){
     base.y = y;
   }
 
-  float sc = uPhase >= 0.0 ? mix(1.45, 2.05, h.z) : mix(1.15, 2.05, h.z);
+  float sc = uPhase >= 0.0 ? mix(1.75, 2.25, h.z) : mix(1.15, 2.05, h.z);
   vec3 ax1 = normalize(h3 - 0.5 + vec3(0.0, 0.2, 0.0));
   vec3 ax2 = cross(ax1, vec3(wdir.x, 0.15, wdir.y));
   if(length(ax2) < 1e-4) ax2 = cross(ax1, vec3(0.0, 1.0, 0.0));
@@ -262,8 +262,8 @@ void main(){
   float ridge = r1 * 0.68 + r2 * 0.32;
   float fissure = smoothstep(0.28, 0.86, ridge);
   float grain = fbm(vec3(vWorld.x * 2.4, vWorld.y * 28.0, vWorld.z * 2.4) + idv * 13.0, 3, 2.1, 0.5) * 0.5 + 0.5;
-  vec3 woodA = vec3(0.078, 0.054, 0.032);
-  vec3 woodB = vec3(0.168, 0.122, 0.074);
+  vec3 woodA = vec3(0.118, 0.082, 0.048);
+  vec3 woodB = vec3(0.235, 0.170, 0.100);
   vec3 alb = mix(woodA, woodB, grain * 0.55 + fissure * 0.45);
   alb *= mix(0.48, 1.08, smoothstep(0.0, 0.62, ridge));
   float rot = smoothstep(0.55, 0.94, fbm(vWorld * 1.5 + 61.0, 3, 2.1, 0.5) * 0.5 + 0.5);
@@ -284,11 +284,11 @@ void main(){
   float rough = mix(0.88, 0.96, grain);
   rough = mix(rough, 0.70, endGrain);
   // wet bark darkens a little; keep it matte so it does not read as metal
-  alb *= mix(1.0, 0.84, wet * (1.0 - endGrain));
-  rough = clamp(rough - wet * 0.10, 0.62, 1.0);
+  alb *= mix(1.0, 0.90, wet * (1.0 - endGrain));
+  rough = clamp(rough - wet * 0.06, 0.72, 1.0);
   float occ = mix(0.52, 1.0, fissure);
   occ = mix(occ, 0.78, endGrain);
-  writeGBuffer(clamp(alb, vec3(0.010), vec3(0.42)), occ, N, rough, 0.0, vCur, vPrev, ${MAT_BARK.toFixed(1)}, 0.0);
+  writeGBuffer(clamp(alb, vec3(0.018), vec3(0.55)), occ, N, rough, 0.0, vCur, vPrev, ${MAT_BARK.toFixed(1)}, 0.0);
 }
 `;
 
@@ -387,14 +387,17 @@ export class FallingBranches {
     const burstW = this.burst.t >= 0 ? Math.exp(-this.burst.t * 1.8) : 0;
     const uDrive = forced ? Math.max(drive, 0.92) : drive;
     let n = 0;
-    for (const layer of this._layers) {
-      layer.mesh.visible = on;
-      layer.shadowMesh.visible = on;
+    for (let li = 0; li < this._layers.length; li++) {
+      const layer = this._layers[li];
+      // held still: one variant so two forks do not become a cone pile
+      const show = on && (!forced || li === 0);
+      layer.mesh.visible = show;
+      layer.shadowMesh.visible = show;
       layer.uniforms.uDrive.value = uDrive;
       layer.uniforms.uPhase.value = this.holdPhase;
       layer.uniforms.uBurst.value.set(this.burst.pos.x, this.burst.pos.y, this.burst.pos.z, burstW);
       layer.uniforms.uCamFwd.value.copy(this._fwd);
-      n += on ? layer.count : 0;
+      n += show ? layer.count : 0;
     }
     this.stats.falling = n;
     this.stats.air = on ? Math.round(n * (forced ? 0.85 : THREE.MathUtils.smoothstep(drive, 0.1, 0.9))) : 0;

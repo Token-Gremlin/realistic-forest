@@ -11,7 +11,7 @@ f.weather.state.storm = 1;
 f.weather.target.storm = 1;
 f.weather.state.wind = 20;
 f.weather.update(0, f.camera.position);
-f.pipeline.settings.exposure = 2.05;
+f.pipeline.settings.exposure = 2.25;
 f.pipeline.settings.aerial = 0.12;
 f.pipeline.settings.motionBlur = 0;
 f.pipeline.settings.chroma = 0;
