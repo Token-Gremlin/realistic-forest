@@ -80,13 +80,17 @@ Fall place(float tShift){
   vec2 adv = wdir * (0.08 + wind * 0.018) * (uPhase >= 0.0 ? 0.0 : uTime);
   vec3 base;
   if(uPhase >= 0.0){
-    // stills: a handful of large limbs in the air in front of the lens
-    vec3 fw = normalize(uCamFwd + vec3(1e-5, 0.0, 0.0));
-    vec3 rt = normalize(cross(fw, vec3(0.0, 1.0, 0.0)));
+    // stills: sit on the look ray. A zenith glance makes world-up useless
+    // as a right vector — that used to drop a limb on the lens.
+    vec3 look = normalize(uCamFwd + vec3(1e-5, 0.0, 0.0));
+    vec3 rt = cross(look, vec3(0.0, 1.0, 0.0));
+    if(length(rt) < 0.08) rt = cross(look, vec3(1.0, 0.0, 0.0));
+    rt = normalize(rt);
+    vec3 lift = normalize(cross(rt, look));
     base = origin
-      + fw * mix(8.0, 12.5, h3.x)
-      + rt * (h3.z - 0.5) * 5.0;
-    base.y = origin.y;
+      + look * mix(9.2, 13.0, h3.x)
+      + rt * (h3.z - 0.5) * 3.4
+      + lift * (h3.y - 0.5) * 2.2;
   } else {
     base.x = origin.x + (fract(h3.x + 0.5 + adv.x / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
     base.z = origin.z + (fract(h3.z + 0.5 + adv.y / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
@@ -115,13 +119,12 @@ Fall place(float tShift){
   y = mix(y, ground + 0.08, settle);
   y = mix(canopy, y, hang);
 
-  base.xz += wdir * drop * mix(1.6, 7.5, h.z) * (0.55 + wind * 0.06);
   if(uPhase >= 0.0){
-    // stills: freeze in the air in front of the lens, not on the ground
-    y = origin.y + mix(5.4, 9.2, h3.y);
     settle = 0.0;
+  } else {
+    base.xz += wdir * drop * mix(1.6, 7.5, h.z) * (0.55 + wind * 0.06);
+    base.y = y;
   }
-  base.y = y;
 
   float sc = uPhase >= 0.0 ? mix(1.45, 2.05, h.z) : mix(1.15, 2.05, h.z);
   vec3 ax1 = normalize(h3 - 0.5 + vec3(0.0, 0.2, 0.0));
@@ -136,6 +139,18 @@ Fall place(float tShift){
   vec3 up = mix(normalize(cross(longA, ax1)), vec3(0.0, 1.0, 0.0), settle);
   if(length(up) < 1e-4) up = vec3(0.0, 1.0, 0.0);
   up = normalize(up);
+  if(uPhase >= 0.0){
+    // side-on to the lens so we see the fork, not the bore
+    vec3 view = normalize(origin - base);
+    vec3 across = cross(vec3(0.0, 1.0, 0.0), view);
+    if(length(across) < 1e-4) across = vec3(1.0, 0.0, 0.0);
+    across = normalize(across);
+    vec3 lift = normalize(cross(across, view));
+    float tip = (h3.y - 0.5) * 1.1;
+    longA = normalize(across * cos(tip) + lift * sin(tip));
+    longA = rotateAxis(longA, view, (h.w - 0.5) * 1.6);
+    up = lift;
+  }
   vec3 side = normalize(cross(up, longA));
   up = normalize(cross(longA, side));
   o.p = base;
