@@ -118,6 +118,12 @@ float barkHeight(vec2 uv, float radius, out float fissure, out float plate){
 
   // fine grain everywhere
   h += (fbm(vec2(p.x * 9.0, p.y * 1.6) + 41.0, 3, 2.1, 0.5)) * 0.16;
+  // metre-scale furrows: the fine ridged field dies as speckle at 528 px
+  float furrow = 0.5 + 0.5 * sin(uv.x * 17.6
+    + fbm(vec2(uv.x * 1.4, uv.y * 0.07) + 9.0, 2, 2.1, 0.5) * 2.2);
+  furrow = pow(abs(furrow * 2.0 - 1.0), 0.58);
+  h += furrow * 0.52 * uBarkParams.x;
+  fissure = max(fissure, smoothstep(0.32, 0.86, furrow));
   // thinner bark on thin branches
   h *= mix(0.35, 1.0, clamp(radius * 6.0, 0.0, 1.0));
   return h;
@@ -137,14 +143,17 @@ Bark barkSurface(vec3 wp, vec3 N, vec3 T, vec3 B, vec2 uv, float radius,
   float hy = barkHeight(uv + vec2(0.0, e), radius, fx, px);
   vec2 grad = vec2(hx - h0, hy - h0) / e;
 
-  float detFade = clamp(1.0 - lodPx * 2.2, 0.0, 1.0);
-  vec3 nrm = normalize(N - (T * grad.x + B * grad.y) * 0.055 * detFade);
+  float detFade = clamp(1.0 - lodPx * 1.55, 0.22, 1.0);
+  vec3 nrm = normalize(N - (T * grad.x + B * grad.y) * 0.085 * detFade);
 
   float tone = fbm(uv * vec2(1.3, 0.11) + rnd * 17.0, 3, 2.1, 0.5) * 0.5 + 0.5;
   vec3 alb = mix(uBarkA, uBarkB, tone * 0.75 + 0.25 * fissure);
   // fissures are in shadow and darker wood
-  alb *= mix(0.42, 1.06, smoothstep(0.0, 0.55, h0 / max(uBarkParams.x, 0.2)));
-  o.occ = mix(0.55, 1.0, smoothstep(0.05, 0.6, h0 / max(uBarkParams.x, 0.2)));
+  alb *= mix(0.34, 1.10, smoothstep(0.0, 0.55, h0 / max(uBarkParams.x, 0.2)));
+  o.occ = mix(0.50, 1.0, smoothstep(0.05, 0.6, h0 / max(uBarkParams.x, 0.2)));
+  // slow value drift so a trunk is not one plastic brown
+  float drift = fbm(uv * vec2(0.55, 0.045) + rnd * 5.0, 2, 2.1, 0.5) * 0.5 + 0.5;
+  alb *= 0.84 + 0.28 * drift;
 
   // --- birch: white bark with dark lenticel bands and pink-grey patches
   if(uBarkParams.z > 0.01){
@@ -176,9 +185,9 @@ Bark barkSurface(vec3 wp, vec3 N, vec3 T, vec3 B, vec2 uv, float radius,
   float northFacing = clamp(-nrm.z * 0.5 + 0.5, 0.0, 1.0);
   float lowness = 1.0 - smoothstep(0.0, 0.30, heightNorm);
   float mossAmt = smoothstep(0.30, 0.85, eco.r) * lowness * (0.35 + 0.65 * northFacing);
-  mossAmt *= smoothstep(0.35, 0.80, fbm(wp.xz * 0.9 + wp.y * 0.35 + rnd * 11.0, 4, 2.1, 0.5) * 0.5 + 0.5);
-  mossAmt *= 1.0 - fissure * 0.25;
-  mossAmt = clamp(mossAmt * 1.5, 0.0, 1.0);
+  mossAmt *= smoothstep(0.28, 0.72, fbm(wp.xz * 0.28 + wp.y * 0.10 + rnd * 11.0, 3, 2.1, 0.5) * 0.5 + 0.5);
+  mossAmt *= 1.0 - fissure * 0.18;
+  mossAmt = clamp(mossAmt * 1.75, 0.0, 1.0);
   if(mossAmt > 0.01){
     float mv = fbm(wp.xz * 6.5 + wp.y * 3.0, 3, 2.1, 0.5) * 0.5 + 0.5;
     vec3 moss = mix(vec3(0.030, 0.062, 0.022), vec3(0.062, 0.108, 0.036), mv);
@@ -198,7 +207,9 @@ Bark barkSurface(vec3 wp, vec3 N, vec3 T, vec3 B, vec2 uv, float radius,
   float crush = mix(0.64, 0.90, skyFace * fallen);
   alb *= mix(1.0, crush, wet);
   alb *= 1.0 + fallen * skyFace * 0.22;
-  rough = mix(rough, mix(0.22, 0.14, skyFace * fallen), wet * 0.8);
+  // standing wet bark stays matte; only a fallen sky-face goes glossy
+  float wetRough = mix(0.68, mix(0.28, 0.16, skyFace), fallen);
+  rough = mix(rough, wetRough, wet * mix(0.35, 0.80, fallen));
 
   o.albedo = clamp(alb, vec3(0.004), vec3(0.75));
   o.normal = nrm;
