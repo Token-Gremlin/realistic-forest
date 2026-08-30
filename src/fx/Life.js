@@ -423,9 +423,11 @@ ${GLSL_MAPS}
 
 uniform mat4 uViewProj;
 uniform vec3 uCamPos;
+uniform vec3 uCamFwd;
 uniform vec4 uWeather;
 uniform float uTime;
 uniform float uSeason;
+uniform float uHold;
 uniform vec3 uVolume;
 uniform float uProjScaleY;
 
@@ -445,7 +447,9 @@ void main(){
   float wind = uWind.z;
   float drive = (uSeason * 0.95 + smoothstep(2.6, 9.0, wind) * 0.28 + 0.06)
     * (1.0 - smoothstep(0.32, 0.72, storm));
+  if(uHold >= 0.0) drive = max(drive, 0.85);
   float alive = step(h.x, mix(0.05, 1.0, smoothstep(0.07, 0.88, drive)));
+  if(uHold >= 0.0) alive = step(float(id), 7.5);
   if(alive < 0.5 || drive < 0.05){
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vAlpha = 0.0; vUv = vec2(0.0); vAge = 0.0;
@@ -460,9 +464,19 @@ void main(){
   vec3 vol = uVolume;
   vec2 adv = wdir * drift * uTime;
   vec3 p;
-  p.x = origin.x + (fract(h3.x + 0.5 + adv.x / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
-  p.z = origin.z + (fract(h3.z + 0.5 + adv.y / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
-  p.y = origin.y + vol.y * 0.5 - fract(h3.y + uTime * fall / max(vol.y, 0.01)) * vol.y;
+  if(uHold >= 0.0){
+    vec3 look = normalize(uCamFwd + vec3(1e-5, 0.0, 0.0));
+    vec3 rt = cross(look, vec3(0.0, 1.0, 0.0));
+    if(length(rt) < 0.08) rt = cross(look, vec3(1.0, 0.0, 0.0));
+    rt = normalize(rt);
+    vec3 up = normalize(cross(rt, look));
+    float along = mix(3.4, 9.2, h3.x);
+    p = uCamPos + look * along + rt * (h3.z - 0.5) * 2.8 + up * (h3.y - 0.42) * 2.2;
+  } else {
+    p.x = origin.x + (fract(h3.x + 0.5 + adv.x / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
+    p.z = origin.z + (fract(h3.z + 0.5 + adv.y / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
+    p.y = origin.y + vol.y * 0.5 - fract(h3.y + uTime * fall / max(vol.y, 0.01)) * vol.y;
+  }
 
   vec4 mapv = mapSample(p.xz);
   float ground = mapv.r;
@@ -482,12 +496,13 @@ void main(){
   vec3 up = vec3(0.0, 1.0, 0.0);
   vec3 side = normalize(cross(up, viewN));
   vec3 fwd = normalize(cross(viewN, side));
-  float spin = uTime * mix(1.4, 4.2, h.w) + h.z * 10.0;
+  float spin = (uHold >= 0.0 ? uHold * 6.4 : uTime * mix(1.4, 4.2, h.w)) + h.z * 10.0;
   float cs = cos(spin), sn = sin(spin);
   vec3 r1 = side * cs + fwd * sn;
   vec3 r2 = -side * sn + fwd * cs;
 
   float len = mix(0.10, 0.22, h.z);
+  if(uHold >= 0.0) len *= 2.15;
   float wid = len * 0.62;
   float minW = 1.8 / max(uProjScaleY / max(dist, 1.0), 1.0);
   wid = max(wid, minW);
@@ -585,7 +600,11 @@ export class Life {
       forest,
       Math.max(360, Math.round(rain * 0.055)),
       LEAF_VERT, LEAF_FRAG,
-      { uVolume: { value: new THREE.Vector3(20, 14, 20) } },
+      {
+        uVolume: { value: new THREE.Vector3(20, 14, 20) },
+        uCamFwd: { value: new THREE.Vector3(0, 0, -1) },
+        uHold: { value: -1 },
+      },
       false,
     );
 
@@ -594,12 +613,17 @@ export class Life {
     ];
     this.stats = { insects: 0, fireflies: 0, birds: 0, leaves: 0 };
     this.holdPulse = -1;
+    this.holdLeaves = -1;
     this.leavesSuppressed = false;
   }
 
   update(_dt, camera) {
     if (camera) {
       camera.getWorldDirection(this.fireflies.uniforms.uCamFwd.value);
+      camera.getWorldDirection(this.leaves.uniforms.uCamFwd.value);
+    }
+    if (this.leaves.uniforms.uHold) {
+      this.leaves.uniforms.uHold.value = this.holdLeaves;
     }
     if (this.fireflies.uniforms.uHoldPulse) {
       this.fireflies.uniforms.uHoldPulse.value = this.holdPulse;
@@ -635,13 +659,16 @@ export class Life {
       ? Math.max(1, Math.floor(this.birds.count * THREE.MathUtils.smoothstep(birdDrive, 0.08, 0.9)))
       : 0;
 
+    const heldLeaves = this.holdLeaves >= 0;
     const leafDrive = this.leavesSuppressed ? 0
+      : heldLeaves ? 1
       : (season * 0.95 + THREE.MathUtils.smoothstep(wind, 2.6, 9) * 0.28 + 0.06)
       * (1 - THREE.MathUtils.smoothstep(storm, 0.32, 0.72));
     this.leaves.mesh.visible = leafDrive > 0.05;
-    this.leaves.geo.instanceCount = this.leaves.mesh.visible
-      ? Math.max(1, Math.floor(this.leaves.count * THREE.MathUtils.smoothstep(leafDrive, 0.05, 0.88)))
-      : 0;
+    this.leaves.geo.instanceCount = heldLeaves ? 8
+      : this.leaves.mesh.visible
+        ? Math.max(1, Math.floor(this.leaves.count * THREE.MathUtils.smoothstep(leafDrive, 0.05, 0.88)))
+        : 0;
 
     this.stats.insects = this.insects.geo.instanceCount;
     this.stats.fireflies = this.fireflies.geo.instanceCount;
