@@ -691,7 +691,7 @@ export class Life {
     this.stats.insects = this.insects.geo.instanceCount;
     this.stats.fireflies = this.fireflies.geo.instanceCount;
     this.stats.birds = this.birds.geo.instanceCount;
-    this.stats.leaves = heldLeaves ? 6 : this.leaves.geo.instanceCount;
+    this.stats.leaves = heldLeaves ? 4 : this.leaves.geo.instanceCount;
   }
 
   beforeForward(_colorTex, depthTex) {
