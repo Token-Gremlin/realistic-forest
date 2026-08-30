@@ -483,15 +483,18 @@ export function buildLimb(seed, opts = {}) {
       radial: 8, rings: 4, hemi: false,
       rx, ry, rz, rough: 0.55, part: PART.WOOD, rnd: r.f(),
     });
+    // blob() lifts a full sphere by ry*0.55 — undo that so the chunk
+    // sits on the tube axis and actually fills the rim
+    const lift = ry * 0.55;
     for (let k = at; k < mb.pos.length; k += 3) {
       mb.pos[k] += snap.x + sx;
-      mb.pos[k + 1] += snap.y + sy;
+      mb.pos[k + 1] += snap.y + sy - lift;
       mb.pos[k + 2] += snap.z + sz;
     }
     for (let k = at / 3; k < mb.extra.length / 4; k++) mb.extra[k * 4 + 2] = 2;
   };
-  placeKnob(0, 0, -rad * 0.15, rad * 1.18, rad * 1.05, rad * 1.35);
-  placeKnob(rad * 0.22, rad * 0.10, -rad * 0.45, rad * 0.55, rad * 0.48, rad * 0.72);
+  placeKnob(0, 0, -rad * 0.20, rad * 1.28, rad * 1.28, rad * 1.55);
+  placeKnob(rad * 0.18, rad * 0.12, -rad * 0.55, rad * 0.62, rad * 0.55, rad * 0.85);
   const splinters = 2;
   for (let k = 0; k < splinters; k++) {
     const sa = r.f() * Math.PI * 2;
@@ -510,10 +513,10 @@ export function buildLimb(seed, opts = {}) {
   }
   const si = 2 + r.int(2);
   const base = pts[si];
-  const yaw = r.range(0.78, 1.12) * (r.f() < 0.5 ? 1 : -1);
-  const pitch = r.range(-0.12, 0.32);
+  // stay in YZ so the held still (Z across the frame, Y = lift) shows a Y
+  const pitch = lerp(0.52, 0.95, r.f());
   const slen = len * lerp(0.40, 0.62, r.f());
-  const fdir = V(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).normalize();
+  const fdir = V(0.10 * (r.f() < 0.5 ? 1 : -1), Math.sin(pitch), Math.cos(pitch)).normalize();
   const spts = [];
   for (let i = 0; i <= 4; i++) {
     const t = i / 4;
@@ -529,12 +532,13 @@ export function buildLimb(seed, opts = {}) {
   const tipAt = mb.pos.length;
   blob(mb, r, {
     radial: 7, rings: 3, hemi: false,
-    rx: tipR * 1.15, ry: tipR * 1.05, rz: tipR * 1.25,
+    rx: tipR * 1.25, ry: tipR * 1.25, rz: tipR * 1.40,
     rough: 0.35, part: PART.WOOD, rnd: r.f(),
   });
+  const tipLift = tipR * 1.25 * 0.55;
   for (let k = tipAt; k < mb.pos.length; k += 3) {
     mb.pos[k] += tip.x;
-    mb.pos[k + 1] += tip.y;
+    mb.pos[k + 1] += tip.y - tipLift;
     mb.pos[k + 2] += tip.z;
   }
   return { mesh: mb, height: mb.height, radius: mb.radius, material: 'solid', sink: rad * 0.5 };
