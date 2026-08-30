@@ -290,6 +290,13 @@ async function start() {
     forest.lightning?.update?.(0, camera);
     pipeline.resetTemporal();
     pipeline.render(camera, { nightAmount: weather.nightAmount });
+    window.__boltAfter = {
+      amp: +U.uBoltAmp.value.x.toFixed(3),
+      flash: +U.uFlash.value.w.toFixed(3),
+      bolt: U.uBolt.value.toArray().map((v) => +v.toFixed(3)),
+      held: !!forest.lightning?.held,
+      active: !!forest.lightning?.active,
+    };
   };
 
   window.__forest = { forest, pipeline, weather, director, camera, renderer, controls, state, drawOnce };

@@ -134,6 +134,8 @@ if (ready) {
   await page.evaluate(() => {
     window.__forest?.drawOnce?.();
   });
+  const boltAfter = await page.evaluate(() => window.__boltAfter ?? null);
+  if (boltAfter) console.log(`bolt after drawOnce: ${JSON.stringify(boltAfter)}`);
 
   const shotList = shots.length ? shots : ['00'];
   for (const s of shotList) {
