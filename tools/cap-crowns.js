@@ -44,13 +44,17 @@ function huntFrom(sx, sz) {
         const lz = pz + Math.sin(a) * reach;
         const far = maps.sample(lx, lz, {});
         if (!far.inside) continue;
-        if (far.canopy < 0.42) continue;
+        // a solid far canopy is a green wall; we want a broken stand
+        // whose tops can silhouette against sky
+        if (far.canopy < 0.28 || far.canopy > 0.82) continue;
         const rise = gh - far.height;
-        const score = far.canopy * 2.2
-          + pad.skyVis * 1.6
-          - pad.canopy * 1.35
-          + Math.min(8, rise) * 0.08
-          + (1 - pad.slope) * 0.25;
+        const openFar = 1.0 - Math.abs(far.canopy - 0.52) * 2.2;
+        const score = openFar * 2.4
+          + pad.skyVis * 1.5
+          + (far.skyVis ?? 0) * 1.1
+          - pad.canopy * 1.45
+          + Math.min(10, rise) * 0.10
+          + (1 - pad.slope) * 0.20;
         if (score > bestS) {
           bestS = score;
           best = { px, pz, lx, lz, pad, far, score, reach };
@@ -82,13 +86,14 @@ if (!pick) {
 
 const gh = maps.height(pick.px, pick.pz);
 const farH = maps.height(pick.lx, pick.lz);
-f.camera.position.set(pick.px, gh + 9.4, pick.pz);
+f.camera.position.set(pick.px, gh + 7.6, pick.pz);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.8);
 const p = f.camera.position;
-p.y = maps.height(p.x, p.z) + 9.2;
-// mid-crown of the far stand, so the canopy line sits in the middle third
-// and sky occupies the upper third. Do not lookAt the far ground.
-f.camera.lookAt(pick.lx, farH + 16.5, pick.lz);
+p.y = maps.height(p.x, p.z) + 7.4;
+// aim at far tree-tops, not mid-crown: a downhill look at farH+16
+// puts the lens into a canopy carpet. Tops against sky let the new
+// metre-scale lobes read as a silhouette line.
+f.camera.lookAt(pick.lx, farH + 27.0, pick.lz);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 

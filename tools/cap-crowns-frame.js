@@ -73,7 +73,7 @@ function stripNearLeaves(f) {
   let leaves = 0;
   for (const v of trees.variants) {
     for (const d of v.draws) {
-      if (!d.leaf || d.lod > 1) continue;
+      if (!d.leaf || d.lod > 2) continue;
       const bucket = v.buckets[d.lod];
       const data = bucket.data;
       let w = 0;
@@ -82,7 +82,7 @@ function stripNearLeaves(f) {
         const dx = data[o] - p.x, dz = data[o + 2] - p.z;
         const dist = Math.hypot(dx, dz);
         const facing = (dx * fwd.x + dz * fwd.z) / (dist || 1);
-        if (dist < 22 && facing > -0.05) { leaves++; continue; }
+        if (dist < 40 && facing > -0.08) { leaves++; continue; }
         if (w !== i) data.copyWithin(w * 12, o, o + 12);
         w++;
       }
