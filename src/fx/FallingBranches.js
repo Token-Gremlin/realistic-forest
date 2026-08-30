@@ -116,6 +116,11 @@ Fall place(float tShift){
   y = mix(canopy, y, hang);
 
   base.xz += wdir * drop * mix(1.6, 7.5, h.z) * (0.55 + wind * 0.06);
+  if(uPhase >= 0.0){
+    // stills: freeze in the air in front of the lens, not on the ground
+    y = origin.y + mix(0.6, 3.8, h3.y);
+    settle = 0.0;
+  }
   base.y = y;
 
   float sc = uPhase >= 0.0 ? mix(1.05, 1.55, h.z) : mix(1.15, 2.05, h.z);

@@ -37,18 +37,18 @@ function pushOutOfAir(f) {
       if (d < nd) { nd = d; near = t; }
     }
   }
-  if (near && nd < 5.5) {
+  if (near && nd < 9.0) {
     const ax = p.x - near.x, az = p.z - near.z;
     const al = Math.hypot(ax, az) || 1;
-    p.x += (ax / al) * (6.2 - nd);
-    p.z += (az / al) * (6.2 - nd);
-    trees.pushOutOfTrunks(p, 1.8);
-    p.y = Math.max(p.y, maps.height(p.x, p.z) + 3.15);
+    p.x += (ax / al) * (9.5 - nd);
+    p.z += (az / al) * (9.5 - nd);
+    trees.pushOutOfTrunks(p, 2.0);
+    p.y = Math.max(p.y, maps.height(p.x, p.z) + 3.4);
   }
 
   const fwd = p.clone();
   cam.getWorldDirection(fwd);
-  cam.lookAt(p.x + fwd.x * 14, p.y + 1.6, p.z + fwd.z * 14);
+  cam.lookAt(p.x + fwd.x * 16, p.y + 4.2, p.z + fwd.z * 16);
   cam.updateMatrixWorld(true);
   cam.updateProjectionMatrix();
   return { near: near ? +nd.toFixed(1) : null };

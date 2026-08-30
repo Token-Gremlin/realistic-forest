@@ -30,14 +30,14 @@ for (let i = 0; i < 90; i++) {
   if (s.slope > 0.58) continue;
   origins.push({
     x, z, s,
-    score: (s.skyVis ?? 0) * 1.6 + s.canopy * 0.85 - s.slope * 1.1
-      - (s.canopy < 0.25 ? 1.4 : 0),
+    score: (s.skyVis ?? 0) * 2.0 + s.canopy * 0.45 - s.slope * 1.1
+      - (s.canopy < 0.22 || s.canopy > 0.82 ? 1.6 : 0),
   });
 }
 origins.sort((a, b) => b.score - a.score);
 const gap = origins[0] ?? { x: c.x, z: c.z, s: maps.sample(c.x, c.z, {}) };
 const gh = maps.height(gap.x, gap.z);
-f.camera.position.set(gap.x - 4.2, gh + 3.4, gap.z + 3.8);
+f.camera.position.set(gap.x - 4.2, gh + 3.8, gap.z + 3.8);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.6);
 const p = f.camera.position;
 p.y = Math.max(maps.height(p.x, p.z) + 3.15, p.y);
