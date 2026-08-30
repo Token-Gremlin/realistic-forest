@@ -295,7 +295,7 @@ void main(){
   float sunShadowK = sunShadow(vWorld, vec3(0.0, 1.0, 0.0), 1.0, viewDist, rnd, 1.0);
   float skyOpen = 0.38 + 0.62 * max(uSunDir.y, 0.0);
   float causAmt = caus * exp(-depth * 0.52) * mix(0.42, sunShadowK, 0.58) * skyOpen;
-  vec3 bedLit = bed * (1.0 + causAmt * 6.8) * trans;
+  vec3 bedLit = bed * (1.0 + causAmt * 3.6) * trans;
 
   // ---- in-water scattering (turbidity) builds up with depth
   vec3 inScatter = uScatter * skyIrradiance(vec3(0.0, 1.0, 0.0)) * (1.0 - trans) * 3.4;
@@ -319,7 +319,7 @@ void main(){
   float nh = max(dot(N, H), 0.0);
   float a = 0.045 + flowMag * 0.05;
   float spec = D_GGX(nh, a) * V_SmithGGXCorrelated(cosV, max(dot(N, uSunDir), 1e-3), a);
-  col += uSunColor * spec * sunShadowK * max(dot(N, uSunDir), 0.0) * 0.9;
+  col += uSunColor * spec * sunShadowK * max(dot(N, uSunDir), 0.0) * 0.42;
   col += uMoonColor * pow(max(dot(N, normalize(uMoonDir + V)), 0.0), 220.0) * 3.0;
   if(uFlash.w > 0.001){
     vec3 fd = normalize(uFlash.xyz - vWorld);
@@ -346,12 +346,13 @@ void main(){
   float foam = shore * 0.95 + riffle * 0.78 * streak + rainFoam;
   foam *= mix(0.40, 1.0, smoothstep(0.16, 0.62, foamNoise * 0.6 + foamNoise2 * 0.45));
   foam = clamp(foam, 0.0, 1.0);
-  // scene-referred foam that still grades above tannin after AgX
-  vec3 foamCol = vec3(0.62, 0.66, 0.64) * (0.55 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 1.6)
-               + uSunColor * sunShadowK * 0.28;
-  col = mix(col, foamCol, foam * 0.90);
+  // lace, not a white slab: foam must sit above tannin after AgX without
+  // turning the whole run into clip
+  vec3 foamCol = vec3(0.38, 0.41, 0.40) * (0.75 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.55)
+               + uSunColor * sunShadowK * 0.10;
+  col = mix(col, foamCol, foam * 0.52);
   float meniscus = exp(-depth * depth * 90.0) * (1.0 - smoothstep(0.10, 0.26, depth));
-  col = mix(col, foamCol * 1.12, meniscus * 0.70);
+  col = mix(col, foamCol * 1.05, meniscus * 0.38);
 
   // ---- sediment plume near the banks
   float silt = shore * smoothstep(0.35, 0.85, foamNoise) * 0.5;
