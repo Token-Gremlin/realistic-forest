@@ -1,13 +1,12 @@
-// high sun: gnat swarm in a sunlit air volume against sky, not a bush.
-// Pin the grove that already proved a sky gap (birds3). Look across the
-// volume — not a zenith glance, not a litter crawl.
+// high sun: gnat swarm as a tight cloud on sky, framed by canopy.
+// Same grove as the proven flock plate; look up enough for air, not a zenith.
 f.weather.setAct(3, true);
 f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
 f.state.exposureAuto = false;
-f.pipeline.settings.exposure = 1.12;
-f.pipeline.settings.aerial = 0.28;
+f.pipeline.settings.exposure = 1.10;
+f.pipeline.settings.aerial = 0.30;
 f.pipeline.settings.motionBlur = 0;
 f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
@@ -19,12 +18,12 @@ const x = pinned.inside ? PIN.x : f.camera.position.x;
 const z = pinned.inside ? PIN.z : f.camera.position.z;
 const best = { x, z, s: pinned.inside ? pinned : maps.sample(x, z, {}) };
 const gh = maps.height(x, z);
-f.camera.position.set(x - 5.8, gh + 3.55, z + 6.4);
+f.camera.position.set(x - 4.4, gh + 4.15, z + 4.8);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.8);
 const p = f.camera.position;
-p.y = maps.height(p.x, p.z) + 3.40;
-// mid look: sky in the upper half, trees as a frame, air in the middle third
-f.camera.lookAt(x + 11.0, gh + 7.2, z - 5.5);
+p.y = maps.height(p.x, p.z) + 4.00;
+// sky occupies the upper two thirds; canopy frames the edges
+f.camera.lookAt(x + 8.0, gh + 16.5, z - 4.0);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 

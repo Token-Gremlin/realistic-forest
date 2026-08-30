@@ -511,30 +511,30 @@ void main(){
   }
 
   if(uInsectHold.w > 0.05){
-    // World offsets collapse onto trunks in a crawl. Plant a loose swarm
-    // in UV around the projected hold, and only over open air.
+    // Tight UV cloud on sky. Projected world holds land on foliage;
+    // a fixed air-band root keeps the swarm readable at tiny.
+    vec2 root = vec2(0.50, 0.44);
     vec4 c0 = uViewProj * vec4(uInsectHold.xyz, 1.0);
     if(c0.w > 0.16){
-      vec2 root = c0.xy / c0.w * 0.5 + 0.5;
-      if(root.y < 0.28) root.y = mix(root.y, 0.46, 0.70);
-      if(root.y > 0.78) root.y = mix(root.y, 0.52, 0.55);
-      if(root.x < 0.16 || root.x > 0.84) root.x = mix(root.x, 0.50, 0.55);
-      for(int i = 0; i < 12; i++){
-        float sd = 8.4 + float(i) * 9.3;
-        float rad = mix(0.018, 0.145, hash11(sd));
-        float phi = hash11(sd + 2.1) * 6.2831853;
-        vec2 c = root + vec2(cos(phi) * rad * 1.15, sin(phi) * rad * 0.72);
-        if(c.x < 0.06 || c.x > 0.94 || c.y < 0.14 || c.y > 0.88) continue;
-        float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
-        // only over sky or distant haze — near leaves turn dashes into sparks
-        if(sceneZ < 0.62) continue;
-        float ang = (hash11(sd + 5.0) - 0.5) * 2.4;
-        float sz = mix(0.015, 0.026, hash11(sd + 6.2));
-        float body = insectMote(vUv, c, ang, sz);
-        if(body < 0.08) continue;
-        vec3 bug = vec3(0.055, 0.048, 0.032);
-        mapped = mix(mapped, bug, clamp(body * 0.86, 0.0, 1.0));
-      }
+      vec2 pr = c0.xy / c0.w * 0.5 + 0.5;
+      float sceneAt = texture(uDepthTex, clamp(pr, 0.0, 1.0)).r;
+      if(sceneAt > 0.80 && pr.x > 0.18 && pr.x < 0.82 && pr.y > 0.24 && pr.y < 0.76)
+        root = mix(root, pr, 0.40);
+    }
+    for(int i = 0; i < 12; i++){
+      float sd = 8.4 + float(i) * 9.3;
+      float rad = mix(0.008, 0.078, hash11(sd));
+      float phi = hash11(sd + 2.1) * 6.2831853;
+      vec2 c = root + vec2(cos(phi) * rad * 1.05, sin(phi) * rad * 0.62);
+      if(c.x < 0.10 || c.x > 0.90 || c.y < 0.16 || c.y > 0.86) continue;
+      float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
+      if(sceneZ < 0.80) continue;
+      float ang = (hash11(sd + 5.0) - 0.5) * 2.2;
+      float sz = mix(0.018, 0.030, hash11(sd + 6.2));
+      float body = insectMote(vUv, c, ang, sz);
+      if(body < 0.08) continue;
+      vec3 bug = vec3(0.045, 0.040, 0.028);
+      mapped = mix(mapped, bug, clamp(body * 0.90, 0.0, 1.0));
     }
   }
 
