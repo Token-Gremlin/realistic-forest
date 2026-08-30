@@ -70,13 +70,13 @@ float mediaDensity(vec3 p, out float mistFrac){
   vec2 dh = vec2(groundHeight(p.xz + vec2(9.0, 0.0)) - ground, groundHeight(p.xz + vec2(0.0, 9.0)) - ground);
   mist *= 1.0 + 0.5 * clamp((dh.x + dh.y) * 0.10, -0.6, 1.2);
 
-  // Mist banks: without a large-scale mask the layer reads as a uniform veil
-  // over the whole forest. This carves clear pockets and dense drifts so the
-  // camera can move between them, which is where the depth cue comes from.
-  float bank = fbm(p.xz * 0.0075 + 53.0, 4, 2.1, 0.55) * 0.5 + 0.5;
-  float bank2 = fbm(p.xz * 0.031 + 17.0, 3, 2.1, 0.5) * 0.5 + 0.5;
-  mist *= smoothstep(0.30, 0.80, bank) * 1.35 + 0.16;
-  mist *= mix(0.55, 1.35, bank2);
+  // Mist banks. Fine fbm dies as speckle at 8 march steps / 528 px;
+  // two-hundred-metre drifts with a hard pocket/bank split are what
+  // still read as morning fog instead of a grey filter.
+  float bank = fbm(p.xz * 0.0046 + 53.0, 3, 2.1, 0.52) * 0.5 + 0.5;
+  float bank2 = fbm(p.xz * 0.011 + 17.0, 3, 2.1, 0.5) * 0.5 + 0.5;
+  mist *= mix(0.08, 1.70, smoothstep(0.40, 0.68, bank));
+  mist *= mix(0.62, 1.28, bank2);
 
   if(uFire.w > 0.01){
     vec2 fd = p.xz - uFire.xz;
@@ -88,7 +88,7 @@ float mediaDensity(vec3 p, out float mistFrac){
   vec3 wind = vec3(uWind.x, 0.0, uWind.y) * uTime * (0.45 + uWind.z * 0.16);
   vec4 dt = texture(uDetailTex, (p + wind * 0.6) * 0.0125);
   vec4 dt2 = texture(uDetailTex, (p + wind * 1.7) * 0.052);
-  float wisp = mix(0.42, 1.45, dt.a) * mix(0.72, 1.26, dt2.r);
+  float wisp = mix(0.70, 1.22, dt.a) * mix(0.82, 1.14, dt2.r);
   mist *= wisp;
   mistFrac = mist;
 
