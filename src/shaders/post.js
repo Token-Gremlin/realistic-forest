@@ -500,9 +500,10 @@ void main(){
         }
         float sceneZ = texture(uDepthTex, clamp(vUv, 0.0, 1.0)).r;
         if(sceneZ > 0.18){
-          vec3 ash = vec3(0.10, 0.085, 0.070);
-          vec3 warm = vec3(0.18, 0.11, 0.06);
-          mapped = mix(mapped, mix(ash, warm, wisps * 0.35), wisps * 0.72);
+          // pale-warm on a dark plate; dark ash vanishes into blue hour
+          vec3 pale = vec3(0.40, 0.34, 0.28);
+          vec3 ember = vec3(0.58, 0.30, 0.10);
+          mapped = max(mapped, mix(pale, ember, wisps * 0.40) * wisps);
         }
       }
     }

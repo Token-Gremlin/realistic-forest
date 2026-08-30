@@ -70,11 +70,45 @@ function clearNearFerns(f) {
   return dropped;
 }
 
+function stripNearLeaves(f) {
+  const trees = f.forest.trees;
+  if (!trees) return 0;
+  const p = f.camera.position;
+  const fwd = p.clone();
+  f.camera.getWorldDirection(fwd);
+  let leaves = 0;
+  for (const v of trees.variants) {
+    for (const d of v.draws) {
+      if (!d.leaf || d.lod > 1) continue;
+      const bucket = v.buckets[d.lod];
+      const data = bucket.data;
+      let w = 0;
+      for (let i = 0; i < bucket.count; i++) {
+        const o = i * 12;
+        const dx = data[o] - p.x, dz = data[o + 2] - p.z;
+        const dist = Math.hypot(dx, dz);
+        const facing = (dx * fwd.x + dz * fwd.z) / (dist || 1);
+        if (dist < 14 && facing > -0.05) { leaves++; continue; }
+        if (w !== i) data.copyWithin(w * 12, o, o + 12);
+        w++;
+      }
+      bucket.count = w;
+      d.geo.instanceCount = w;
+      d.buf.needsUpdate = true;
+      d.mesh.visible = w > 0;
+      if (d.shadow) d.shadow.visible = w > 0;
+    }
+  }
+  return leaves;
+}
+
 catchUp(f);
 const plants = clearNearFerns(f);
+const leaves = stripNearLeaves(f);
 
 return {
   plants,
+  leaves,
   fire: +f.forest.fire.stats.strength.toFixed(2),
   flames: f.forest.fire.stats.flames,
   smoke: f.forest.fire.stats.smoke,
