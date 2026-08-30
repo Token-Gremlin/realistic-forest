@@ -230,10 +230,9 @@ function fellThieves(trees, cam, scratch, stem) {
     for (const t of list) {
       if (t === stem || (t.damage ?? 0) > 0.3 || t.height < 10) continue;
       const dist = Math.hypot(t.x - cx, t.z - cz);
-      const bole = Math.hypot(stem.x - cx, stem.z - cz);
-      if (dist < 1.4 || dist > bole - 0.6) continue;
+      if (dist < 1.4 || dist > 16) continue;
       const v = ndcOf(cam, scratch, t.x, t.y + t.height * 0.38, t.z);
-      if (Math.abs(v[0]) > 0.50 || v[1] < -0.22 || v[1] > 0.72) continue;
+      if (Math.abs(v[0]) > 0.34 || v[1] < -0.28 || v[1] > 0.52) continue;
       thieves.push({ t, dist, ax: Math.abs(v[0]) });
     }
   }
@@ -343,7 +342,10 @@ candidates.sort((a, b) => b.score - a.score);
 
 let best = null;
 const oaks = candidates.filter((c) => c.key === 'oak');
-const pool = (oaks.length >= 2 ? oaks : candidates).slice(0, 8);
+const pinned = candidates.find((c) => Math.hypot(c.t.x - 100.9, c.t.z - 120.8) < 2.5);
+const pool = pinned
+  ? [pinned]
+  : (oaks.length >= 2 ? oaks : candidates).slice(0, 8);
 for (const c of pool) {
   for (const side of [-1, 1]) {
     const place = placeAlong(maps, c.t, FX, FZ, side);
