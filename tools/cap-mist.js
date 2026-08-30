@@ -1,5 +1,5 @@
-// dawn mist over a stream. Water is the open corridor; do not look down
-// onto billboards and do not use morning shafts.
+// dawn mist over a stream. Pin the mist5 run: water, a fog band and
+// far crowns layered. Do not look down onto billboards.
 f.weather.setAct(0, true);
 f.weather.timelineEnabled = false;
 f.director.enabled = false;
@@ -12,12 +12,6 @@ f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
-const scratch = f.camera.position.clone();
-
-function ndcOf(x, y, z) {
-  scratch.set(x, y, z).project(f.camera);
-  return scratch;
-}
 
 function snap(s) {
   return {
@@ -27,52 +21,6 @@ function snap(s) {
     canopy: s.canopy,
     moisture: s.moisture,
   };
-}
-
-function walkStream(sx, sz) {
-  const pts = [];
-  let cx = sx, cz = sz;
-  for (let step = 0; step < 14; step++) {
-    let next = null, ns = -1e9;
-    for (let k = 0; k < 16; k++) {
-      const a = k * 0.393;
-      const nx = cx + Math.cos(a) * 2.5, nz = cz + Math.sin(a) * 2.5;
-      const s = maps.sample(nx, nz, {});
-      if (!s.inside) continue;
-      const wd = s.waterDepth;
-      if (wd < 0.05 || wd > 1.3) continue;
-      const away = (nx - sx) * (nx - cx) + (nz - sz) * (nz - cz);
-      const score = 1 + Math.min(wd, 0.55) + (away > 0 ? 1.2 : 0);
-      if (score > ns) { ns = score; next = { x: nx, z: nz, s: snap(s) }; }
-    }
-    if (!next) break;
-    pts.push(next);
-    cx = next.x; cz = next.z;
-  }
-  return pts;
-}
-
-function findBank(wx, wz) {
-  let x = wx, z = wz;
-  let s = snap(maps.sample(x, z, {}));
-  for (let i = 0; i < 24; i++) {
-    const h0 = maps.height(x, z);
-    let pick = null, ps = -1e9;
-    for (let k = 0; k < 8; k++) {
-      const a = k * 0.785;
-      const nx = x + Math.cos(a) * 1.55, nz = z + Math.sin(a) * 1.55;
-      const ns = maps.sample(nx, nz, {});
-      if (!ns.inside) continue;
-      const h = maps.height(nx, nz);
-      const dry = ns.waterDepth < 0.015 ? 10 : 0;
-      const score = dry + (h - h0) * 2.4 - ns.waterDepth * 4 + ns.skyVis * 0.8;
-      if (score > ps) { ps = score; pick = { x: nx, z: nz, s: snap(ns) }; }
-    }
-    if (!pick) break;
-    x = pick.x; z = pick.z; s = pick.s;
-    if (s.waterDepth < 0.0 && s.waterDepth > -0.85) return { x, z, s };
-  }
-  return { x, z, s };
 }
 
 function place(bank, look, pull, rise, side = 0) {
@@ -87,106 +35,24 @@ function place(bank, look, pull, rise, side = 0) {
   const p = f.camera.position;
   p.y = Math.max(p.y, maps.height(p.x, p.z) + rise * 0.86);
   const lookH = maps.height(look.x, look.z);
-  // aim above the run so water sits in the lower third and mist occupies
-  // the middle. lookAt the water itself parks it on the horizon.
   f.camera.lookAt(look.x, lookH + 4.6, look.z);
   f.camera.updateMatrixWorld(true);
   f.camera.updateProjectionMatrix();
 }
 
-function scoreShot(run, look, mid) {
-  const lookW = Math.max(0, look.s?.waterDepth ?? 0);
-  const midW = Math.max(0, mid.s?.waterDepth ?? 0);
-  if (lookW < 0.12 || midW < 0.12) return -1e9;
-  let inFrame = 0, waterY = 0;
-  for (const pt of run) {
-    const wd = Math.max(0, pt.s.waterDepth);
-    const y = maps.height(pt.x, pt.z) + wd * 0.08;
-    const v = ndcOf(pt.x, y, pt.z);
-    if (Math.abs(v.x) < 0.82 && v.y > -0.62 && v.y < 0.22 && v.z > 0 && v.z < 1) {
-      inFrame++;
-      waterY += v.y;
-    }
-  }
-  if (inFrame < 3) return -1e9;
-  const p = f.camera.position;
-  let canopy = 0, n = 0;
-  for (let t = 0.12; t < 0.88; t += 0.08) {
-    const x = p.x + (look.x - p.x) * t;
-    const z = p.z + (look.z - p.z) * t;
-    canopy += maps.canopy(x, z);
-    n++;
-  }
-  const avgY = waterY / inFrame;
-  const fx = look.x - p.x, fz = look.z - p.z;
-  const fl = Math.hypot(fx, fz) || 1;
-  const nearCanopy = maps.canopy(p.x + fx / fl * 3.2, p.z + fz / fl * 3.2);
-  return inFrame * 9 - Math.abs(avgY + 0.32) * 8 - (canopy / n) * 12
-    + maps.skyVis(p.x, p.z) * 2.4 - maps.canopy(p.x, p.z) * 5 - nearCanopy * 9
-    + Math.min(lookW, 0.55) * 18 + Math.min(midW, 0.55) * 12;
-}
+const PIN = {
+  bank: { x: 24.4, z: -171.1 },
+  look: { x: 13.7, z: -167.9 },
+  pull: 11.4,
+  rise: 6.0,
+  side: 0,
+};
 
-const SEEDS = [
-  { x: -11.4, z: 0.3 },
-  { x: 40, z: -80 },
-  { x: 156.3, z: -69.3 },
-  { x: 80, z: 40 },
-];
-
-const pulls = [9.6, 11.4];
-const rises = [5.2, 6.0];
-const sides = [0, 3.2, -3.2];
-
-let best = null, bestS = -1e9;
-for (const seed of SEEDS) {
-  f.camera.position.set(seed.x, 48, seed.z);
-  f.forest.ensureMaps(f.camera);
-  const origins = [];
-  for (let i = 0; i < 70; i++) {
-    const a = i * 2.399963;
-    const r = 14 + (i % 12) * 11;
-    const x = seed.x + Math.cos(a) * r, z = seed.z + Math.sin(a) * r;
-    const s = maps.sample(x, z, {});
-    if (!s.inside) continue;
-    const wd = s.waterDepth;
-    if (wd < 0.08 || wd > 0.95) continue;
-    origins.push({
-      x, z, s: snap(s),
-      rank: (wd < 0.42 ? 10 : 4) + s.skyVis * 0.8 - s.canopy * 0.6,
-    });
-  }
-  origins.sort((a, b) => b.rank - a.rank);
-  for (const origin of origins.slice(0, 10)) {
-    const run = walkStream(origin.x, origin.z);
-    if (run.length < 4) continue;
-    const mid = run[Math.max(0, (run.length >> 1) - 1)] ?? origin;
-    const look = run[Math.min(run.length - 1, Math.max(3, (run.length * 2 / 3) | 0))] ?? mid;
-    const bank = findBank(mid.x, mid.z);
-    if (bank.s.waterDepth > 0.02) continue;
-    for (const pull of pulls) {
-      for (const rise of rises) {
-        for (const side of sides) {
-          place(bank, look, pull, rise, side);
-          const sc = scoreShot(run, look, mid);
-          if (sc > bestS) {
-            bestS = sc;
-            best = { bank, look, mid, run, pull, rise, side };
-          }
-        }
-      }
-    }
-  }
-}
-
-if (!best) {
-  const fb = { x: -11.4, z: 0.3 };
-  f.camera.position.set(fb.x, 48, fb.z);
-  f.forest.ensureMaps(f.camera);
-  const look = { x: fb.x - 7, z: fb.z + 0.3, s: snap(maps.sample(fb.x - 7, fb.z + 0.3, {})) };
-  best = { bank: { x: fb.x, z: fb.z, s: snap(maps.sample(fb.x, fb.z, {})) }, look, mid: look, run: [], pull: 9.6, rise: 5.4, side: 0 };
-}
-
-place(best.bank, best.look, best.pull, best.rise, best.side ?? 0);
+f.camera.position.set(PIN.bank.x, 48, PIN.bank.z);
+f.forest.ensureMaps(f.camera);
+PIN.bank.s = snap(maps.sample(PIN.bank.x, PIN.bank.z, {}));
+PIN.look.s = snap(maps.sample(PIN.look.x, PIN.look.z, {}));
+place(PIN.bank, PIN.look, PIN.pull, PIN.rise, PIN.side);
 f.forest.ensureMaps(f.camera);
 
 if (f.forest.falling) {
@@ -203,28 +69,17 @@ if (f.forest.life) {
 f.state.running = false;
 
 const p = f.camera.position;
-let inFrame = 0, waterY = 0;
-for (const pt of best.run) {
-  const wd = Math.max(0, pt.s.waterDepth);
-  const v = ndcOf(pt.x, maps.height(pt.x, pt.z) + wd * 0.08, pt.z);
-  if (Math.abs(v.x) < 0.82 && v.y > -0.62 && v.y < 0.22 && v.z > 0 && v.z < 1) {
-    inFrame++;
-    waterY += v.y;
-  }
-}
-
 return {
   act: f.weather.actName,
-  score: +bestS.toFixed(2),
-  bank: [+best.bank.x.toFixed(1), +best.bank.z.toFixed(1)],
-  look: [+best.look.x.toFixed(1), +best.look.z.toFixed(1)],
-  pull: best.pull,
-  rise: best.rise,
-  side: best.side ?? 0,
-  run: best.run.length,
-  inFrame,
-  waterY: inFrame ? +(waterY / inFrame).toFixed(2) : null,
+  pin: [PIN.bank.x, PIN.bank.z],
+  look: [PIN.look.x, PIN.look.z],
+  pull: PIN.pull,
+  rise: PIN.rise,
+  side: PIN.side,
   mist: +(f.weather.state.mist ?? 0).toFixed(2),
   camY: +(p.y - maps.height(p.x, p.z)).toFixed(2),
-  sky: +(best.bank.s.skyVis ?? 0).toFixed(2),
+  bankWater: +(PIN.bank.s.waterDepth ?? 0).toFixed(2),
+  lookWater: +(PIN.look.s.waterDepth ?? 0).toFixed(2),
+  sky: +(PIN.bank.s.skyVis ?? 0).toFixed(2),
+  inside: !!(PIN.bank.s.inside && PIN.look.s.inside),
 };

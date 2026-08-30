@@ -154,7 +154,7 @@ void main(){
     S += ambTop * (0.55 + 0.45 * clamp(p.y * 0.05, 0.0, 1.0)) + ambSide;
     // Only ground mist gets the cool floor. Lighting all fog with it
     // painted mist4 as a flat grey filter.
-    S += uSkyAmbient * (0.22 + 0.50 * uFog.z) * smoothstep(0.04, 0.48, mistFrac);
+    S += uSkyAmbient * (0.14 + 0.36 * uFog.z) * smoothstep(0.04, 0.55, mistFrac);
     if(uFlash.w > 0.001){
       vec3 fv = uFlash.xyz - p;
       float fd2 = dot(fv, fv);

@@ -65,17 +65,18 @@ function clearNearFerns(f) {
   return dropped;
 }
 
-function stripNearLeaves(f) {
+function stripLookCone(f) {
+  // bark and leaf share a lod bucket. Compact once, then give every
+  // draw on that lod the new count or the near trunk stays in the tail.
   const trees = f.forest.trees;
   if (!trees) return 0;
   const p = f.camera.position;
   const fwd = p.clone();
   f.camera.getWorldDirection(fwd);
-  let leaves = 0;
+  let dropped = 0;
   for (const v of trees.variants) {
-    for (const d of v.draws) {
-      if (!d.leaf || d.lod > 1) continue;
-      const bucket = v.buckets[d.lod];
+    for (let lod = 0; lod < 3; lod++) {
+      const bucket = v.buckets[lod];
       const data = bucket.data;
       let w = 0;
       for (let i = 0; i < bucket.count; i++) {
@@ -83,27 +84,30 @@ function stripNearLeaves(f) {
         const dx = data[o] - p.x, dz = data[o + 2] - p.z;
         const dist = Math.hypot(dx, dz);
         const facing = (dx * fwd.x + dz * fwd.z) / (dist || 1);
-        if (dist < 22 && facing > -0.08) { leaves++; continue; }
+        if (dist < 14 && facing > 0.05) { dropped++; continue; }
         if (w !== i) data.copyWithin(w * 12, o, o + 12);
         w++;
       }
       bucket.count = w;
-      d.geo.instanceCount = w;
-      d.buf.needsUpdate = true;
-      d.mesh.visible = w > 0;
-      if (d.shadow) d.shadow.visible = w > 0;
+      for (const d of v.draws) {
+        if (d.lod !== lod) continue;
+        d.geo.instanceCount = w;
+        d.buf.needsUpdate = true;
+        d.mesh.visible = w > 0;
+        if (d.shadow) d.shadow.visible = w > 0;
+      }
     }
   }
-  return leaves;
+  return dropped;
 }
 
 catchUp(f);
 const plants = clearNearFerns(f);
-const leaves = stripNearLeaves(f);
+const trees = stripLookCone(f);
 
 return {
   plants,
-  leaves,
+  treesDropped: trees,
   trees: f.forest.trees?.stats.trees ?? 0,
   mist: +(f.weather.state.mist ?? 0).toFixed(2),
   aerial: f.pipeline.settings.aerial,
