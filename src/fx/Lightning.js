@@ -135,6 +135,8 @@ export class Lightning {
     this.forwardMeshes = [this.mesh];
     this._uvA = new THREE.Vector3();
     this._uvB = new THREE.Vector3();
+    // capture stills set this so one missed flash frame cannot kill the channel
+    this.held = false;
   }
 
   _rnd() {
@@ -355,15 +357,16 @@ export class Lightning {
       U.uBoltAmp.value.set(0, 0, 0, 0);
       return;
     }
-    const live = U.uFlash.value.w > 0.0008;
+    const live = U.uFlash.value.w > 0.0008 || this.held;
     this.mesh.visible = live || !this.sawFlash;
     // hold the channel at a readable amp even if the shared flash uniform
     // was overwritten between the capture scripts and drawOnce
-    this.uniforms.uAmp.value = live ? Math.max(U.uFlash.value.w, 0.85) : (this.mesh.visible ? 1.2 : 0);
+    this.uniforms.uAmp.value = live ? Math.max(U.uFlash.value.w, this.held ? 1.6 : 0.85) : (this.mesh.visible ? 1.2 : 0);
     if (live) {
       U.uFlash.value.x = this.lightPos.x;
       U.uFlash.value.y = this.lightPos.y;
       U.uFlash.value.z = this.lightPos.z;
+      if (this.held && U.uFlash.value.w < 0.8) U.uFlash.value.w = 1.6;
       this.sawFlash = true;
     } else if (this.sawFlash) {
       this.active = false;
@@ -380,7 +383,7 @@ export class Lightning {
    * is finished after AgX so it cannot grade into storm fog.
    */
   _publishBolt(camera) {
-    const live = this.mesh.visible && this.active;
+    const live = this.active && (this.mesh.visible || this.held || U.uFlash.value.w > 0.02);
     if (!live || !camera || !camera.isCamera) {
       U.uBoltAmp.value.set(0, 0, 0, 0);
       return;

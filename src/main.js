@@ -286,6 +286,7 @@ async function start() {
     U.uViewProj.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     U.uInvViewProj.value.copy(U.uViewProj.value).invert();
     U.uProjScaleY.value = camera.projectionMatrix.elements[5] * pipeline.height * 0.5;
+    if (weather.holdFlash) weather.update(0, camera.position);
     forest.lightning?.update?.(0, camera);
     pipeline.resetTemporal();
     pipeline.render(camera, { nightAmount: weather.nightAmount });

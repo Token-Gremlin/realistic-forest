@@ -212,6 +212,8 @@ uniform float uTime;
 uniform mat4 uInvViewProj;
 uniform vec3 uCamPos;
 uniform vec4 uWeather;
+uniform vec4 uFlash;
+uniform mat4 uViewProj;
 uniform vec4 uBolt;
 uniform vec4 uBoltAmp;
 uniform vec4 uBoltF0;
@@ -239,10 +241,11 @@ float boltStroke(vec2 uv, vec2 a, vec2 b, float seed){
   jog += sin(t * 71.0 + seed) * 0.008;
   jog += sin(t * 163.0 + seed * 2.1) * 0.003;
   vec2 q = a + dir * (t * len) + nrm * jog;
-  float d = length(uv - q);
-  float core = exp(-d * d * 24000.0);
-  float glow = exp(-d * d * 1800.0);
-  return max(core, glow * 0.48);
+  vec2 dp = (uv - q) * vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+  float d = length(dp);
+  float core = exp(-d * d * 9000.0);
+  float glow = exp(-d * d * 700.0);
+  return max(core, glow * 0.55);
 }
 
 float cocAt(vec2 uv){
@@ -328,15 +331,30 @@ void main(){
   // ---- lightning channel, display-referred. A 70 m world ribbon is one
   // pixel after the far divide and AgX then grades 16-nit lines into fog;
   // finishing the bolt here is how a plate would get a readable strike.
-  if(uBoltAmp.x > 0.02){
-    float stroke = boltStroke(vUv, uBolt.xy, uBolt.zw, uBoltAmp.y);
-    stroke = max(stroke, boltStroke(vUv, uBoltF0.xy, uBoltF0.zw, uBoltAmp.y + 17.0) * 0.55);
-    stroke = max(stroke, boltStroke(vUv, uBoltF1.xy, uBoltF1.zw, uBoltAmp.y + 31.0) * 0.40);
-    float cloud = exp(-dot(vUv - uBolt.xy, vUv - uBolt.xy) * 110.0);
+  vec2 cloudUv = uBolt.xy;
+  vec2 groundUv = uBolt.zw;
+  float amp = uBoltAmp.x;
+  float seed = uBoltAmp.y;
+  if(amp < 0.02 && uFlash.w > 0.08){
+    // fallback: the point flash already reaches every shader; drop a channel
+    // from that position if the JS publish missed this frame
+    vec4 clip = uViewProj * vec4(uFlash.xyz, 1.0);
+    vec2 cuv = clip.xy / max(abs(clip.w), 1.0e-4) * 0.5 + 0.5;
+    cloudUv = cuv;
+    groundUv = vec2(cuv.x + 0.012, cuv.y - 1.35);
+    amp = max(uFlash.w, 1.15);
+    seed = 4.2;
+  }
+  if(amp > 0.02){
+    float stroke = boltStroke(vUv, cloudUv, groundUv, seed);
+    stroke = max(stroke, boltStroke(vUv, uBoltF0.xy, uBoltF0.zw, seed + 17.0) * 0.55);
+    stroke = max(stroke, boltStroke(vUv, uBoltF1.xy, uBoltF1.zw, seed + 31.0) * 0.40);
+    vec2 cdp = (vUv - cloudUv) * vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+    float cloud = exp(-dot(cdp, cdp) * 70.0);
     vec3 core = vec3(0.97, 0.98, 1.0);
-    vec3 envelope = vec3(0.32, 0.52, 0.95);
-    float amp = clamp(uBoltAmp.x, 0.0, 2.4);
-    mapped = max(mapped, core * stroke * amp + envelope * (stroke * 0.40 + cloud * 0.50) * amp);
+    vec3 envelope = vec3(0.28, 0.50, 0.96);
+    float a = clamp(amp, 0.0, 2.4);
+    mapped = max(mapped, core * stroke * a + envelope * (stroke * 0.45 + cloud * 0.55) * a);
   }
 
   oColor = vec4(clamp(mapped, 0.0, 1.0), 1.0);

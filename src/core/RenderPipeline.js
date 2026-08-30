@@ -222,7 +222,7 @@ export class RenderPipeline {
       uDofParams: { value: new THREE.Vector4(12, 14, 12, 1) },
       uMotionBlur: { value: 0.55 },
       uTime: U.uTime, uInvViewProj: U.uInvViewProj, uCamPos: U.uCamPos,
-      uWeather: U.uWeather,
+      uWeather: U.uWeather, uFlash: U.uFlash, uViewProj: U.uViewProj,
       uBolt: U.uBolt, uBoltAmp: U.uBoltAmp, uBoltF0: U.uBoltF0, uBoltF1: U.uBoltF1,
     }));
 
@@ -576,6 +576,10 @@ export class RenderPipeline {
     }
 
     /* ------------------------------------------------------------- composite */
+    // last moment: project the channel with this camera so a still cannot
+    // lose the stroke between the capture script and the grade pass
+    w.lightning?._publishBolt?.(camera);
+
     const cu = this.compositePass.material.uniforms;
     cu.uColor.value = lit;
     cu.uBloom.value = bloomTex ?? this.bloomUp[0].texture;
