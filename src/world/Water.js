@@ -156,6 +156,12 @@ export class Water {
     this.waterMesh.frustumCulled = false;
     this.waterMesh.matrixAutoUpdate = false;
     this.stats = { cells: 0 };
+    this._causticHeld = false;
+  }
+
+  holdCaustics(x, y, z) {
+    this._causticHeld = true;
+    U.uCausticHold.set(x, y, z, 1);
   }
 
   _vertex() {
@@ -489,6 +495,7 @@ void main(){
       0.4 + w.y * 0.8,
       w.z,
     );
+    if(!this._causticHeld) U.uCausticHold.w = 0;
   }
 
   beforeWater(colorTex, depthTex) {

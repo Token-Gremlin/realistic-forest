@@ -69,9 +69,17 @@ function clearNearFerns(f) {
 catchUp(f);
 const plants = clearNearFerns(f);
 
+const p = f.camera.position;
+const fwd = p.clone();
+f.camera.getWorldDirection(fwd);
+const hit = p.clone().add(fwd.multiplyScalar(6.2));
+const y = f.forest.maps.height(hit.x, hit.z) + 0.32;
+f.forest.water?.holdCaustics?.(hit.x, y, hit.z);
+
 return {
   plants,
   trees: f.forest.trees?.stats.trees ?? 0,
   cells: f.forest.water?.stats?.cells ?? 0,
   aerial: f.pipeline.settings.aerial,
+  caustic: !!(f.forest.water?._causticHeld),
 };

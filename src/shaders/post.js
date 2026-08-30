@@ -219,6 +219,7 @@ uniform vec4 uInsectHold;
 uniform vec4 uBirdHold;
 uniform vec4 uSmokeHold;
 uniform vec4 uEmberHold;
+uniform vec4 uCausticHold;
 uniform vec3 uSunColor;
 uniform vec3 uWind;
 uniform mat4 uViewProj;
@@ -351,6 +352,21 @@ float smokeWisp(vec2 uv, vec2 root, float seed, float tall){
  * them into brown fog; short hard dashes above the fire keep a
  * handful readable at 528 px without becoming orbs.
  */
+/** Display-space caustic knot. World-space worley milks out after AgX;
+ *  a few hard vesicae on the projected run still read at 528 px. */
+float causticKnot(vec2 uv, vec2 c, float ang, float sz){
+  vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+  vec2 d = (uv - c) * aspect;
+  float ca = cos(ang), sa = sin(ang);
+  vec2 q = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y) / max(sz, 1.0e-4);
+  q.x *= 1.55;
+  float r = length(q);
+  float body = 1.0 - smoothstep(0.28, 0.92, r);
+  body *= 1.0 - smoothstep(0.14, 0.40, abs(q.x) * abs(q.y) * 5.2);
+  body *= 1.0 - smoothstep(0.52, 1.02, abs(q.y));
+  return pow(clamp(body, 0.0, 1.0), 1.18);
+}
+
 float emberSpark(vec2 uv, vec2 c, float ang, float sz){
   vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
   vec2 d = (uv - c) * aspect;
@@ -521,6 +537,30 @@ void main(){
           vec3 pale = vec3(0.46, 0.38, 0.30);
           vec3 ember = vec3(0.62, 0.32, 0.10);
           mapped = mix(mapped, mix(pale, ember, wisps * 0.35), clamp(wisps * 0.78, 0.0, 1.0));
+        }
+      }
+    }
+  }
+
+  if(uCausticHold.w > 0.05){
+    vec4 kclip = uViewProj * vec4(uCausticHold.xyz, 1.0);
+    if(kclip.w > 0.10){
+      vec2 kuv = kclip.xy / kclip.w * 0.5 + 0.5;
+      if(kuv.x > 0.06 && kuv.x < 0.94 && kuv.y > 0.12 && kuv.y < 0.82){
+        for(int i = 0; i < 6; i++){
+          float sd = 41.0 + float(i) * 9.3;
+          float rad = mix(0.034, 0.13, hash11(sd));
+          float phi = hash11(sd + 1.7) * 6.2831853;
+          vec2 c = kuv + vec2(cos(phi) * rad * 1.25, sin(phi) * rad * 0.55);
+          if(c.x < 0.10 || c.x > 0.90 || c.y < 0.16 || c.y > 0.78) continue;
+          float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
+          if(sceneZ < 0.16) continue;
+          float ang = 0.35 + (hash11(sd + 4.0) - 0.5) * 1.4;
+          float sz = mix(0.046, 0.078, hash11(sd + 6.2));
+          float body = causticKnot(vUv, c, ang, sz);
+          if(body < 0.16) continue;
+          vec3 gold = mix(vec3(0.92, 0.70, 0.22), vec3(1.0, 0.82, 0.40), hash11(sd + 8.0));
+          mapped = max(mapped, gold * body);
         }
       }
     }

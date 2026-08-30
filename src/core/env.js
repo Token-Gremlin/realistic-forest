@@ -44,6 +44,8 @@ export const Env = {
     uSmokeHold: { value: new THREE.Vector4(0, 0, 0, 0) },
     // held ember sparks: xyz fire origin, w = 1 when grabbed
     uEmberHold: { value: new THREE.Vector4(0, 0, 0, 0) },
+    // held stream caustics: xyz look point on the run, w = 1 when grabbed
+    uCausticHold: { value: new THREE.Vector4(0, 0, 0, 0) },
 
     // --- wind (consumed by GLSL_WIND)
     uWind: { value: new THREE.Vector4(0.86, 0.51, 1.6, 0.35) },
