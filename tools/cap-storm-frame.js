@@ -115,18 +115,19 @@ function fellOpticalAxis(trees, cam, stem, fx, fz) {
 }
 
 function placeAlong(maps, stem, fx, fz, side) {
-  // sit on the clear bole (oak branches start ~0.28 H). Height is local AGL
-  // so a downhill pad does not turn the shot into a 3 m overlook.
+  // SIDE-ON on the clear bole. Looking along the stem projects it as a
+  // vertical smear (a standing trunk). A still needs the log to run
+  // across the frame.
   const gh = maps.height(stem.x, stem.z);
   const H = stem.height;
   const px = -fz * side, pz = fx * side;
-  const fxw = stem.x - fx * 7.4 + px * 4.2;
-  const fzw = stem.z - fz * 7.4 + pz * 4.2;
-  const lx = stem.x + fx * H * 0.18;
-  const lz = stem.z + fz * H * 0.18;
+  const mx = stem.x + fx * H * 0.16;
+  const mz = stem.z + fz * H * 0.16;
+  const fxw = mx - px * 7.1;
+  const fzw = mz - pz * 7.1;
   return {
-    from: [fxw, maps.height(fxw, fzw) + 1.72, fzw],
-    look: [lx, maps.height(lx, lz) + 0.70, lz],
+    from: [fxw, maps.height(fxw, fzw) + 1.58, fzw],
+    look: [mx, maps.height(mx, mz) + 0.62, mz],
     gh, H, px, pz,
   };
 }
@@ -145,7 +146,7 @@ function pushOutOfFallen(pos, maps, stem, fx, fz) {
     if (d < 1e-4) { pos.x = px + 1; pos.z = pz; d = 1; }
     pos.x = px + (dx / d) * rad;
     pos.z = pz + (dz / d) * rad;
-    pos.y = maps.height(pos.x, pos.z) + 1.72;
+    pos.y = maps.height(pos.x, pos.z) + 1.58;
   }
 }
 
@@ -153,7 +154,7 @@ function scoreView(trees, cam, scratch, stem, fx, fz, place) {
   cam.position.set(place.from[0], place.from[1], place.from[2]);
   trees.pushOutOfTrunks(cam.position, 1.8);
   pushOutOfFallen(cam.position, trees.forest.maps, stem, fx, fz);
-  cam.position.y = trees.forest.maps.height(cam.position.x, cam.position.z) + 1.72;
+  cam.position.y = trees.forest.maps.height(cam.position.x, cam.position.z) + 1.58;
   cam.lookAt(place.look[0], place.look[1], place.look[2]);
   cam.updateMatrixWorld(true);
 
@@ -162,18 +163,19 @@ function scoreView(trees, cam, scratch, stem, fx, fz, place) {
   const llen = Math.hypot(lx, lz) || 1;
   const hits = standingHits(trees, cam.position.x, cam.position.z, lx / llen, lz / llen);
 
-  const gh = place.gh;
+  const maps = trees.forest.maps;
   const H = place.H;
-  const base = ndcOf(cam, scratch, stem.x, gh + 0.55, stem.z);
-  const mid = ndcOf(cam, scratch, stem.x + fx * H * 0.16, gh + 0.72, stem.z + fz * H * 0.16);
-  const tip = ndcOf(cam, scratch, stem.x + fx * H * 0.42, gh + 0.70, stem.z + fz * H * 0.42);
+  const base = ndcOf(cam, scratch, stem.x, maps.height(stem.x, stem.z) + 0.55, stem.z);
+  const mid = ndcOf(cam, scratch, stem.x + fx * H * 0.16, maps.height(stem.x + fx * H * 0.16, stem.z + fz * H * 0.16) + 0.62, stem.z + fz * H * 0.16);
+  const tip = ndcOf(cam, scratch, stem.x + fx * H * 0.34, maps.height(stem.x + fx * H * 0.34, stem.z + fz * H * 0.34) + 0.58, stem.z + fz * H * 0.34);
   let score = 0;
   if (inFrame(mid)) score += 12;
   if (inFrame(base)) score += 7;
   if (inFrame(tip)) score += 5;
-  score += Math.max(0, 0.55 - Math.abs(mid[0])) * 8;
-  score += Math.max(0, 0.35 - Math.abs(mid[1])) * 10;
-  score += Math.min(1.1, Math.hypot(tip[0] - base[0], tip[1] - base[1])) * 6;
+  score += Math.max(0, 0.55 - Math.abs(mid[0])) * 6;
+  score += Math.max(0, 0.28 - Math.abs(mid[1])) * 12;
+  score += Math.min(1.2, Math.abs(tip[0] - base[0])) * 16;
+  score -= Math.min(1.0, Math.abs(tip[1] - base[1])) * 10;
   score -= hits * 9;
   return { score, hits, base, mid, tip };
 }
@@ -228,7 +230,8 @@ function fellThieves(trees, cam, scratch, stem) {
     for (const t of list) {
       if (t === stem || (t.damage ?? 0) > 0.3 || t.height < 10) continue;
       const dist = Math.hypot(t.x - cx, t.z - cz);
-      if (dist < 1.4 || dist > 12) continue;
+      const bole = Math.hypot(stem.x - cx, stem.z - cz);
+      if (dist < 1.4 || dist > bole - 0.6) continue;
       const v = ndcOf(cam, scratch, t.x, t.y + t.height * 0.38, t.z);
       if (Math.abs(v[0]) > 0.50 || v[1] < -0.22 || v[1] > 0.72) continue;
       thieves.push({ t, dist, ax: Math.abs(v[0]) });
@@ -297,7 +300,8 @@ for (const list of trees.chunks.values()) {
 candidates.sort((a, b) => b.score - a.score);
 
 let best = null;
-const pool = candidates.slice(0, 8);
+const oaks = candidates.filter((c) => c.key === 'oak');
+const pool = (oaks.length >= 2 ? oaks : candidates).slice(0, 8);
 for (const c of pool) {
   for (const side of [-1, 1]) {
     const place = placeAlong(maps, c.t, FX, FZ, side);
@@ -343,10 +347,10 @@ if (stem) {
   cam.position.set(place.from[0], place.from[1], place.from[2]);
   trees.pushOutOfTrunks(cam.position, 1.8);
   pushOutOfFallen(cam.position, maps, stem, FX, FZ);
-  cam.position.y = maps.height(cam.position.x, cam.position.z) + 1.72;
+  cam.position.y = maps.height(cam.position.x, cam.position.z) + 1.58;
   hits = dodgeStanding(trees, cam, place.look, [place.px, place.pz]);
   pushOutOfFallen(cam.position, maps, stem, FX, FZ);
-  cam.position.y = maps.height(cam.position.x, cam.position.z) + 1.72;
+  cam.position.y = maps.height(cam.position.x, cam.position.z) + 1.58;
   cam.lookAt(place.look[0], place.look[1], place.look[2]);
   cam.updateMatrixWorld(true);
   cam.updateProjectionMatrix();
@@ -386,9 +390,17 @@ if (stem) {
     dmg: +stem.damage.toFixed(2),
     side,
     camY: +(cam.position.y - maps.height(cam.position.x, cam.position.z)).toFixed(2),
+    boleDist: +Math.hypot(
+      cam.position.x - (stem.x + FX * H * 0.18),
+      cam.position.z - (stem.z + FZ * H * 0.18),
+    ).toFixed(1),
     base: fmt(ndcOf(cam, scratch, stem.x, gh + 0.55, stem.z)),
-    mid: fmt(ndcOf(cam, scratch, stem.x + FX * H * 0.16, gh + 0.72, stem.z + FZ * H * 0.16)),
-    tip: fmt(ndcOf(cam, scratch, stem.x + FX * H * 0.42, gh + 0.70, stem.z + FZ * H * 0.42)),
+    mid: fmt(ndcOf(cam, scratch, stem.x + FX * H * 0.16, maps.height(stem.x + FX * H * 0.16, stem.z + FZ * H * 0.16) + 0.62, stem.z + FZ * H * 0.16)),
+    tip: fmt(ndcOf(cam, scratch, stem.x + FX * H * 0.34, maps.height(stem.x + FX * H * 0.34, stem.z + FZ * H * 0.34) + 0.58, stem.z + FZ * H * 0.34)),
+    span: +Math.abs(
+      ndcOf(cam, scratch, stem.x + FX * H * 0.34, maps.height(stem.x + FX * H * 0.34, stem.z + FZ * H * 0.34) + 0.58, stem.z + FZ * H * 0.34)[0]
+      - ndcOf(cam, scratch, stem.x, gh + 0.55, stem.z)[0],
+    ).toFixed(2),
     view: best ? +best.view.score.toFixed(2) : null,
     hits: +hits.toFixed(2),
   };
