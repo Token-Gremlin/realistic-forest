@@ -31,12 +31,12 @@ p.y = Math.max(p.y, maps.height(p.x, p.z) + 40);
 
 // 42° vertical FOV: a ~75 m strike has to sit ahead, not overhead, or the
 // cloud end leaves the frame. Look slightly up so the channel crosses sky.
-f.camera.lookAt(p.x + 70, p.y + 22, p.z + 21);
+f.camera.lookAt(p.x + 62, p.y + 18, p.z + 18);
 f.camera.updateMatrixWorld(true);
 f.forest.camPos = p;
 
 const cx = p.x + 72, cz = p.z + 22;
-const cloudY = maps.height(cx, cz) + 64;
+const cloudY = maps.height(cx, cz) + 70;
 const gx = p.x + 78, gz = p.z + 24;
 const gy = maps.height(gx, gz) + 0.4;
 

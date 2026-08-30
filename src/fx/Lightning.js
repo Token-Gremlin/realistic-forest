@@ -16,8 +16,6 @@ const VERT = /* glsl */ `
 precision highp float;
 precision highp int;
 
-uniform mat4 uViewProj;
-
 in vec3 position;
 in vec2 uv;   // x side -1..1, y signed brightness
 
@@ -29,9 +27,8 @@ void main(){
   vSide = uv.x;
   vBright = max(abs(uv.y), 0.2);
   vGlow = 1.0 - step(0.0, uv.y);
-  vec4 clip = uViewProj * vec4(position, 1.0);
-  // 70 m / 7000 m far-plane projects to NDC z ~= 1; SwiftShader clips that
-  gl_Position = vec4(clip.xy / max(clip.w, 1.0e-4), 0.0, 1.0);
+  // position is NDC; z is forced to 0 so a 70 m strike is not far-clipped
+  gl_Position = vec4(position, 1.0);
 }
 `;
 
@@ -57,7 +54,7 @@ void main(){
   if(mask < 0.012) discard;
 
   vec3 col = mix(vec3(1.55, 1.62, 1.85), uFlashColor, 0.14 + vGlow * 0.42);
-  oColor = vec4(col * uAmp * vBright * mask * 28.0, 0.0);
+  oColor = vec4(col * uAmp * vBright * mask * 40.0, 0.0);
 }
 `;
 
@@ -106,7 +103,7 @@ export class Lightning {
     this.geometry = g;
 
     this.uniforms = {
-      ...Env.pick('uViewProj', 'uFlashColor'),
+      ...Env.pick('uFlashColor'),
       uAmp: { value: 0 },
     };
     this._camera = null;
@@ -311,6 +308,15 @@ export class Lightning {
     for (const s of this._segs) {
       ribbon(s.a, s.b, Math.max(s.width * 0.40, 1.4), s.bright);
       ribbon(s.a, s.b, Math.max(s.width * 2.8, 4.2), -(s.bright * 0.48));
+    }
+    if (camObj) {
+      const ndc = this._ndc;
+      camObj.updateMatrixWorld(true);
+      for (let i = 0; i < n; i++) {
+        const o = i * 3;
+        ndc.set(P[o], P[o + 1], P[o + 2]).project(camObj);
+        P[o] = ndc.x; P[o + 1] = ndc.y; P[o + 2] = 0.0;
+      }
     }
     this.geometry.setDrawRange(0, n);
     this.bufPos.needsUpdate = true;
