@@ -232,6 +232,60 @@ export class Clutter {
         });
       }
     }
+
+    // a second, tighter lattice for the small cover a crawl actually sees.
+    // those kinds already cull past ~20 m, so far chunks stay cheap.
+    const nearIdx = [];
+    let nearSum0 = 0;
+    for (let k = 0; k < ARCHETYPES.length; k++) {
+      const key = ARCHETYPES[k].key;
+      if (key === 'leafPatch' || key === 'moss' || key === 'mushroom' || key === 'twig' || key === 'flower') {
+        nearIdx.push(k);
+        nearSum0 += ARCHETYPES[k].density;
+      }
+    }
+    const nearN = Math.max(8, Math.round(CHUNK / 1.05));
+    const nearStep = CHUNK / nearN;
+    for (let j = 0; j < nearN; j++) {
+      for (let i = 0; i < nearN; i++) {
+        const x = baseX + (i + rng.f()) * nearStep;
+        const z = baseZ + (j + rng.f()) * nearStep;
+        maps.sample(x, z, eco);
+        if (!eco.inside) continue;
+        let sum = 0;
+        for (const k of nearIdx) {
+          const s = Math.max(0, ARCHETYPES[k].score(eco)) * ARCHETYPES[k].density;
+          scores[k] = s;
+          sum += s;
+        }
+        if (sum <= 1e-6) continue;
+        if (rng.f() > clamp(sum / (nearSum0 * this.densityScale * 0.95), 0, 1)) continue;
+        let t = rng.f() * sum;
+        let chosen = nearIdx[0];
+        for (const k of nearIdx) {
+          t -= scores[k];
+          if (t <= 0) { chosen = k; break; }
+        }
+        const kind = this.kinds[chosen];
+        if (!kind || !kind.variants.length) continue;
+        const variant = kind.variants[rng.int(kind.variants.length)];
+        const yaw = rng.f() * Math.PI * 2;
+        const stress = clamp(0.5 - eco.moisture * 0.6 + eco.rock * 0.5 + rng.sym() * 0.25, 0, 1);
+        const scale = lerp(0.65, 1.15, Math.pow(rng.f(), 0.85));
+        const lean = (0.02 + eco.slope * 0.18) * rng.f();
+        const leanDir = rng.f() * Math.PI * 2;
+        out.byKind[chosen].push({
+          x, z, y: eco.height - variant.sink * scale,
+          scale,
+          cos: Math.cos(yaw), sin: Math.sin(yaw),
+          tiltX: Math.cos(leanDir) * lean, tiltZ: Math.sin(leanDir) * lean,
+          phase: rng.f(), tint: stress, rnd: rng.f(),
+          variant,
+          height: variant.height * scale,
+          radius: Math.max(variant.radius * scale, 0.1),
+        });
+      }
+    }
     return out;
   }
 

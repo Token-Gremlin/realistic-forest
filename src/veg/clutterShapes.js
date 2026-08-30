@@ -340,7 +340,7 @@ export function buildLeafPatch(seed, opts = {}) {
   const r = new Rng(seed);
   const mb = new MeshBuilder();
   const size = lerp(0.18, 0.45, r.f()) * (opts.scale ?? 1);
-  const leaves = 4 + r.int(8);
+  const leaves = 7 + r.int(10);
   for (let i = 0; i < leaves; i++) {
     const az = r.f() * Math.PI * 2;
     const rr = size * Math.sqrt(r.f());
@@ -574,7 +574,7 @@ export function buildMossPatch(seed, opts = {}) {
  */
 export const ARCHETYPES = [
   {
-    key: 'fern', build: buildFern, variants: 3, density: 0.3, maxDist: 46,
+    key: 'fern', build: buildFern, variants: 3, density: 0.42, maxDist: 46,
     score: (e) => 0.10 + e.canopy * 1.7 + e.moisture * 1.5 - e.rock * 1.4 - e.slope * 1.0
       - Math.max(0, e.waterDepth + 0.2) * 3,
   },
@@ -589,12 +589,12 @@ export const ARCHETYPES = [
       - Math.max(0, e.waterDepth + 0.3) * 3,
   },
   {
-    key: 'flower', build: buildFlower, variants: 3, density: 0.45, maxDist: 26,
+    key: 'flower', build: buildFlower, variants: 3, density: 0.58, maxDist: 26,
     score: (e) => 0.02 + (1 - e.canopy) * 2.1 + e.moisture * 0.5 - e.rock * 1.2 - e.slope * 0.7
       - Math.max(0, e.waterDepth + 0.2) * 4,
   },
   {
-    key: 'mushroom', build: buildMushroom, variants: 3, density: 0.22, maxDist: 14,
+    key: 'mushroom', build: buildMushroom, variants: 3, density: 0.34, maxDist: 16,
     score: (e) => -0.15 + e.litter * 1.9 + e.canopy * 1.2 + e.moisture * 1.1 - e.rock * 1.5
       - Math.max(0, e.waterDepth + 0.2) * 4,
   },
@@ -604,11 +604,11 @@ export const ARCHETYPES = [
       + Math.max(0, 0.38 - Math.abs(e.waterDepth + 0.06)) * 4.2,
   },
   {
-    key: 'twig', build: buildTwig, variants: 3, density: 0.65, maxDist: 22,
+    key: 'twig', build: buildTwig, variants: 3, density: 0.88, maxDist: 22,
     score: (e) => 0.05 + e.litter * 1.7 + e.canopy * 0.9 - Math.max(0, e.waterDepth + 0.2) * 4,
   },
   {
-    key: 'leafPatch', build: buildLeafPatch, variants: 3, density: 0.95, maxDist: 18,
+    key: 'leafPatch', build: buildLeafPatch, variants: 3, density: 1.35, maxDist: 20,
     score: (e) => -0.05 + e.litter * 2.3 + e.canopy * 0.7 - Math.max(0, e.waterDepth + 0.1) * 5,
   },
   {
@@ -617,7 +617,7 @@ export const ARCHETYPES = [
       - e.rock * 1.0 - e.slope * 1.2,
   },
   {
-    key: 'moss', build: buildMossPatch, variants: 3, density: 0.35, maxDist: 20,
+    key: 'moss', build: buildMossPatch, variants: 3, density: 0.52, maxDist: 22,
     score: (e) => -0.25 + e.moisture * 1.8 + e.canopy * 1.1 + e.rock * 0.5 - e.slope * 0.6
       - Math.max(0, e.waterDepth + 0.2) * 3,
   },

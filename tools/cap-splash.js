@@ -135,7 +135,7 @@ origins.sort((a, b) => b.rank - a.rank);
 
 let best = null, bestS = -1e9;
 const pulls = [8.2, 10.0, 7.0];
-const rises = [5.4, 6.2];
+const rises = [6.6, 7.4];
 for (const origin of origins.slice(0, 16)) {
   const run = walkStream(origin.x, origin.z);
   if (run.length < 4) continue;
