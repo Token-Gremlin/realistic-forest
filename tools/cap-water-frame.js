@@ -39,7 +39,7 @@ function clearNearFerns(f) {
   const p = f.camera.position;
   const fwd = p.clone();
   f.camera.getWorldDirection(fwd);
-  const hide = new Set(['fern', 'bush', 'bramble', 'vine', 'herb', 'sedge', 'log', 'limb']);
+  const hide = new Set(['fern', 'bush', 'bramble', 'vine', 'herb', 'sedge', 'log', 'limb', 'rock']);
   let dropped = 0;
   for (const k of clutter.kinds) {
     if (!hide.has(k.arch.key)) continue;
@@ -51,7 +51,8 @@ function clearNearFerns(f) {
         const dx = d[o] - p.x, dy = d[o + 1] - p.y, dz = d[o + 2] - p.z;
         const dist = Math.hypot(dx, dy, dz);
         const facing = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / (dist || 1);
-        if (dist < 8.5 && facing > -0.02) { dropped++; continue; }
+        const near = (k.arch.key === 'log' || k.arch.key === 'limb' || k.arch.key === 'rock') ? 14 : 8.5;
+        if (dist < near && facing > -0.02) { dropped++; continue; }
         if (w !== i) d.copyWithin(w * 12, o, o + 12);
         w++;
       }
