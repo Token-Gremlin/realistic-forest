@@ -161,7 +161,7 @@ export class Water {
 
   holdCaustics(x, y, z) {
     this._causticHeld = true;
-    U.uCausticHold.set(x, y, z, 1);
+    U.uCausticHold.value.set(x, y, z, 1);
   }
 
   _vertex() {
@@ -495,7 +495,7 @@ void main(){
       0.4 + w.y * 0.8,
       w.z,
     );
-    if(!this._causticHeld) U.uCausticHold.w = 0;
+    if(!this._causticHeld) U.uCausticHold.value.w = 0;
   }
 
   beforeWater(colorTex, depthTex) {
