@@ -53,8 +53,8 @@ void main(){
   float mask = vGlow > 0.5 ? halo * 0.78 : (core * 1.65 + halo * 0.38);
   if(mask < 0.012) discard;
 
-  vec3 col = mix(vec3(1.55, 1.62, 1.85), uFlashColor, 0.14 + vGlow * 0.42);
-  oColor = vec4(col * uAmp * vBright * mask * 40.0, 0.0);
+  vec3 col = mix(vec3(1.65, 1.72, 1.95), uFlashColor, 0.12 + vGlow * 0.40);
+  oColor = vec4(col * uAmp * vBright * mask * 22.0, 1.0);
 }
 `;
 
@@ -126,10 +126,7 @@ export class Lightning {
       transparent: true,
       depthTest: false,
       depthWrite: false,
-      blending: THREE.CustomBlending,
-      blendEquation: THREE.AddEquation,
-      blendSrc: THREE.OneFactor,
-      blendDst: THREE.OneFactor,
+      blending: THREE.NoBlending,
     });
 
     this.mesh = new THREE.Mesh(this.geometry, this.material);
@@ -316,6 +313,26 @@ export class Lightning {
         const o = i * 3;
         ndc.set(P[o], P[o + 1], P[o + 2]).project(camObj);
         P[o] = ndc.x; P[o + 1] = ndc.y; P[o + 2] = 0.0;
+      }
+      // a slim NDC spine so the still always has a readable channel
+      if (n + 6 <= P.length / 3 && this.cloud && this.ground) {
+        const a = ndc.copy(this.cloud).project(camObj);
+        const ax = a.x, ay = a.y;
+        const b = ndc.copy(this.cloud).lerp(this.ground, 0.48).project(camObj);
+        const bx = b.x, by = b.y;
+        const dx = bx - ax, dy = by - ay;
+        const len = Math.hypot(dx, dy) || 1;
+        const sx = -dy / len * 0.018, sy = dx / len * 0.018;
+        const pts = [
+          ax - sx, ay - sy, ax + sx, ay + sy, bx - sx, by - sy,
+          bx - sx, by - sy, ax + sx, ay + sy, bx + sx, by + sy,
+        ];
+        for (let k = 0; k < 6; k++) {
+          const o = n * 3, m = n * 2;
+          P[o] = pts[k * 2]; P[o + 1] = pts[k * 2 + 1]; P[o + 2] = 0;
+          M[m] = 0; M[m + 1] = 1;
+          n++;
+        }
       }
     }
     this.geometry.setDrawRange(0, n);
