@@ -54,8 +54,8 @@ void main(){
   float mask = vGlow > 0.5 ? halo * 0.85 : (core * 1.7 + halo * 0.40);
   if(mask < 0.012) discard;
 
-  vec3 col = mix(vec3(1.65, 1.70, 1.90), uFlashColor, 0.18 + vGlow * 0.45);
-  oColor = vec4(col * uAmp * vBright * mask * 48.0, 0.0);
+  vec3 col = mix(vec3(1.85, 1.90, 2.10), uFlashColor, 0.12 + vGlow * 0.40);
+  oColor = vec4(col * max(uAmp, 1.0) * vBright * mask * 80.0, 1.0);
 }
 `;
 
@@ -125,10 +125,7 @@ export class Lightning {
       transparent: true,
       depthTest: false,
       depthWrite: false,
-      blending: THREE.CustomBlending,
-      blendEquation: THREE.AddEquation,
-      blendSrc: THREE.OneFactor,
-      blendDst: THREE.OneFactor,
+      blending: THREE.NoBlending,
     });
 
     this.mesh = new THREE.Mesh(this.geometry, this.material);
