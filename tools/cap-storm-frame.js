@@ -29,8 +29,8 @@ for (const list of f.forest.trees.chunks.values()) {
     const dx = t.x - cam.x, dz = t.z - cam.z;
     const d2 = dx * dx + dz * dz;
     if (d2 > 70 * 70) continue;
-    if (t.scale < 0.38) continue;
-    if (t.height < 10) continue;
+    if (t.scale < 0.36) continue;
+    if (t.height < 12 || t.height > 26) continue;
     const s = maps.sample(t.x, t.z, {});
     if (!s.inside || s.waterDepth > 0.05) continue;
     candidates.push({ t, s, d2, score: t.height * t.scale - Math.sqrt(d2) * 0.08 + s.canopy * 2 });
@@ -49,7 +49,7 @@ if (stem) {
   for (let i = 1; i < Math.min(6, candidates.length); i++) {
     const t = candidates[i].t;
     const d = Math.hypot(t.x - stem.x, t.z - stem.z);
-    if (d < 4 || d > 22) continue;
+    if (d < 3 || d > 28) continue;
     t.fallDirX = stem.fallDirX;
     t.fallDirZ = stem.fallDirZ;
     t.damage = 0.42 + (i % 3) * 0.12;
@@ -63,9 +63,9 @@ if (stem) {
   const H = stem.height;
   const px = -stem.fallDirZ, pz = stem.fallDirX;
   f.camera.position.set(
-    stem.x + stem.fallDirX * H * 0.32 - px * 9.2,
-    gh + 2.85,
-    stem.z + stem.fallDirZ * H * 0.32 - pz * 9.2,
+    stem.x + stem.fallDirX * H * 0.28 - px * 11.4,
+    gh + 3.45,
+    stem.z + stem.fallDirZ * H * 0.28 - pz * 11.4,
   );
   f.forest.trees.pushOutOfTrunks(f.camera.position, 1.4);
   const p = f.camera.position;
