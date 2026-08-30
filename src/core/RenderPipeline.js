@@ -576,10 +576,6 @@ export class RenderPipeline {
     }
 
     /* ------------------------------------------------------------- composite */
-    // last moment: project the channel with this camera so a still cannot
-    // lose the stroke between the capture script and the grade pass
-    w.lightning?._publishBolt?.(camera);
-
     const cu = this.compositePass.material.uniforms;
     cu.uColor.value = lit;
     cu.uBloom.value = bloomTex ?? this.bloomUp[0].texture;
