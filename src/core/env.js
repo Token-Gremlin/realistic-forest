@@ -35,6 +35,8 @@ export const Env = {
     // forest fire: xyz world, w intensity. Warmer and longer-lived than a flash.
     uFire: { value: new THREE.Vector4(0, 0, 0, 0) },
     uFireColor: { value: new THREE.Vector3(1.0, 0.42, 0.10) },
+    // held tumbling leaves: xyz look-ray anchor, w = 1 when a still has grabbed them
+    uLeafHold: { value: new THREE.Vector4(0, 0, 0, 0) },
 
     // --- wind (consumed by GLSL_WIND)
     uWind: { value: new THREE.Vector4(0.86, 0.51, 1.6, 0.35) },

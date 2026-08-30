@@ -223,6 +223,7 @@ export class RenderPipeline {
       uMotionBlur: { value: 0.55 },
       uTime: U.uTime, uInvViewProj: U.uInvViewProj, uCamPos: U.uCamPos,
       uWeather: U.uWeather, uFlash: U.uFlash, uFire: U.uFire, uWind: U.uWind,
+      uLeafHold: U.uLeafHold,
       uViewProj: U.uViewProj,
       uBolt: U.uBolt, uBoltAmp: U.uBoltAmp, uBoltF0: U.uBoltF0, uBoltF1: U.uBoltF1,
     }));

@@ -132,6 +132,9 @@ if (f.forest.life) {
   f.forest.life.insects.mesh.visible = false;
   f.forest.life.insects.geo.instanceCount = 0;
   f.forest.life.stats.insects = 0;
+  f.forest.life.birds.mesh.visible = false;
+  f.forest.life.birds.geo.instanceCount = 0;
+  f.forest.life.stats.birds = 0;
 }
 
 return {
@@ -139,6 +142,7 @@ return {
   treeLeaves: leaves,
   bills,
   holdLeaves: f.forest.life?.holdLeaves ?? -1,
+  leafW: +(f.pipeline.compositePass?.material?.uniforms?.uLeafHold?.value?.w ?? -1).toFixed(2),
   life: f.forest.life?.stats ?? null,
   trees: f.forest.trees?.stats.trees ?? 0,
 };

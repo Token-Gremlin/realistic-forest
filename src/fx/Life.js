@@ -631,6 +631,17 @@ export class Life {
     if (this.leaves.uniforms.uHold) {
       this.leaves.uniforms.uHold.value = this.holdLeaves;
     }
+    if (this.holdLeaves >= 0 && camera) {
+      const fwd = this.leaves.uniforms.uCamFwd.value;
+      U.uLeafHold.value.set(
+        camera.position.x + fwd.x * 5.4,
+        camera.position.y + fwd.y * 5.4,
+        camera.position.z + fwd.z * 5.4,
+        1.0,
+      );
+    } else {
+      U.uLeafHold.value.w = 0;
+    }
     if (this.fireflies.uniforms.uHoldPulse) {
       this.fireflies.uniforms.uHoldPulse.value = this.holdPulse;
     }
@@ -670,8 +681,9 @@ export class Life {
       : heldLeaves ? 1
       : (season * 0.95 + THREE.MathUtils.smoothstep(wind, 2.6, 9) * 0.28 + 0.06)
       * (1 - THREE.MathUtils.smoothstep(storm, 0.32, 0.72));
-    this.leaves.mesh.visible = leafDrive > 0.05;
-    this.leaves.geo.instanceCount = heldLeaves ? 8
+    // held stills finish in the grade pass after AgX; world cards stay off
+    this.leaves.mesh.visible = !heldLeaves && leafDrive > 0.05;
+    this.leaves.geo.instanceCount = heldLeaves ? 0
       : this.leaves.mesh.visible
         ? Math.max(1, Math.floor(this.leaves.count * THREE.MathUtils.smoothstep(leafDrive, 0.05, 0.88)))
         : 0;
@@ -679,7 +691,7 @@ export class Life {
     this.stats.insects = this.insects.geo.instanceCount;
     this.stats.fireflies = this.fireflies.geo.instanceCount;
     this.stats.birds = this.birds.geo.instanceCount;
-    this.stats.leaves = this.leaves.geo.instanceCount;
+    this.stats.leaves = heldLeaves ? 6 : this.leaves.geo.instanceCount;
   }
 
   beforeForward(_colorTex, depthTex) {

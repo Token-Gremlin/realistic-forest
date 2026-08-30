@@ -214,6 +214,7 @@ uniform vec3 uCamPos;
 uniform vec4 uWeather;
 uniform vec4 uFlash;
 uniform vec4 uFire;
+uniform vec4 uLeafHold;
 uniform vec3 uWind;
 uniform mat4 uViewProj;
 uniform vec4 uBolt;
@@ -274,6 +275,26 @@ float fireTongue(vec2 uv, vec2 root, float seed, float tall){
  * far divide and AgX grades them into storm fog; a wind-leaned field of
  * streaks keeps a downpour still readable without becoming a 2D overlay.
  */
+/**
+ * Display-space hardwood leaf. World cards vanish after AgX on this
+ * rasteriser the same way rain and fire did; a few ovate silhouettes
+ * around a projected look-ray keep a fall still readable.
+ */
+float leafMask(vec2 uv, vec2 c, float ang, float sz, float seed){
+  vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+  vec2 d = (uv - c) * aspect;
+  float ca = cos(ang), sa = sin(ang);
+  vec2 q = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y) / max(sz, 1.0e-4);
+  float y = clamp(q.y * 0.5 + 0.5, 0.0, 1.0);
+  float x = q.x;
+  float w = pow(max(sin(3.14159265 * y), 0.0), 0.52);
+  w *= 1.0 - 0.28 * smoothstep(0.62, 1.0, y);
+  w += 0.07 * sin(y * 20.0 + seed * 6.0) * smoothstep(0.08, 0.22, y);
+  float body = 1.0 - smoothstep(w * 0.90, w + 0.10, abs(x));
+  body *= smoothstep(-0.06, 0.05, y) * smoothstep(1.05, 0.90, y);
+  return clamp(body, 0.0, 1.0);
+}
+
 float rainStreak(vec2 uv, vec2 a, vec2 b, float halfW){
   vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
   vec2 ab = b - a;
@@ -430,6 +451,34 @@ void main(){
     }
     streaks *= rain;
     mapped = max(mapped, vec3(0.72, 0.80, 0.90) * streaks);
+  }
+
+  if(uLeafHold.w > 0.05){
+    vec4 lclip = uViewProj * vec4(uLeafHold.xyz, 1.0);
+    if(lclip.w > 0.12){
+      vec2 luv = lclip.xy / lclip.w * 0.5 + 0.5;
+      if(luv.x > -0.08 && luv.x < 1.08 && luv.y > -0.10 && luv.y < 1.12){
+        float sceneZ = texture(uDepthTex, clamp(luv, 0.0, 1.0)).r;
+        float leafZ = lclip.z / lclip.w * 0.5 + 0.5;
+        // skip the cluster if the anchor is buried in a trunk
+        if(leafZ < sceneZ + 0.012){
+          for(int i = 0; i < 6; i++){
+            float sd = 3.1 + float(i) * 11.7;
+            vec2 off = vec2((hash11(sd) - 0.5) * 0.22, (hash11(sd + 2.0) - 0.5) * 0.18);
+            vec2 c = luv + off;
+            float ang = (hash11(sd + 4.0) - 0.5) * 2.6;
+            float sz = mix(0.048, 0.086, hash11(sd + 6.0));
+            float body = leafMask(vUv, c, ang, sz, sd);
+            if(body < 0.02) continue;
+            float y = clamp(((vUv - c).y * cos(ang) - (vUv - c).x * sin(ang)) / sz * 0.5 + 0.5, 0.0, 1.0);
+            vec3 rust = mix(vec3(0.42, 0.16, 0.04), vec3(0.62, 0.28, 0.06), hash11(sd + 8.0));
+            vec3 umber = vec3(0.18, 0.08, 0.03);
+            vec3 leafCol = mix(rust, umber, smoothstep(0.55, 1.0, y) * 0.45);
+            mapped = mix(mapped, leafCol, body * 0.88);
+          }
+        }
+      }
+    }
   }
 
   oColor = vec4(clamp(mapped, 0.0, 1.0), 1.0);
