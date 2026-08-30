@@ -22,7 +22,7 @@ import { Env, U } from '../core/env.js';
  */
 
 const CELL = 16;          // metres per water cell
-const GRID = 12;          // quads per cell edge
+const GRID = 20;          // quads per cell edge — 0.8 m, close cells were a facet
 
 function cellGeometry() {
   const n = GRID + 1;
@@ -80,6 +80,17 @@ vec3 rippleNormal(vec2 p, vec2 flow, float flowMag, float depth, float lodPx){
     grad += wg.yz * ring * uWaterWave.w * 1.35;
   }
   return normalize(vec3(-grad.x, 1.0, -grad.y));
+}
+
+/** Geometric chop. Normals alone left close cells as a flat 16 m slab. */
+float rippleHeight(vec2 p, vec2 flow, float flowMag, float depth){
+  float t = uTime;
+  vec2 fdir = flowMag > 1e-4 ? flow / flowMag : vec2(0.0, 1.0);
+  float amp = uWaterWave.y * mix(0.016, 0.052, smoothstep(0.0, 0.42, depth));
+  vec2 q1 = p * (0.85 * uWaterWave.x) - fdir * t * (0.35 + flowMag * 1.6);
+  vec2 q2 = p * (2.30 * uWaterWave.x) - fdir * t * (0.62 + flowMag * 2.9) + 11.0;
+  float h = (noised(q1).x * 2.0 - 1.0) * 0.64 + (noised(q2).x * 2.0 - 1.0) * 0.30;
+  return h * amp * (1.0 + flowMag * 1.55);
 }
 
 /** Procedural caustics: interference of two rotating worley fields. */
@@ -153,8 +164,12 @@ precision highp float;
 precision highp int;
 ${GLSL_COMMON}
 ${GLSL_MAPS}
+${WATER_SURFACE}
 uniform mat4 uViewProj;
 uniform vec3 uCamPos;
+uniform vec4 uWind;
+uniform float uTime;
+uniform vec4 uWaterWave;
 uniform float uCellSize;
 uniform float uGrid;
 in vec3 position;
@@ -167,8 +182,14 @@ void main(){
   vec4 m = mapSample(wp);
   float surf = m.g;
   float ground = m.r;
+  float depth = max(surf - ground, 0.0);
+  vec2 flow = uWind.xy;
+  float fl = length(flow);
+  flow = fl > 1e-4 ? flow / fl : vec2(0.0, 1.0);
+  float fade = 1.0 - smoothstep(22.0, 64.0, length(vec3(wp.x, surf, wp.y) - uCamPos));
+  float chop = rippleHeight(wp, flow, clamp(m.a, 0.0, 1.0), depth) * fade;
   // lift the skirt slightly so the surface never z-fights the bed
-  vec3 world = vec3(wp.x, max(surf, ground - 0.35), wp.y);
+  vec3 world = vec3(wp.x, max(surf + chop, ground - 0.35), wp.y);
   vWorld = world;
   vLodPx = length(world - uCamPos);
   vCur = uViewProj * vec4(world, 1.0);
