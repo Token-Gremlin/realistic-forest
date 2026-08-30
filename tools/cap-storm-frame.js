@@ -115,29 +115,27 @@ function fellOpticalAxis(trees, cam, stem, fx, fz) {
 }
 
 function placeAlong(maps, stem, fx, fz, side) {
-  // sit on the clear bole (oak branches start ~0.28 H). Looking at the leafy
-  // mid-stem turns the hero into a green mound.
+  // sit on the clear bole (oak branches start ~0.28 H). Height is local AGL
+  // so a downhill pad does not turn the shot into a 3 m overlook.
   const gh = maps.height(stem.x, stem.z);
   const H = stem.height;
   const px = -fz * side, pz = fx * side;
-  const from = [
-    stem.x - fx * 5.1 + px * 3.15,
-    gh + 1.92,
-    stem.z - fz * 5.1 + pz * 3.15,
-  ];
-  const look = [
-    stem.x + fx * H * 0.16,
-    gh + 0.78,
-    stem.z + fz * H * 0.16,
-  ];
-  return { from, look, gh, H, px, pz };
+  const fxw = stem.x - fx * 4.3 + px * 2.75;
+  const fzw = stem.z - fz * 4.3 + pz * 2.75;
+  const lx = stem.x + fx * H * 0.15;
+  const lz = stem.z + fz * H * 0.15;
+  return {
+    from: [fxw, maps.height(fxw, fzw) + 1.62, fzw],
+    look: [lx, maps.height(lx, lz) + 0.66, lz],
+    gh, H, px, pz,
+  };
 }
 
 function scoreView(trees, cam, scratch, stem, fx, fz, place) {
   cam.position.set(place.from[0], place.from[1], place.from[2]);
   trees.pushOutOfTrunks(cam.position, 2.2);
   const pg = trees.forest.maps.height(cam.position.x, cam.position.z);
-  if (cam.position.y < pg + 1.85) cam.position.y = pg + 1.85;
+  cam.position.y = pg + 1.62;
   cam.lookAt(place.look[0], place.look[1], place.look[2]);
   cam.updateMatrixWorld(true);
 
@@ -168,7 +166,7 @@ function clearNearPlants(f, stem, fx, fz) {
   const p = f.camera.position;
   const fwd = p.clone();
   f.camera.getWorldDirection(fwd);
-  const hide = new Set(['fern', 'bush', 'bramble', 'vine', 'sedge', 'flower']);
+  const hide = new Set(['fern', 'bush', 'bramble', 'vine', 'sedge', 'flower', 'limb']);
   const px = stem ? -fz : 0, pz = stem ? fx : 0;
   const H = stem ? stem.height : 0;
   let dropped = 0;
@@ -203,6 +201,31 @@ function clearNearPlants(f, stem, fx, fz) {
     }
   }
   return dropped;
+}
+
+function fellThieves(trees, cam, scratch, stem) {
+  const thieves = [];
+  const cx = cam.position.x, cz = cam.position.z;
+  for (const list of trees.chunks.values()) {
+    for (const t of list) {
+      if (t === stem || (t.damage ?? 0) > 0.3 || t.height < 10) continue;
+      const dist = Math.hypot(t.x - cx, t.z - cz);
+      if (dist < 1.4 || dist > 12) continue;
+      const v = ndcOf(cam, scratch, t.x, t.y + t.height * 0.38, t.z);
+      if (Math.abs(v[0]) > 0.50 || v[1] < -0.22 || v[1] > 0.72) continue;
+      thieves.push({ t, dist, ax: Math.abs(v[0]) });
+    }
+  }
+  thieves.sort((a, b) => a.ax - b.ax || a.dist - b.dist);
+  let n = 0;
+  for (const th of thieves.slice(0, 2)) {
+    const nn = Math.hypot(th.t.x - cx, th.t.z - cz) || 1;
+    th.t.fallDirX = (th.t.x - cx) / nn;
+    th.t.fallDirZ = (th.t.z - cz) / nn;
+    th.t.damage = 1;
+    n++;
+  }
+  return n;
 }
 
 function dodgeStanding(trees, cam, look, perp) {
@@ -245,9 +268,11 @@ for (const list of trees.chunks.values()) {
     const s = maps.sample(t.x, t.z, {});
     if (!s.inside || s.waterDepth > 0.04) continue;
     const crowded = neighborCount(trees, t, 1.2, 6.5);
+    const key = trees.variants[t.variant]?.key ?? '';
+    const kind = key === 'oak' ? 3.2 : (key === 'pine' || key === 'fir') ? 1.6 : 0;
     candidates.push({
-      t, s, d2, crowded,
-      score: t.height * t.scale - crowded * 1.6 - Math.sqrt(d2) * 0.03,
+      t, s, d2, crowded, key,
+      score: t.height * t.scale + kind - crowded * 1.6 - Math.sqrt(d2) * 0.03,
     });
   }
 }
@@ -296,16 +321,18 @@ if (stem) {
   trees._rebuildBuckets(cam);
 
   const place = best?.place ?? placeAlong(maps, stem, FX, FZ, side);
+  cam.fov = 36;
   cam.position.set(place.from[0], place.from[1], place.from[2]);
-  trees.pushOutOfTrunks(cam.position, 2.4);
-  const pg = maps.height(cam.position.x, cam.position.z);
-  if (cam.position.y < pg + 1.9) cam.position.y = pg + 1.9;
+  trees.pushOutOfTrunks(cam.position, 2.2);
+  cam.position.y = maps.height(cam.position.x, cam.position.z) + 1.62;
   hits = dodgeStanding(trees, cam, place.look, [place.px, place.pz]);
+  cam.position.y = maps.height(cam.position.x, cam.position.z) + 1.62;
   cam.lookAt(place.look[0], place.look[1], place.look[2]);
   cam.updateMatrixWorld(true);
   cam.updateProjectionMatrix();
 
   axisFell = fellOpticalAxis(trees, cam, stem, FX, FZ);
+  axisFell += fellThieves(trees, cam, scratch, stem);
   trees._damageDirty = true;
   trees._rememberWounds();
   trees._rebuildBuckets(cam);
@@ -335,6 +362,7 @@ if (stem) {
   const H = stem.height;
   stemInfo = {
     h: +H.toFixed(1),
+    kind: trees.variants[stem.variant]?.key ?? '?',
     dmg: +stem.damage.toFixed(2),
     side,
     camY: +(cam.position.y - maps.height(cam.position.x, cam.position.z)).toFixed(2),
