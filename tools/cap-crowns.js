@@ -12,7 +12,17 @@ f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
-const scratch = {};
+
+function snap(s) {
+  return {
+    height: s.height,
+    canopy: s.canopy,
+    skyVis: s.skyVis,
+    waterDepth: s.waterDepth,
+    slope: s.slope,
+    inside: s.inside,
+  };
+}
 
 const SEEDS = [
   { x: 40, z: -80 },
@@ -49,18 +59,18 @@ function huntFrom(sx, sz) {
   for (let iz = -80; iz <= 80; iz += 20) {
     for (let ix = -80; ix <= 80; ix += 20) {
       const px = sx + ix, pz = sz + iz;
-      const pad = maps.sample(px, pz, scratch);
+      const pad = snap(maps.sample(px, pz, {}));
       if (!pad.inside) continue;
       if (pad.waterDepth > 0.02) continue;
-      if (pad.canopy > 0.38) continue;
-      if (pad.skyVis < 0.28) continue;
+      if (pad.canopy > 0.22) continue;
+      if (pad.skyVis < 0.32) continue;
       const gh = pad.height;
       for (let k = 0; k < 16; k++) {
         const a = k * 0.393;
         const reach = 118;
         const lx = px + Math.cos(a) * reach;
         const lz = pz + Math.sin(a) * reach;
-        const farS = maps.sample(lx, lz, {});
+        const farS = snap(maps.sample(lx, lz, {}));
         if (!farS.inside) continue;
         const cor = corridor(px, pz, lx, lz);
         if (!cor) continue;
@@ -110,12 +120,13 @@ if (!pick) {
 
 const gh = maps.height(pick.px, pick.pz);
 const farH = maps.height(pick.lx, pick.lz);
-f.camera.position.set(pick.px, gh + 6.4, pick.pz);
-f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.8);
+f.camera.position.set(pick.px, gh + 9.6, pick.pz);
+f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 2.0);
 const p = f.camera.position;
-p.y = maps.height(p.x, p.z) + 6.2;
-// far tree-tops against sky. Do not lookAt the far ground.
-f.camera.lookAt(pick.lx, farH + 24.0, pick.lz);
+p.y = maps.height(p.x, p.z) + 9.4;
+// far tree-tops against sky. Raised so undergrowth falls out of the
+// 42 deg lens. Do not lookAt the far ground.
+f.camera.lookAt(pick.lx, farH + 26.0, pick.lz);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 
