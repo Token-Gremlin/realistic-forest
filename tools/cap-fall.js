@@ -30,7 +30,8 @@ for (let i = 0; i < 90; i++) {
   if (s.slope > 0.58) continue;
   origins.push({
     x, z, s,
-    score: (s.skyVis ?? 0) * 2.4 + (1 - s.canopy) * 1.1 - s.slope * 1.1,
+    score: (s.skyVis ?? 0) * 1.6 + s.canopy * 0.85 - s.slope * 1.1
+      - (s.canopy < 0.25 ? 1.4 : 0),
   });
 }
 origins.sort((a, b) => b.score - a.score);

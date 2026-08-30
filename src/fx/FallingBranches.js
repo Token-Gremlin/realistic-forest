@@ -57,7 +57,7 @@ Fall place(float tShift){
   float drive = max(uDrive, uBurst.w * 1.4);
   float alive = step(h.x, mix(0.10, 1.0, smoothstep(0.10, 0.88, drive)));
   // a held still wants a few metre-plus limbs, not eighty twigs on the lens
-  if(uPhase >= 0.0) alive *= step(h.x, 0.15);
+  if(uPhase >= 0.0) alive *= step(h.x, 0.075);
   if(alive < 0.5 || drive < 0.07){
     return o;
   }
@@ -84,8 +84,8 @@ Fall place(float tShift){
     vec3 fw = normalize(uCamFwd + vec3(1e-5, 0.0, 0.0));
     vec3 rt = normalize(cross(fw, vec3(0.0, 1.0, 0.0)));
     base = origin
-      + fw * mix(6.0, 13.5, h3.x)
-      + rt * (h3.z - 0.5) * 7.2;
+      + fw * mix(9.0, 16.5, h3.x)
+      + rt * (h3.z - 0.5) * 9.0;
     base.y = origin.y;
   } else {
     base.x = origin.x + (fract(h3.x + 0.5 + adv.x / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
@@ -118,7 +118,7 @@ Fall place(float tShift){
   base.xz += wdir * drop * mix(1.6, 7.5, h.z) * (0.55 + wind * 0.06);
   base.y = y;
 
-  float sc = uPhase >= 0.0 ? mix(2.35, 3.85, h.z) : mix(1.15, 2.05, h.z);
+  float sc = uPhase >= 0.0 ? mix(1.05, 1.55, h.z) : mix(1.15, 2.05, h.z);
   vec3 ax1 = normalize(h3 - 0.5 + vec3(0.0, 0.2, 0.0));
   vec3 ax2 = cross(ax1, vec3(wdir.x, 0.15, wdir.y));
   if(length(ax2) < 1e-4) ax2 = cross(ax1, vec3(0.0, 1.0, 0.0));

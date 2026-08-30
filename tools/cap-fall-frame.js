@@ -48,7 +48,7 @@ function pushOutOfAir(f) {
 
   const fwd = p.clone();
   cam.getWorldDirection(fwd);
-  cam.lookAt(p.x + fwd.x * 11, p.y + 3.4, p.z + fwd.z * 11);
+  cam.lookAt(p.x + fwd.x * 14, p.y + 1.6, p.z + fwd.z * 14);
   cam.updateMatrixWorld(true);
   cam.updateProjectionMatrix();
   return { near: near ? +nd.toFixed(1) : null };
