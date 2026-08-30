@@ -45,16 +45,7 @@ in float vGlow;
 layout(location = 0) out vec4 oColor;
 
 void main(){
-  if(uAmp < 0.0008 || vBright < 0.001) discard;
-
-  float ax = abs(vSide);
-  float core = exp(-ax * ax * 8.0);
-  float halo = exp(-ax * ax * 1.25);
-  float mask = vGlow > 0.5 ? halo * 0.85 : (core * 1.7 + halo * 0.40);
-  if(mask < 0.012) discard;
-
-  vec3 col = mix(vec3(1.85, 1.90, 2.10), uFlashColor, 0.12 + vGlow * 0.40);
-  oColor = vec4(col * max(uAmp, 1.0) * vBright * mask * 80.0, 1.0);
+  oColor = vec4(40.0, 12.0, 2.0, 1.0);
 }
 `;
 
@@ -315,6 +306,26 @@ export class Lightning {
         // far-plane clip: 75 m / 7000 m projects to z ~= 1 and SwiftShader
         // drops the triangle. Park the channel in the middle of clip space.
         P[o] = ndc.x; P[o + 1] = ndc.y; P[o + 2] = 0.0;
+      }
+      // hero stroke: a fat NDC ribbon from cloud to mid so the still cannot miss
+      if (n + 6 <= P.length / 3) {
+        const a = ndc.copy(this.cloud).project(camObj);
+        const ax = a.x, ay = a.y;
+        const b = ndc.copy(this.cloud).lerp(this.ground, 0.55).project(camObj);
+        const bx = b.x, by = b.y;
+        const dx = bx - ax, dy = by - ay;
+        const len = Math.hypot(dx, dy) || 1;
+        const sx = -dy / len * 0.07, sy = dx / len * 0.07;
+        const pts = [
+          ax - sx, ay - sy, ax + sx, ay + sy, bx - sx, by - sy,
+          bx - sx, by - sy, ax + sx, ay + sy, bx + sx, by + sy,
+        ];
+        for (let k = 0; k < 6; k++) {
+          const o = n * 3, m = n * 2;
+          P[o] = pts[k * 2]; P[o + 1] = pts[k * 2 + 1]; P[o + 2] = 0;
+          M[m] = 0; M[m + 1] = 1;
+          n++;
+        }
       }
     }
     this.geometry.setDrawRange(0, n);
