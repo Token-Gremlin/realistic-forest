@@ -370,10 +370,11 @@ void main(){
   float riffle = smoothstep(0.20, 0.72, flowMag) * (1.0 - smoothstep(0.50, 1.35, depth));
   float across = dot(wxz, vec2(-flow.y, flow.x));
   float along = dot(wxz, flow);
-  float streak = fbm(vec2(across * 4.4, along * 0.62 - uTime * (0.85 + flowMag * 2.4)), 4, 2.15, 0.5);
-  streak = smoothstep(0.22, 0.70, streak * 0.5 + 0.5);
-  float foamNoise = fbm(wxz * 5.8 - flow * uTime * 1.5, 3, 2.1, 0.5) * 0.5 + 0.5;
-  float foamNoise2 = fbm(wxz * 15.0 - flow * uTime * 2.7 + 9.0, 2, 2.1, 0.5) * 0.5 + 0.5;
+  // metre-scale lace. Fine fbm died as speckle on the close tiny plate.
+  float streak = fbm(vec2(across * 1.15, along * 0.22 - uTime * (0.55 + flowMag * 1.4)), 3, 2.15, 0.5);
+  streak = smoothstep(0.28, 0.74, streak * 0.5 + 0.5);
+  float foamNoise = fbm(wxz * 1.65 - flow * uTime * 0.8, 3, 2.1, 0.5) * 0.5 + 0.5;
+  float foamNoise2 = fbm(wxz * 3.4 - flow * uTime * 1.3 + 9.0, 2, 2.1, 0.5) * 0.5 + 0.5;
   float rainFoam = uWeather.z * (0.14 + foamNoise2 * 0.28);
   float foam = shore * 0.95 + riffle * 0.48 * streak + rainFoam;
   foam *= mix(0.40, 1.0, smoothstep(0.16, 0.62, foamNoise * 0.6 + foamNoise2 * 0.45));
@@ -388,9 +389,9 @@ void main(){
   col += vec3(0.78, 0.55, 0.16) * causAmt * 1.25;
   vec3 foamCol = vec3(0.42, 0.44, 0.42) * (0.88 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.40)
                + uSkyAmbient * 0.40 + uSunColor * sunShadowK * 0.10;
-  col = mix(col, foamCol, foam * 0.26);
-  float meniscus = exp(-depth * depth * 90.0) * (1.0 - smoothstep(0.10, 0.26, depth));
-  col = mix(col, foamCol * 1.05, meniscus * 0.38);
+  col = mix(col, foamCol, foam * 0.40);
+  float meniscus = exp(-depth * depth * 55.0) * (1.0 - smoothstep(0.12, 0.30, depth));
+  col = mix(col, foamCol * 1.12, meniscus * 0.58);
 
   // ---- sediment plume near the banks
   float silt = shore * smoothstep(0.35, 0.85, foamNoise) * 0.5;
