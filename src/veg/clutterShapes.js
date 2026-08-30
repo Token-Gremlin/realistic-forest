@@ -499,22 +499,12 @@ export function buildLimb(seed, opts = {}) {
   placeKnob(0, 0, len * 0.07, rad * 1.22, rad * 1.22, len * 0.14);
   placeKnob(rad * 0.18, rad * 0.10, -rad * 0.15, rad * 0.70, rad * 0.58, rad * 0.88);
   placeKnob(-rad * 0.14, -rad * 0.08, rad * 0.20, rad * 0.62, rad * 0.55, rad * 0.80);
-  const splinters = 2;
-  for (let k = 0; k < splinters; k++) {
-    const sa = r.f() * Math.PI * 2;
-    const tilt = lerp(0.20, 0.48, r.f());
-    const sl = rad * lerp(1.1, 2.4, r.f());
-    const sr = rad * lerp(0.08, 0.16, r.f());
-    const sd = V(
-      Math.cos(sa) * tilt,
-      Math.sin(sa) * tilt * 0.65,
-      -Math.sqrt(Math.max(0.05, 1 - tilt * tilt)),
-    ).normalize();
-    const spts = [snap.clone(), snap.clone().addScaledVector(sd, sl)];
-    tube(mb, spts, [sr, sr * 0.18], 4, PART.WOOD, {
-      totalHeight: rad * 2, rnd: r.f(), lumpy: 0.18, cap: true, capStart: true, vScale: 5,
-    });
-  }
+  const sl = rad * lerp(1.2, 2.0, r.f());
+  const sr0 = rad * lerp(0.10, 0.16, r.f());
+  const sd = V(r.range(-0.35, 0.35), r.range(-0.25, 0.35), -0.85).normalize();
+  tube(mb, [snap.clone(), snap.clone().addScaledVector(sd, sl)], [sr0, sr0 * 0.2], 4, PART.WOOD, {
+    totalHeight: rad * 2, rnd: r.f(), lumpy: 0.16, cap: true, capStart: true, vScale: 5,
+  });
   const si = 2 + r.int(2);
   const base = pts[si];
   // stay in YZ so the held still (Z across the frame, Y = lift) shows a Y
@@ -531,20 +521,22 @@ export function buildLimb(seed, opts = {}) {
   tube(mb, spts, [sr, sr * 0.90, sr * 0.72, sr * 0.50, sr * 0.28], 7, PART.WOOD, {
     totalHeight: rad * 2, rnd: r.f(), lumpy: 0.18, cap: true, capStart: true, vScale: 4.4,
   });
-  const tip = pts[segs];
-  const tipR = radii[segs];
-  const tipAt = mb.pos.length;
-  blob(mb, r, {
-    radial: 7, rings: 3, hemi: false,
-    rx: tipR * 1.25, ry: tipR * 1.25, rz: tipR * 1.40,
-    rough: 0.35, part: PART.WOOD, rnd: r.f(),
-  });
-  const tipLift = tipR * 1.25 * 0.55;
-  for (let k = tipAt; k < mb.pos.length; k += 3) {
-    mb.pos[k] += tip.x;
-    mb.pos[k + 1] += tip.y - tipLift;
-    mb.pos[k + 2] += tip.z;
-  }
+  const plugEnd = (p, pr) => {
+    const at = mb.pos.length;
+    blob(mb, r, {
+      radial: 7, rings: 3, hemi: false,
+      rx: pr * 1.55, ry: pr * 1.55, rz: pr * 2.10,
+      rough: 0.38, part: PART.WOOD, rnd: r.f(),
+    });
+    const lift = pr * 1.55 * 0.55;
+    for (let k = at; k < mb.pos.length; k += 3) {
+      mb.pos[k] += p.x;
+      mb.pos[k + 1] += p.y - lift;
+      mb.pos[k + 2] += p.z;
+    }
+  };
+  plugEnd(pts[segs], radii[segs]);
+  plugEnd(spts[spts.length - 1], sr * 0.28);
   return { mesh: mb, height: mb.height, radius: mb.radius, material: 'solid', sink: rad * 0.5 };
 }
 
