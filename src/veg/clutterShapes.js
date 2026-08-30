@@ -449,7 +449,7 @@ export function buildLimb(seed, opts = {}) {
   // a random XZ heading made some variants point at the lens (hollow pipe).
   const len = lerp(1.35, 3.2, r.f()) * (opts.scale ?? 1);
   const rad = len * lerp(0.055, 0.095, r.f());
-  const segs = 7;
+  const segs = 9;
   const pts = [];
   const kink = r.range(-0.38, 0.38);
   const sag = r.range(-0.22, 0.28);
@@ -461,35 +461,37 @@ export function buildLimb(seed, opts = {}) {
       t * len,
     ));
   }
-  // living tip stays a stub, not a needle — needle cones read as a cluster
-  const radii = [rad, rad * 0.97, rad * 0.90, rad * 0.80, rad * 0.68, rad * 0.54, rad * 0.42, rad * 0.32];
+  const radii = [];
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs;
+    radii.push(rad * (1.0 - t * 0.62) * (1 + 0.06 * Math.sin(t * 7.0)));
+  }
   tube(mb, pts, radii, 10, PART.WOOD, {
-    totalHeight: rad * 2, rnd: r.f(), lumpy: 0.22, cap: true, capStart: true, vScale: 4.2,
+    totalHeight: rad * 2, rnd: r.f(), lumpy: 0.26, cap: true, vScale: 4.2,
   });
   const snap = pts[0];
   const along = V().subVectors(pts[1], pts[0]).normalize();
   const outward = along.clone().negate();
-  breakFace(mb, snap, outward, rad * 1.04, 10, PART.WOOD, {
-    rnd: r.f(), inset: rad * 0.04, jitter: 0.30,
+  breakFace(mb, snap, outward, rad * 1.06, 10, PART.WOOD, {
+    rnd: r.f(), inset: rad * 0.02, jitter: 0.36,
   });
-  // solid broken knob — a paper disc still reads as a pipe when edge-on
-  const knobAt = mb.pos.length;
-  blob(mb, r, {
-    radial: 8, rings: 4, hemi: true,
-    rx: rad * 1.06, ry: rad * 0.62, rz: rad * 1.06,
-    rough: 0.48, part: PART.WOOD, rnd: r.f(),
-  });
-  for (let k = knobAt; k < mb.pos.length; k += 3) {
-    const x = mb.pos[k], y = mb.pos[k + 1], z = mb.pos[k + 2];
-    mb.pos[k] = snap.x + x;
-    mb.pos[k + 1] = snap.y + z;
-    mb.pos[k + 2] = snap.z - y;
-    const nx = mb.nrm[k], ny = mb.nrm[k + 1], nz = mb.nrm[k + 2];
-    mb.nrm[k] = nx;
-    mb.nrm[k + 1] = nz;
-    mb.nrm[k + 2] = -ny;
-  }
-  for (let k = knobAt / 3; k < mb.extra.length / 4; k++) mb.extra[k * 4 + 2] = 2;
+  // chunky broken wood — a paper disc is edge-on in a side-on still and
+  // the open rim then reads as a pipe
+  const placeKnob = (sx, sy, sz, rx, ry, rz) => {
+    const at = mb.pos.length;
+    blob(mb, r, {
+      radial: 8, rings: 4, hemi: false,
+      rx, ry, rz, rough: 0.55, part: PART.WOOD, rnd: r.f(),
+    });
+    for (let k = at; k < mb.pos.length; k += 3) {
+      mb.pos[k] += snap.x + sx;
+      mb.pos[k + 1] += snap.y + sy;
+      mb.pos[k + 2] += snap.z + sz;
+    }
+    for (let k = at / 3; k < mb.extra.length / 4; k++) mb.extra[k * 4 + 2] = 2;
+  };
+  placeKnob(0, 0, -rad * 0.15, rad * 1.18, rad * 1.05, rad * 1.35);
+  placeKnob(rad * 0.22, rad * 0.10, -rad * 0.45, rad * 0.55, rad * 0.48, rad * 0.72);
   const splinters = 2;
   for (let k = 0; k < splinters; k++) {
     const sa = r.f() * Math.PI * 2;
@@ -522,6 +524,19 @@ export function buildLimb(seed, opts = {}) {
   tube(mb, spts, [sr, sr * 0.90, sr * 0.72, sr * 0.50, sr * 0.28], 7, PART.WOOD, {
     totalHeight: rad * 2, rnd: r.f(), lumpy: 0.18, cap: true, capStart: true, vScale: 4.4,
   });
+  const tip = pts[segs];
+  const tipR = radii[segs];
+  const tipAt = mb.pos.length;
+  blob(mb, r, {
+    radial: 7, rings: 3, hemi: false,
+    rx: tipR * 1.15, ry: tipR * 1.05, rz: tipR * 1.25,
+    rough: 0.35, part: PART.WOOD, rnd: r.f(),
+  });
+  for (let k = tipAt; k < mb.pos.length; k += 3) {
+    mb.pos[k] += tip.x;
+    mb.pos[k + 1] += tip.y;
+    mb.pos[k + 2] += tip.z;
+  }
   return { mesh: mb, height: mb.height, radius: mb.radius, material: 'solid', sink: rad * 0.5 };
 }
 

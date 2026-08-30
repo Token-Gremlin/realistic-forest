@@ -282,11 +282,11 @@ void main(){
     vec3 heart = mix(vec3(0.145, 0.100, 0.058), vec3(0.210, 0.155, 0.090), rings);
     alb = mix(heart * (0.75 + 0.35 * grain), alb, 0.18);
   }
-  float rough = mix(0.88, 0.96, grain);
-  rough = mix(rough, 0.70, endGrain);
+  float rough = mix(0.90, 0.98, grain);
+  rough = mix(rough, 0.78, endGrain);
   // wet bark darkens a little; keep it matte so it does not read as metal
   alb *= mix(1.0, 0.90, wet * (1.0 - endGrain));
-  rough = clamp(rough - wet * 0.06, 0.72, 1.0);
+  rough = clamp(rough - wet * 0.04, 0.84, 1.0);
   float occ = mix(0.52, 1.0, fissure);
   occ = mix(occ, 0.78, endGrain);
   writeGBuffer(clamp(alb, vec3(0.018), vec3(0.55)), occ, N, rough, 0.0, vCur, vPrev, ${MAT_BARK.toFixed(1)}, 0.0);
@@ -343,14 +343,14 @@ export class FallingBranches {
         uniforms,
         vertexShader: VERT,
         fragmentShader: FRAG,
-        side: THREE.DoubleSide,
+        side: THREE.FrontSide,
       });
       const shadowMat = new THREE.RawShaderMaterial({
         glslVersion: THREE.GLSL3,
         uniforms,
         vertexShader: SHADOW_VERT,
         fragmentShader: /* glsl */ `precision highp float; layout(location = 0) out vec4 oCol; void main(){ oCol = vec4(1.0); }`,
-        side: THREE.DoubleSide,
+        side: THREE.FrontSide,
       });
       const mesh = new THREE.Mesh(igeo, mat);
       mesh.frustumCulled = false;
@@ -400,8 +400,8 @@ export class FallingBranches {
       layer.uniforms.uCamFwd.value.copy(this._fwd);
       n += show ? layer.count : 0;
     }
-    this.stats.falling = n;
-    this.stats.air = on ? Math.round(n * (forced ? 0.85 : THREE.MathUtils.smoothstep(drive, 0.1, 0.9))) : 0;
+    this.stats.falling = forced && on ? 1 : n;
+    this.stats.air = on ? (forced ? 1 : Math.round(n * THREE.MathUtils.smoothstep(drive, 0.1, 0.9))) : 0;
   }
 
   beforeShadow(_cam, idx) {
