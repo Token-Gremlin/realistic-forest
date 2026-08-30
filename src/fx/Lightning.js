@@ -137,6 +137,7 @@ export class Lightning {
     this._uvB = new THREE.Vector3();
     // capture stills set this so one missed flash frame cannot kill the channel
     this.held = false;
+    this._boltLocked = false;
   }
 
   _rnd() {
@@ -351,6 +352,13 @@ export class Lightning {
 
   update(_dt, camera) {
     if (camera && camera.isCamera) this._camera = camera;
+    if (this.held && this._boltLocked) {
+      this.mesh.visible = true;
+      this.active = true;
+      this.uniforms.uAmp.value = Math.max(U.uFlash.value.w, 1.6);
+      if (U.uFlash.value.w < 0.8) U.uFlash.value.w = 1.6;
+      return;
+    }
     if (!this.active) {
       this.mesh.visible = false;
       this.uniforms.uAmp.value = 0;
@@ -406,6 +414,7 @@ export class Lightning {
       1,
       0,
     );
+    if (this.held) this._boltLocked = true;
 
     let f0 = false, f1 = false;
     U.uBoltF0.value.set(a.x, a.y, a.x, a.y);

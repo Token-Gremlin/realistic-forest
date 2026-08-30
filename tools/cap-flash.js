@@ -51,8 +51,10 @@ f.forest.lightning?.onLightning?.(
   { x: gx, y: gy, z: gz },
 );
 if (f.forest.lightning) f.forest.lightning.held = true;
+if (f.forest.lightning) f.forest.lightning.held = true;
 f.weather.update(0, p);
 f.forest.lightning?.update?.(0, f.camera);
+f.state.running = false;
 
 // holdPhase packs metre-scale limbs into the lens — never for a skyward still
 if (f.forest.falling) {
