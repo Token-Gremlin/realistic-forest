@@ -77,7 +77,7 @@ vec3 rippleNormal(vec2 p, vec2 flow, float flowMag, float depth, float lodPx){
     vec3 w = worley2(p * 9.0 + floor(t * 3.0) * 17.3, 1.0);
     float ring = sin(w.x * 42.0 - fract(t * 3.0) * 22.0) * exp(-w.x * 6.0);
     vec3 wg = noised(p * 9.0 + floor(t * 3.0) * 17.3);
-    grad += wg.yz * ring * uWaterWave.w * 0.55;
+    grad += wg.yz * ring * uWaterWave.w * 1.05;
   }
   return normalize(vec3(-grad.x, 1.0, -grad.y));
 }
@@ -362,6 +362,10 @@ void main(){
   // ---- sediment plume near the banks
   float silt = shore * smoothstep(0.35, 0.85, foamNoise) * 0.5;
   col = mix(col, col * vec3(1.25, 1.05, 0.78), silt);
+
+  // rain lifts the column so ripples survive the storm grade instead of
+  // crushing to wet gravel
+  col *= mix(1.0, 1.22, uWeather.z);
 
   // soften the very edge so the waterline is not a hard cut
   float edgeFade = smoothstep(0.006, 0.05, depth);
