@@ -84,8 +84,8 @@ Fall place(float tShift){
     vec3 fw = normalize(uCamFwd + vec3(1e-5, 0.0, 0.0));
     vec3 rt = normalize(cross(fw, vec3(0.0, 1.0, 0.0)));
     base = origin
-      + fw * mix(7.5, 12.5, h3.x)
-      + rt * (h3.z - 0.5) * 4.8;
+      + fw * mix(4.6, 8.2, h3.x)
+      + rt * (h3.z - 0.5) * 4.2;
     base.y = origin.y;
   } else {
     base.x = origin.x + (fract(h3.x + 0.5 + adv.x / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
@@ -118,7 +118,7 @@ Fall place(float tShift){
   base.xz += wdir * drop * mix(1.6, 7.5, h.z) * (0.55 + wind * 0.06);
   if(uPhase >= 0.0){
     // stills: freeze in the air in front of the lens, not on the ground
-    y = origin.y + mix(1.8, 5.4, h3.y);
+    y = origin.y + mix(7.0, 11.2, h3.y);
     settle = 0.0;
   }
   base.y = y;

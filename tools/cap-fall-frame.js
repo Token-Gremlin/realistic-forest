@@ -83,7 +83,9 @@ function aimSkyHole(f) {
   p.y = maps.height(p.x, p.z) + 5.7;
 
   const fx = best?.fx ?? 1, fz = best?.fz ?? 0;
-  cam.lookAt(p.x + fx * 16, p.y + 7.4, p.z + fz * 16);
+  // steep up-look: map skyVis is not pixel sky — crowns still fill a 24
+  // degree glance. Aim near the zenith so the limbs sit on grey.
+  cam.lookAt(p.x + fx * 7, p.y + 15.5, p.z + fz * 7);
   cam.updateMatrixWorld(true);
   cam.updateProjectionMatrix();
 
