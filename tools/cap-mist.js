@@ -21,13 +21,13 @@ const far = maps.sample(LOOK.x, LOOK.z, {});
 const gh = maps.height(PIN.x, PIN.z);
 const farH = maps.height(LOOK.x, LOOK.z);
 
-f.camera.position.set(PIN.x, gh + 5.6, PIN.z);
-f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.8);
+f.camera.position.set(PIN.x, gh + 14.8, PIN.z);
+f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.6);
 const p = f.camera.position;
-p.y = maps.height(p.x, p.z) + 5.5;
-// across the bowl: mist in the middle third, sky above. Do not lookAt
-// far tree-tops or the ground horizon.
-f.camera.lookAt(LOOK.x, farH + 7.2, LOOK.z);
+p.y = maps.height(p.x, p.z) + 14.6;
+// over the near crowns, down into the valley bowl. mist1 at +5.5 m
+// was a leaf wall.
+f.camera.lookAt(LOOK.x, farH + 6.4, LOOK.z);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 
