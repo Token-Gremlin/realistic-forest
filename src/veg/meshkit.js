@@ -23,6 +23,7 @@ export const PART = {
   GILL: 8,
   MOSS: 9,
   BARK: 10,
+  PAD: 11,
 };
 
 const V = () => new THREE.Vector3();

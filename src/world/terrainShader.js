@@ -91,7 +91,7 @@ BasinInfo basinInfo(vec2 wp){
     float d = length(site - fp);
     if(d < best){ best = d; bestSite = ip + site; bestId = o.z; }
   }
-  if(bestId > 0.28) return b;
+  if(bestId > 0.42) return b;
   vec2 siteW = (bestSite - uTerrainSeed * 11.0) / SCALE;
   b.site = siteW;
   b.id = bestId;
@@ -101,7 +101,7 @@ BasinInfo basinInfo(vec2 wp){
   vec2 crSite = channelRaw(siteW);
   float along = smoothstep(0.30, 0.62, crSite.x);
   if(along <= 0.001) return b;
-  float radius = (0.30 + 0.34 * fract(bestId * 31.77)) * (0.5 + 0.5 * along);
+  float radius = (0.34 + 0.40 * fract(bestId * 31.77)) * (0.55 + 0.45 * along);
   float m = 1.0 - smoothstep(radius * 0.30, radius, best);
   if(m <= 0.001) return b;
   m = m * m * (3.0 - 2.0 * m);

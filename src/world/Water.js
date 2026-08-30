@@ -55,6 +55,7 @@ vec3 rippleNormal(vec2 p, vec2 flow, float flowMag, float depth, float lodPx){
   float t = uTime;
   vec2 fdir = flowMag > 1e-4 ? flow / flowMag : vec2(0.0, 1.0);
   float amp = uWaterWave.y * mix(0.35, 1.0, smoothstep(0.0, 0.45, depth));
+  amp *= mix(0.22, 1.0, smoothstep(0.05, 0.42, flowMag));
   float det = clamp(1.0 - lodPx * 6.0, 0.0, 1.0);
 
   vec2 q1 = p * (0.85 * uWaterWave.x) - fdir * t * (0.35 + flowMag * 1.6);
@@ -89,6 +90,7 @@ float rippleHeight(vec2 p, vec2 flow, float flowMag, float depth){
   // centimetre chop dies at 528 px. Riffle-scale displacement is what
   // still reads as a surface when the camera sits on the bank.
   float amp = uWaterWave.y * mix(0.14, 0.52, smoothstep(0.0, 0.42, depth));
+  amp *= mix(0.16, 1.0, smoothstep(0.05, 0.42, flowMag));
   vec2 q1 = p * (0.85 * uWaterWave.x) - fdir * t * (0.35 + flowMag * 1.6);
   vec2 q2 = p * (2.30 * uWaterWave.x) - fdir * t * (0.62 + flowMag * 2.9) + 11.0;
   float h = (noised(q1).x * 2.0 - 1.0) * 0.64 + (noised(q2).x * 2.0 - 1.0) * 0.30;
@@ -342,7 +344,9 @@ void main(){
   float fres = f0 + (1.0 - f0) * pow(1.0 - cosV, 5.0);
   // forest water is tannin-stained, not a lake of sky: keep Fresnel modest
   fres = mix(fres, clamp(fres * 1.25, 0.0, 0.72), clamp(flowMag * 0.45, 0.0, 1.0));
-  fres = min(fres, 0.20);
+  // still pools keep a little more sky so they do not read as a riffle
+  float still = 1.0 - smoothstep(0.06, 0.40, flowMag);
+  fres = min(fres, mix(0.26, 0.20, 1.0 - still));
 
   vec3 col = mix(bedLit + inScatter, refl, fres);
 
@@ -385,8 +389,8 @@ void main(){
   // Beer-Lambert alone cannot retint that into tea. Foam is mixed after
   // so the lace stays pale on the stained column.
   float stain = smoothstep(0.04, 0.55, depth);
-  col *= mix(vec3(1.0), vec3(1.20, 0.56, 0.22), stain * 0.95);
-  col *= mix(1.0, 0.70, stain);
+  col *= mix(vec3(1.0), vec3(1.20, 0.56, 0.22), stain * mix(0.95, 1.18, still));
+  col *= mix(1.0, mix(0.70, 0.58, still), stain);
   // hard gold cores, not a beige wash
   col += vec3(0.78, 0.55, 0.16) * causAmt * 1.25;
   vec3 foamCol = vec3(0.58, 0.57, 0.50) * (0.90 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.32)
@@ -398,6 +402,12 @@ void main(){
   // ---- sediment plume near the banks
   float silt = shore * smoothstep(0.35, 0.85, foamNoise) * 0.5;
   col = mix(col, col * vec3(1.25, 1.05, 0.78), silt);
+  // pollen film on still water. Metre-scale so it survives tiny; keep
+  // it off the foam lip so the meniscus stays a dirt line.
+  float film = fbm(wxz * 0.48 + 21.0, 3, 2.1, 0.5) * 0.5 + 0.5;
+  film = smoothstep(0.56, 0.80, film) * still * smoothstep(0.14, 0.50, depth);
+  film *= 1.0 - shore;
+  col = mix(col, col * vec3(0.70, 0.78, 0.38) + vec3(0.030, 0.036, 0.010), film * 0.52);
 
   // rain impact rings as colour. Fine worley cells died as speckle at
   // tiny; metre-scale rings on tea still read after AgX.

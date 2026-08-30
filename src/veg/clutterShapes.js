@@ -412,6 +412,29 @@ export function buildSedge(seed, opts = {}) {
   return { mesh: mb, height: size, radius: mb.radius, material: 'plant' };
 }
 
+/* ---------------------------------------------------------------- lily pad */
+export function buildLily(seed, opts = {}) {
+  const r = new Rng(seed);
+  const mb = new MeshBuilder();
+  const pads = 1 + r.int(2);
+  let span = 0.12;
+  for (let i = 0; i < pads; i++) {
+    const w = lerp(0.30, 0.56, r.f()) * (opts.scale ?? 1);
+    const az = r.f() * Math.PI * 2;
+    const off = i === 0 ? 0 : w * lerp(0.55, 0.95, r.f());
+    const ox = Math.cos(az) * off;
+    const oz = Math.sin(az) * off;
+    const yaw = r.f() * Math.PI * 2;
+    const ax = V(Math.cos(yaw), 0, Math.sin(yaw));
+    const ay = V(-Math.sin(yaw), lerp(0.04, 0.14, r.f()), Math.cos(yaw)).normalize();
+    card(mb, V(ox, 0.03, oz), ax, ay, w, w, PART.PAD, {
+      totalHeight: 0.12, rnd: r.f(), flex: 0.08, phase: r.f(), droop: 0,
+    });
+    span = Math.max(span, off + w * 0.55);
+  }
+  return { mesh: mb, height: 0.08, radius: Math.max(mb.radius, span), material: 'plant', sink: 0 };
+}
+
 /* ------------------------------------------------------------------- bramble */
 export function buildBramble(seed, opts = {}) {
   return buildBush(seed, { ...opts, arching: 1 });
@@ -651,6 +674,15 @@ export const ARCHETYPES = [
     key: 'sedge', build: buildSedge, variants: 3, density: 0.28, maxDist: 44,
     score: (e) => -0.35 + e.moisture * 1.9 + Math.max(0, 0.4 - Math.abs(e.waterDepth + 0.15)) * 6
       - e.rock * 1.0 - e.slope * 1.2,
+  },
+  {
+    key: 'lily', build: buildLily, variants: 3, density: 0.055, maxDist: 20,
+    score: (e) => {
+      const wd = e.waterDepth;
+      if (wd < 0.12 || wd > 0.90) return 0;
+      return 0.12 + Math.max(0, 0.40 - Math.abs(wd - 0.36)) * 7.2
+        - e.slope * 1.8 - e.canopy * 0.30;
+    },
   },
   {
     key: 'moss', build: buildMossPatch, variants: 3, density: 0.52, maxDist: 22,

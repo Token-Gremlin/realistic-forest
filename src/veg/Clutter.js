@@ -127,6 +127,10 @@ export class Clutter {
       case 'sedge':
         return { ...base, leaflets: 3, serration: 0.2, transmission: 0.88, windAmp: 0.038,
           leafA: [0.040, 0.078, 0.034], leafB: [0.095, 0.130, 0.052] };
+      case 'lily':
+        return { ...base, leaflets: 1, serration: 0, transmission: 0.12, windAmp: 0.006,
+          floatWater: true, alignGround: 0,
+          leafA: [0.026, 0.058, 0.018], leafB: [0.055, 0.095, 0.028] };
       case 'leafPatch':
         return { ...base, leaflets: 5, serration: 1.2, transmission: 0.18, windAmp: 0.004,
           alignGround: 1.0, litter: true,
@@ -243,7 +247,8 @@ export class Clutter {
     for (let k = 0; k < ARCHETYPES.length; k++) {
       const key = ARCHETYPES[k].key;
       if (key === 'leafPatch' || key === 'moss' || key === 'mushroom'
-        || key === 'twig' || key === 'flower' || key === 'herb' || key === 'rock') {
+        || key === 'twig' || key === 'flower' || key === 'herb' || key === 'rock'
+        || key === 'lily') {
         nearIdx.push(k);
         nearSum0 += ARCHETYPES[k].density;
       }

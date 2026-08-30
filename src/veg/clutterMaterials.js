@@ -26,6 +26,7 @@ const CLUTTER_TRANSFORM = /* glsl */ `
 uniform float uPlantHeight;
 uniform float uWindAmp;
 uniform float uAlignGround;   // 0 = stay upright, 1 = lie along the slope
+uniform float uFloatWater;    // 1 = sit on the water surface, not the bed
 
 mat3 instBasis(){
   mat3 yaw = mat3(iRot.x, 0.0, iRot.y, 0.0, 1.0, 0.0, -iRot.y, 0.0, iRot.x);
@@ -35,6 +36,7 @@ mat3 instBasis(){
 
 vec3 instanceBase(){
   float gy = mix(iPosScale.y, groundHeight(iPosScale.xz), mapInside(iPosScale.xz));
+  gy += max(mapWaterDepth(iPosScale.xz), 0.0) * uFloatWater + 0.022 * uFloatWater;
   return vec3(iPosScale.x, gy, iPosScale.z);
 }
 
@@ -128,6 +130,18 @@ float petalMask(vec2 uv, float rnd, out float throat){
   throat = 1.0 - smoothstep(0.0, 0.45, y);
   return step(abs(x), w);
 }
+
+/** Lily pad: notched disc, slightly irregular so it is not a debug circle. */
+float padMask(vec2 uv, float rnd, out float rib){
+  vec2 p = uv * 2.0 - 1.0;
+  float r = length(p);
+  float ang = atan(p.y, p.x);
+  float notch = (1.0 - smoothstep(0.32, 0.62, abs(ang))) * 0.42;
+  float rad = 0.90 - notch;
+  rad *= 0.93 + 0.07 * sin(ang * 5.0 + rnd * 9.0);
+  rib = 1.0 - smoothstep(0.0, 0.22, r);
+  return step(r, rad);
+}
 `;
 
 const SOLID_SURFACE = /* glsl */ `
@@ -191,6 +205,7 @@ float coverageOf(int part, vec2 uv, float rnd, out float rib, out float throat, 
   if(part == ${PART.FROND}) return frondMask(uv, rnd, rib, lt);
   if(part == ${PART.BLADE}) return bladeMask(uv, rnd, rib);
   if(part == ${PART.PETAL}) return petalMask(uv, rnd, throat);
+  if(part == ${PART.PAD}) return padMask(uv, rnd, rib);
   return 1.0;
 }
 `;
@@ -202,6 +217,7 @@ export function makePlantMaterial(maps, cfg, opts = {}) {
     uPlantHeight: { value: cfg.height ?? 0.6 },
     uWindAmp: { value: cfg.windAmp ?? 0.030 },
     uAlignGround: { value: cfg.alignGround ?? 0 },
+    uFloatWater: { value: cfg.floatWater ? 1 : 0 },
     uLitter: { value: cfg.litter ? 1 : 0 },
     uLeafA: { value: new THREE.Vector3(...(cfg.leafA ?? [0.030, 0.072, 0.024])) },
     uLeafB: { value: new THREE.Vector3(...(cfg.leafB ?? [0.070, 0.130, 0.040])) },
@@ -298,6 +314,18 @@ void main(){
     thin = 0.95;
     alb *= mix(1.0, 0.78, wet);
     rough = clamp(rough - wet * 0.16, 0.18, 1.0);
+  } else if(part == ${PART.PAD}){
+    vec3 olive = mix(uLeafA, uLeafB, fract(idv * 2.4));
+    alb = olive * mix(0.70, 1.08, fract(idv * 5.1));
+    alb *= mix(0.52, 1.0, 1.0 - rib * 0.55);
+    alb = mix(alb, alb * vec3(0.55, 0.48, 0.28), smoothstep(0.72, 0.92, fract(idv * 8.3)) * 0.35);
+    rough = 0.36;
+    trans = 0.12;
+    occ = mix(0.70, 1.0, 1.0 - rib * 0.4);
+    matId = ${MAT_FOLIAGE.toFixed(1)};
+    thin = 0.15;
+    alb *= mix(1.0, 0.78, wet);
+    rough = clamp(rough - wet * 0.10, 0.22, 1.0);
   } else if(part == ${PART.CENTRE}){
     alb = mix(vec3(0.26, 0.20, 0.045), vec3(0.35, 0.27, 0.06), idv);
     rough = 0.62; trans = 0.05; occ = 0.75;
