@@ -224,6 +224,9 @@ export class RenderPipeline {
       uTime: U.uTime, uInvViewProj: U.uInvViewProj, uCamPos: U.uCamPos,
       uWeather: U.uWeather, uFlash: U.uFlash, uFire: U.uFire, uWind: U.uWind,
       uLeafHold: U.uLeafHold,
+      uInsectHold: U.uInsectHold,
+      uBirdHold: U.uBirdHold,
+      uSunColor: U.uSunColor,
       uViewProj: U.uViewProj,
       uBolt: U.uBolt, uBoltAmp: U.uBoltAmp, uBoltF0: U.uBoltF0, uBoltF1: U.uBoltF1,
     }));

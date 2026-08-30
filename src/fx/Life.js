@@ -620,11 +620,15 @@ export class Life {
     this.stats = { insects: 0, fireflies: 0, birds: 0, leaves: 0 };
     this.holdPulse = -1;
     this.holdLeaves = -1;
+    this.holdInsects = -1;
+    this.holdBirds = -1;
     this.leavesSuppressed = false;
+    this._fwd = new THREE.Vector3(0, 0, -1);
   }
 
   update(_dt, camera) {
     if (camera) {
+      camera.getWorldDirection(this._fwd);
       camera.getWorldDirection(this.fireflies.uniforms.uCamFwd.value);
       camera.getWorldDirection(this.leaves.uniforms.uCamFwd.value);
     }
@@ -642,6 +646,30 @@ export class Life {
     } else {
       U.uLeafHold.value.w = 0;
     }
+    if (this.holdInsects >= 0 && camera) {
+      const maps = this.forest.maps;
+      const ax = camera.position.x + this._fwd.x * 3.8;
+      const az = camera.position.z + this._fwd.z * 3.8;
+      const ground = maps?.height?.(ax, az) ?? (camera.position.y - 1.6);
+      U.uInsectHold.value.set(
+        ax,
+        Math.max(camera.position.y + this._fwd.y * 3.8, ground + 1.45),
+        az,
+        1.0,
+      );
+    } else {
+      U.uInsectHold.value.w = 0;
+    }
+    if (this.holdBirds >= 0 && camera) {
+      U.uBirdHold.value.set(
+        camera.position.x + this._fwd.x * 92,
+        camera.position.y + this._fwd.y * 92 + 16,
+        camera.position.z + this._fwd.z * 92,
+        1.0,
+      );
+    } else {
+      U.uBirdHold.value.w = 0;
+    }
     if (this.fireflies.uniforms.uHoldPulse) {
       this.fireflies.uniforms.uHoldPulse.value = this.holdPulse;
     }
@@ -656,8 +684,10 @@ export class Life {
     const insectDrive = (0.22 + dusk * 1.35 + (1 - night) * 0.18)
       * (1 - THREE.MathUtils.smoothstep(rain, 0.16, 0.52))
       * (1 - THREE.MathUtils.smoothstep(storm, 0.5, 0.88));
-    this.insects.mesh.visible = insectDrive > 0.05;
-    this.insects.geo.instanceCount = this.insects.mesh.visible
+    const heldInsects = this.holdInsects >= 0;
+    this.insects.mesh.visible = !heldInsects && insectDrive > 0.05;
+    this.insects.geo.instanceCount = heldInsects ? 0
+      : this.insects.mesh.visible
       ? Math.max(1, Math.floor(this.insects.count * THREE.MathUtils.smoothstep(insectDrive, 0.05, 0.85)))
       : 0;
 
@@ -671,8 +701,10 @@ export class Life {
     const birdDrive = (1 - THREE.MathUtils.smoothstep(night, 0.42, 0.78))
       * (1 - THREE.MathUtils.smoothstep(storm, 0.55, 0.92))
       * (1 - THREE.MathUtils.smoothstep(rain, 0.45, 0.85));
-    this.birds.mesh.visible = birdDrive > 0.08;
-    this.birds.geo.instanceCount = this.birds.mesh.visible
+    const heldBirds = this.holdBirds >= 0;
+    this.birds.mesh.visible = !heldBirds && birdDrive > 0.08;
+    this.birds.geo.instanceCount = heldBirds ? 0
+      : this.birds.mesh.visible
       ? Math.max(1, Math.floor(this.birds.count * THREE.MathUtils.smoothstep(birdDrive, 0.08, 0.9)))
       : 0;
 
@@ -688,9 +720,9 @@ export class Life {
         ? Math.max(1, Math.floor(this.leaves.count * THREE.MathUtils.smoothstep(leafDrive, 0.05, 0.88)))
         : 0;
 
-    this.stats.insects = this.insects.geo.instanceCount;
+    this.stats.insects = heldInsects ? 12 : this.insects.geo.instanceCount;
     this.stats.fireflies = this.fireflies.geo.instanceCount;
-    this.stats.birds = this.birds.geo.instanceCount;
+    this.stats.birds = heldBirds ? 5 : this.birds.geo.instanceCount;
     this.stats.leaves = heldLeaves ? 4 : this.leaves.geo.instanceCount;
   }
 

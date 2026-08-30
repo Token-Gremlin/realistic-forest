@@ -215,6 +215,9 @@ uniform vec4 uWeather;
 uniform vec4 uFlash;
 uniform vec4 uFire;
 uniform vec4 uLeafHold;
+uniform vec4 uInsectHold;
+uniform vec4 uBirdHold;
+uniform vec3 uSunColor;
 uniform vec3 uWind;
 uniform mat4 uViewProj;
 uniform vec4 uBolt;
@@ -294,6 +297,25 @@ float leafMask(vec2 uv, vec2 c, float ang, float sz, float seed){
   float body = 1.0 - smoothstep(w * 0.88, w + 0.07, abs(x));
   body *= smoothstep(-0.04, 0.06, y) * smoothstep(1.04, 0.88, y);
   return clamp(body, 0.0, 1.0);
+}
+
+float insectMote(vec2 uv, vec2 c, float ang, float sz){
+  vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+  vec2 d = (uv - c) * aspect;
+  float ca = cos(ang), sa = sin(ang);
+  vec2 q = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y) / max(sz, 1.0e-4);
+  return exp(-q.x * q.x * 7.5 - q.y * q.y * 1.8);
+}
+
+float birdV(vec2 uv, vec2 c, float ang, float sz, float flap){
+  vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+  vec2 d = (uv - c) * aspect;
+  float ca = cos(ang), sa = sin(ang);
+  vec2 q = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y) / max(sz, 1.0e-4);
+  float body = 1.0 - smoothstep(0.07, 0.22, abs(q.x) * 1.7 + abs(q.y) * 0.48);
+  float wing = 1.0 - smoothstep(0.10, 0.74, abs(q.x) - (0.06 - q.y * 0.38 * flap));
+  wing *= smoothstep(-0.92, -0.04, q.y);
+  return clamp(max(body, wing * 0.92), 0.0, 1.0);
 }
 
 float rainStreak(vec2 uv, vec2 a, vec2 b, float halfW){
@@ -482,6 +504,68 @@ void main(){
       vec3 umber = vec3(0.16, 0.08, 0.03);
       float tip = smoothstep(0.45, 1.0, clamp(((vUv - c).y * cos(ang) - (vUv - c).x * sin(ang)) / sz * 0.5 + 0.5, 0.0, 1.0));
       mapped = mix(mapped, mix(rust, umber, tip * 0.40), body * 0.82);
+    }
+  }
+
+  if(uInsectHold.w > 0.05){
+    vec3 origin = uInsectHold.xyz;
+    vec3 look = normalize(origin - uCamPos + vec3(1.0e-5, 0.0, 0.0));
+    vec3 rt = cross(look, vec3(0.0, 1.0, 0.0));
+    if(length(rt) < 0.08) rt = cross(look, vec3(1.0, 0.0, 0.0));
+    rt = normalize(rt);
+    vec3 upv = normalize(cross(rt, look));
+    for(int i = 0; i < 12; i++){
+      float sd = 8.4 + float(i) * 9.3;
+      vec3 p = origin
+        + rt * (hash11(sd) - 0.5) * 1.55
+        + upv * (hash11(sd + 1.7) - 0.5) * 1.15
+        + look * (hash11(sd + 3.1) - 0.5) * 1.35;
+      vec4 c4 = uViewProj * vec4(p, 1.0);
+      if(c4.w < 0.16) continue;
+      vec2 c = c4.xy / c4.w * 0.5 + 0.5;
+      if(c.x < 0.04 || c.x > 0.96 || c.y < 0.06 || c.y > 0.92) continue;
+      float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
+      float z = c4.z / c4.w * 0.5 + 0.5;
+      if(z > sceneZ + 0.006) continue;
+      float ang = (hash11(sd + 5.0) - 0.5) * 1.8;
+      float sz = mix(0.0075, 0.0135, hash11(sd + 6.2));
+      float body = insectMote(vUv, c, ang, sz);
+      if(body < 0.05) continue;
+      vec3 bug = vec3(0.07, 0.075, 0.045);
+      mapped = mix(mapped, bug, clamp(body * 0.78, 0.0, 1.0));
+      if(hash11(sd + 9.0) > 0.62){
+        vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+        float glint = exp(-length((vUv - c) * aspect) / max(sz * 0.28, 1.0e-4));
+        mapped = max(mapped, uSunColor * glint * 0.55);
+      }
+    }
+  }
+
+  if(uBirdHold.w > 0.05){
+    vec3 origin = uBirdHold.xyz;
+    vec3 look = normalize(origin - uCamPos + vec3(1.0e-5, 0.0, 0.0));
+    vec3 rt = cross(look, vec3(0.0, 1.0, 0.0));
+    if(length(rt) < 0.08) rt = cross(look, vec3(1.0, 0.0, 0.0));
+    rt = normalize(rt);
+    vec3 upv = normalize(cross(rt, look));
+    for(int i = 0; i < 5; i++){
+      float idb = float(i);
+      float side = (i == 0) ? 0.0 : (mod(idb, 2.0) < 0.5 ? -1.0 : 1.0);
+      float rank = (i == 0) ? 0.0 : ceil(idb * 0.5);
+      vec3 p = origin + rt * side * rank * 5.4 + look * rank * 3.2 + upv * (hash11(12.0 + idb) - 0.5) * 1.6;
+      vec4 c4 = uViewProj * vec4(p, 1.0);
+      if(c4.w < 0.20) continue;
+      vec2 c = c4.xy / c4.w * 0.5 + 0.5;
+      if(c.x < -0.02 || c.x > 1.02 || c.y < 0.08 || c.y > 0.98) continue;
+      float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
+      float z = c4.z / c4.w * 0.5 + 0.5;
+      if(z > sceneZ + 0.004) continue;
+      float ang = -0.18 + side * 0.12;
+      float sz = mix(0.022, 0.034, hash11(20.0 + idb));
+      float flap = mix(0.55, 1.0, hash11(24.0 + idb));
+      float body = birdV(vUv, c, ang, sz, flap);
+      if(body < 0.06) continue;
+      mapped = mix(mapped, vec3(0.05, 0.055, 0.06), body * 0.90);
     }
   }
 
