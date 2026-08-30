@@ -1,12 +1,12 @@
-// high sun: look out from a clearing or rise at a distant stand so
-// billboard crowns read against sky. Do not reuse the failed sky-gap grove.
+// high sun: look across a gap at a far tree line so billboard crowns
+// silhouette against sky. A 42 deg lens inside a stand only sees a thicket.
 f.weather.setAct(3, true);
 f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
 f.state.exposureAuto = false;
-f.pipeline.settings.exposure = 1.12;
-f.pipeline.settings.aerial = 0.30;
+f.pipeline.settings.exposure = 1.10;
+f.pipeline.settings.aerial = 0.34;
 f.pipeline.settings.motionBlur = 0;
 f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
@@ -15,49 +15,72 @@ const maps = f.forest.maps;
 const scratch = {};
 
 const SEEDS = [
-  { x: 97.3, z: -216.7 },
   { x: 40, z: -80 },
-  { x: -120, z: -40 },
   { x: 180, z: 20 },
+  { x: -120, z: -40 },
+  { x: 80, z: 200 },
   { x: -60, z: 160 },
-  { x: -148.5, z: -155.5 },
+  { x: 97.3, z: -216.7 },
 ];
+
+function along(px, pz, lx, lz, t) {
+  return { x: px + (lx - px) * t, z: pz + (lz - pz) * t };
+}
+
+function corridor(px, pz, lx, lz) {
+  let near = 0, mid = 0, far = 0, nN = 0, nM = 0, nF = 0, wet = 0;
+  for (let t = 0.08; t <= 1.0; t += 0.08) {
+    const q = along(px, pz, lx, lz, t);
+    const s = maps.sample(q.x, q.z, {});
+    if (!s.inside) continue;
+    if (t < 0.38) { near += s.canopy; nN++; if (s.waterDepth > 0.05) wet++; }
+    else if (t < 0.68) { mid += s.canopy; nM++; if (s.waterDepth > 0.05) wet++; }
+    else { far += s.canopy; nF++; }
+  }
+  if (!nN || !nM || !nF) return null;
+  return { near: near / nN, mid: mid / nM, far: far / nF, wet };
+}
 
 function huntFrom(sx, sz) {
   f.camera.position.set(sx, 80, sz);
   f.forest.ensureMaps(f.camera);
   let best = null;
   let bestS = -1e9;
-  for (let iz = -72; iz <= 72; iz += 18) {
-    for (let ix = -72; ix <= 72; ix += 18) {
+  for (let iz = -80; iz <= 80; iz += 20) {
+    for (let ix = -80; ix <= 80; ix += 20) {
       const px = sx + ix, pz = sz + iz;
       const pad = maps.sample(px, pz, scratch);
       if (!pad.inside) continue;
-      if (pad.waterDepth > -0.04) continue;
-      if (pad.canopy > 0.52) continue;
-      if (pad.skyVis < 0.22) continue;
+      if (pad.waterDepth > 0.02) continue;
+      if (pad.canopy > 0.38) continue;
+      if (pad.skyVis < 0.28) continue;
       const gh = pad.height;
-      for (let k = 0; k < 12; k++) {
-        const a = k * 0.524;
-        const reach = 108;
+      for (let k = 0; k < 16; k++) {
+        const a = k * 0.393;
+        const reach = 118;
         const lx = px + Math.cos(a) * reach;
         const lz = pz + Math.sin(a) * reach;
-        const far = maps.sample(lx, lz, {});
-        if (!far.inside) continue;
-        // a solid far canopy is a green wall; we want a broken stand
-        // whose tops can silhouette against sky
-        if (far.canopy < 0.28 || far.canopy > 0.82) continue;
-        const rise = gh - far.height;
-        const openFar = 1.0 - Math.abs(far.canopy - 0.52) * 2.2;
-        const score = openFar * 2.4
-          + pad.skyVis * 1.5
-          + (far.skyVis ?? 0) * 1.1
-          - pad.canopy * 1.45
-          + Math.min(10, rise) * 0.10
-          + (1 - pad.slope) * 0.20;
+        const farS = maps.sample(lx, lz, {});
+        if (!farS.inside) continue;
+        const cor = corridor(px, pz, lx, lz);
+        if (!cor) continue;
+        // need an open near/mid so the 42 deg lens is not a leaf wall,
+        // and a real stand at the far end
+        if (cor.near > 0.28) continue;
+        if (cor.mid > 0.42) continue;
+        if (cor.far < 0.32 || cor.far > 0.88) continue;
+        const rise = gh - farS.height;
+        const score = (1 - cor.near) * 3.2
+          + (1 - cor.mid) * 2.0
+          + (1.0 - Math.abs(cor.far - 0.55)) * 2.4
+          + pad.skyVis * 1.2
+          + (farS.skyVis ?? 0) * 0.8
+          + cor.wet * 0.35
+          + Math.min(12, rise) * 0.08
+          - pad.canopy * 0.8;
         if (score > bestS) {
           bestS = score;
-          best = { px, pz, lx, lz, pad, far, score, reach };
+          best = { px, pz, lx, lz, pad, far: farS, cor, score, reach };
         }
       }
     }
@@ -72,28 +95,27 @@ for (const s of SEEDS) {
 }
 
 if (!pick) {
-  const fb = { x: 97.3, z: -216.7 };
+  const fb = { x: 40, z: -80 };
   f.camera.position.set(fb.x, 80, fb.z);
   f.forest.ensureMaps(f.camera);
   const pad = maps.sample(fb.x, fb.z, {});
   pick = {
     px: fb.x, pz: fb.z,
-    lx: fb.x + 92, lz: fb.z - 48,
-    pad, far: maps.sample(fb.x + 92, fb.z - 48, {}),
-    score: -1, reach: 104,
+    lx: fb.x + 80, lz: fb.z + 80,
+    pad, far: maps.sample(fb.x + 80, fb.z + 80, {}),
+    cor: { near: 0, mid: 0, far: 0, wet: 0 },
+    score: -1, reach: 113,
   };
 }
 
 const gh = maps.height(pick.px, pick.pz);
 const farH = maps.height(pick.lx, pick.lz);
-f.camera.position.set(pick.px, gh + 7.6, pick.pz);
+f.camera.position.set(pick.px, gh + 6.4, pick.pz);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.8);
 const p = f.camera.position;
-p.y = maps.height(p.x, p.z) + 7.4;
-// aim at far tree-tops, not mid-crown: a downhill look at farH+16
-// puts the lens into a canopy carpet. Tops against sky let the new
-// metre-scale lobes read as a silhouette line.
-f.camera.lookAt(pick.lx, farH + 27.0, pick.lz);
+p.y = maps.height(p.x, p.z) + 6.2;
+// far tree-tops against sky. Do not lookAt the far ground.
+f.camera.lookAt(pick.lx, farH + 24.0, pick.lz);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 
@@ -118,8 +140,10 @@ return {
   reach: pick.reach,
   padSky: +(pick.pad.skyVis ?? 0).toFixed(2),
   padCan: +(pick.pad.canopy ?? 0).toFixed(2),
-  farCan: +(pick.far.canopy ?? 0).toFixed(2),
-  farSky: +(pick.far.skyVis ?? 0).toFixed(2),
+  nearCan: +(pick.cor.near ?? 0).toFixed(2),
+  midCan: +(pick.cor.mid ?? 0).toFixed(2),
+  farCan: +(pick.cor.far ?? 0).toFixed(2),
+  wet: pick.cor.wet ?? 0,
   camY: +(p.y - maps.height(p.x, p.z)).toFixed(2),
   rise: +(gh - farH).toFixed(1),
 };

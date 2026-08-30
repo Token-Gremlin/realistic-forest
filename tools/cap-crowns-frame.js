@@ -64,6 +64,42 @@ function clearNearFerns(f) {
   return dropped;
 }
 
+function stripShortTrees(f) {
+  const trees = f.forest.trees;
+  if (!trees) return 0;
+  const p = f.camera.position;
+  const fwd = p.clone();
+  f.camera.getWorldDirection(fwd);
+  let dropped = 0;
+  for (const v of trees.variants) {
+    const short = (v.height ?? 20) < 9;
+    for (let lod = 0; lod < 3; lod++) {
+      const bucket = v.buckets[lod];
+      const data = bucket.data;
+      let w = 0;
+      for (let i = 0; i < bucket.count; i++) {
+        const o = i * 12;
+        const dx = data[o] - p.x, dz = data[o + 2] - p.z;
+        const dist = Math.hypot(dx, dz);
+        const facing = (dx * fwd.x + dz * fwd.z) / (dist || 1);
+        const h = (v.height ?? 20) * data[o + 3];
+        if (facing > -0.05 && dist < 55 && (short || h < 8.5)) { dropped++; continue; }
+        if (w !== i) data.copyWithin(w * 12, o, o + 12);
+        w++;
+      }
+      bucket.count = w;
+      for (const d of v.draws) {
+        if (d.lod !== lod) continue;
+        d.geo.instanceCount = w;
+        d.buf.needsUpdate = true;
+        d.mesh.visible = w > 0;
+        if (d.shadow) d.shadow.visible = w > 0;
+      }
+    }
+  }
+  return dropped;
+}
+
 function stripNearLeaves(f) {
   const trees = f.forest.trees;
   if (!trees) return 0;
@@ -98,10 +134,12 @@ function stripNearLeaves(f) {
 
 catchUp(f);
 const plants = clearNearFerns(f);
+const shorts = stripShortTrees(f);
 const leaves = stripNearLeaves(f);
 
 return {
   plants,
+  shorts,
   leaves,
   trees: f.forest.trees?.stats.trees ?? 0,
   lod: f.forest.trees?.stats.lod ?? null,
