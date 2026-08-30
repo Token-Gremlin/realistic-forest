@@ -335,33 +335,27 @@ void main(){
   vec2 groundUv = uBolt.zw;
   float amp = uBoltAmp.x;
   float seed = uBoltAmp.y;
-  if(amp < 0.02 && uFlash.w > 0.08){
+  bool insane = cloudUv.x < -0.2 || cloudUv.x > 1.2 || cloudUv.y < -0.3 || cloudUv.y > 1.5;
+  if((amp < 0.02 || insane) && uFlash.w > 0.08){
     // fallback: the point flash already reaches every shader; drop a channel
-    // from that position if the JS publish missed this frame
+    // from that position if the JS publish missed this frame or went off-UV
     vec4 clip = uViewProj * vec4(uFlash.xyz, 1.0);
     vec2 cuv = clip.xy / max(abs(clip.w), 1.0e-4) * 0.5 + 0.5;
     cloudUv = cuv;
-    groundUv = vec2(cuv.x + 0.012, cuv.y - 1.35);
-    amp = max(uFlash.w, 1.15);
+    groundUv = vec2(cuv.x + 0.010, cuv.y - 1.35);
+    amp = max(max(amp, uFlash.w), 1.15);
     seed = 4.2;
   }
-  if(amp > 0.02){
+  if(amp > 0.02 && cloudUv.x > -0.15 && cloudUv.x < 1.15){
     float stroke = boltStroke(vUv, cloudUv, groundUv, seed);
     stroke = max(stroke, boltStroke(vUv, uBoltF0.xy, uBoltF0.zw, seed + 17.0) * 0.55);
     stroke = max(stroke, boltStroke(vUv, uBoltF1.xy, uBoltF1.zw, seed + 31.0) * 0.40);
-    // wide straight trunk so a 960-wide still cannot miss the channel
-    float ty = clamp((vUv.y - groundUv.y) / max(cloudUv.y - groundUv.y, 1.0e-4), 0.0, 1.0);
-    float xLine = mix(groundUv.x, cloudUv.x, ty);
-    float bar = 1.0 - smoothstep(0.010, 0.026, abs(vUv.x - xLine));
-    stroke = max(stroke, bar);
     vec2 cdp = (vUv - cloudUv) * vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
     float cloud = exp(-dot(cdp, cdp) * 70.0);
     vec3 core = vec3(0.97, 0.98, 1.0);
     vec3 envelope = vec3(0.28, 0.50, 0.96);
     float a = clamp(amp, 0.0, 2.4);
     mapped = max(mapped, core * stroke * min(a, 1.0) + envelope * (stroke * 0.45 + cloud * 0.55) * a);
-    // fail-visible: the branch ran if the top of the frame goes warm
-    if(vUv.y > 0.92) mapped = max(mapped, vec3(0.95, 0.25, 0.12));
   }
 
   oColor = vec4(clamp(mapped, 0.0, 1.0), 1.0);

@@ -388,9 +388,11 @@ export class Lightning {
       U.uBoltAmp.value.set(0, 0, 0, 0);
       return;
     }
-    camera.updateMatrixWorld(true);
+    // Use the frame's view-projection, not camera.project(). A late publish
+    // after shadows / scene renders has been seen to write UVs around (-2, 3).
+    const vp = U.uViewProj.value;
     const toUv = (src, dst) => {
-      dst.copy(src).project(camera);
+      dst.copy(src).applyMatrix4(vp);
       dst.x = dst.x * 0.5 + 0.5;
       dst.y = dst.y * 0.5 + 0.5;
       return dst;

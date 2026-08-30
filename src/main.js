@@ -294,6 +294,7 @@ async function start() {
       amp: +U.uBoltAmp.value.x.toFixed(3),
       flash: +U.uFlash.value.w.toFixed(3),
       bolt: U.uBolt.value.toArray().map((v) => +v.toFixed(3)),
+      cloud: forest.lightning?.cloud.toArray().map((v) => +v.toFixed(1)),
       held: !!forest.lightning?.held,
       active: !!forest.lightning?.active,
     };
