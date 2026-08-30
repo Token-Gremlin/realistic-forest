@@ -16,11 +16,11 @@ const s = maps.sample(PIN.x, PIN.z, {});
 const x = s.inside ? PIN.x : f.camera.position.x;
 const z = s.inside ? PIN.z : f.camera.position.z;
 const gh = maps.height(x, z);
-f.camera.position.set(x - 2.9, gh + 1.44, z + 2.2);
-f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.75);
+f.camera.position.set(x - 3.1, gh + 1.58, z + 2.4);
+f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.8);
 const p = f.camera.position;
-p.y = maps.height(p.x, p.z) + 1.40;
-f.camera.lookAt(x + 1.8, gh + 0.06, z - 0.7);
+p.y = maps.height(p.x, p.z) + 1.55;
+f.camera.lookAt(x + 1.6, gh + 0.04, z - 0.9);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 

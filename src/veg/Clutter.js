@@ -130,7 +130,7 @@ export class Clutter {
       case 'leafPatch':
         return { ...base, leaflets: 5, serration: 1.2, transmission: 0.18, windAmp: 0.004,
           alignGround: 1.0, litter: true,
-          leafA: [0.145, 0.088, 0.032], leafB: [0.088, 0.055, 0.026] };
+          leafA: [0.112, 0.068, 0.028], leafB: [0.068, 0.042, 0.020] };
       case 'herb':
         return { ...base, leaflets: 3, serration: 0.4, transmission: 0.82, windAmp: 0.028,
           leafA: [0.034, 0.078, 0.026], leafB: [0.072, 0.132, 0.042] };
