@@ -16,8 +16,6 @@ const VERT = /* glsl */ `
 precision highp float;
 precision highp int;
 
-uniform mat4 uViewProj;
-
 in vec3 position;
 in vec2 uv;   // x side -1..1, y signed brightness
 
@@ -314,7 +312,9 @@ export class Lightning {
       for (let i = 0; i < n; i++) {
         const o = i * 3;
         ndc.set(P[o], P[o + 1], P[o + 2]).project(camObj);
-        P[o] = ndc.x; P[o + 1] = ndc.y; P[o + 2] = ndc.z;
+        // far-plane clip: 75 m / 7000 m projects to z ~= 1 and SwiftShader
+        // drops the triangle. Park the channel in the middle of clip space.
+        P[o] = ndc.x; P[o + 1] = ndc.y; P[o + 2] = 0.0;
       }
     }
     this.geometry.setDrawRange(0, n);
