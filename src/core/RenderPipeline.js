@@ -507,6 +507,9 @@ export class RenderPipeline {
     w.drawForward(camera, this.hdr.texture, this.depthRT.texture);
 
     /* ---------------------------------------------------------------- TAA */
+    // Stash the cut flag. TAA used to clear _cutTemporal here, then
+    // composite would smear the still with full motion blur.
+    const cut = this._cutTemporal;
     let lit = this.hdr.texture;
     if (s.taa) {
       const tu = this.taaPass.material.uniforms;
@@ -515,7 +518,6 @@ export class RenderPipeline {
       tu.uBlend.value = 0.90;
       this.taaPass.render(r, this.taaRT[0]);
       tu.uFirst.value = 0;
-      this._cutTemporal = false;
       lit = this.taaRT[0].texture;
       const t = this.taaRT[0]; this.taaRT[0] = this.taaRT[1]; this.taaRT[1] = t;
       lit = this.taaRT[1].texture;
@@ -584,7 +586,9 @@ export class RenderPipeline {
     cu.uGrade2.value.set(s.saturation, s.punch, s.chroma, s.sharpen);
     cu.uDofParams.value.set(this.dof.focus, this.dof.aperture, this.dof.maxCoc,
       (this.dof.enabled && s.dof) ? 1 : 0);
-    cu.uMotionBlur.value = s.motionBlur;
+    // a camera cut has huge g-buffer velocity; smearing it turns the still
+    // into radial streaks. TAA already ignores history on the cut.
+    cu.uMotionBlur.value = cut ? 0 : s.motionBlur;
     r.setRenderTarget(null);
     r.setViewport(0, 0, r.domElement.width, r.domElement.height);
     if (this.debugMode > 0) this._renderDebug();

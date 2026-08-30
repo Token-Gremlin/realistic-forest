@@ -7,6 +7,7 @@ f.state.autoQuality = false;
 f.state.exposureAuto = false;
 f.pipeline.settings.exposure = 1.02;
 f.pipeline.settings.aerial = 0.52;
+f.pipeline.settings.motionBlur = 0;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
