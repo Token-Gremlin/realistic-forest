@@ -8,27 +8,23 @@ f.state.exposureAuto = false;
 f.pipeline.settings.exposure = 1.02;
 f.pipeline.settings.aerial = 0.52;
 f.pipeline.settings.motionBlur = 0;
+f.pipeline.settings.chroma = 0;
+f.pipeline.settings.sharpen = 0.10;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
 const c = f.camera.position;
-let best = null, bestS = -1e9;
-for (let i = 0; i < 260; i++) {
-  const a = Math.random() * Math.PI * 2;
-  const r = 12 + Math.random() * 150;
-  const x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
-  const s = maps.sample(x, z, {});
-  if (!s.inside) continue;
-  const wd = s.waterDepth;
-  if (wd < 0.06 || wd > 0.85) continue;
-  const score = (wd < 0.38 ? 10 : 3) + s.moisture * 1.1 + s.slope * 0.4 - s.canopy * 0.4;
-  if (score > bestS) { bestS = score; best = { x, z, s }; }
+const scratch = c.clone();
+
+function ndcOf(x, y, z) {
+  scratch.set(x, y, z).project(f.camera);
+  return scratch;
 }
 
 function walkStream(sx, sz) {
   const pts = [];
   let cx = sx, cz = sz;
-  for (let step = 0; step < 14; step++) {
+  for (let step = 0; step < 16; step++) {
     let next = null, ns = -1e9;
     for (let k = 0; k < 16; k++) {
       const a = k * 0.393;
@@ -61,7 +57,7 @@ function findBank(wx, wz) {
       if (!ns.inside) continue;
       const h = maps.height(nx, nz);
       const dry = ns.waterDepth < 0.015 ? 10 : 0;
-      const score = dry + (h - h0) * 2.4 - ns.waterDepth * 4;
+      const score = dry + (h - h0) * 2.4 - ns.waterDepth * 4 + ns.skyVis * 0.8;
       if (score > ps) { ps = score; pick = { x: nx, z: nz, s: ns }; }
     }
     if (!pick) break;
@@ -71,28 +67,95 @@ function findBank(wx, wz) {
   return { x, z, s };
 }
 
-const origin = best ?? { x: c.x, z: c.z, s: maps.sample(c.x, c.z, {}) };
-const run = walkStream(origin.x, origin.z);
-const mid = run[Math.max(0, (run.length >> 1) - 1)] ?? origin;
-const look = run[Math.min(run.length - 1, Math.max(2, run.length - 3))] ?? mid;
-const bank = findBank(mid.x, mid.z);
+function place(bank, look, pull, rise) {
+  const vx = look.x - bank.x, vz = look.z - bank.z;
+  const vl = Math.hypot(vx, vz) || 1;
+  const gh = maps.height(bank.x, bank.z);
+  const camX = bank.x - (vx / vl) * pull;
+  const camZ = bank.z - (vz / vl) * pull;
+  f.camera.position.set(camX, Math.max(gh + rise, maps.height(camX, camZ) + rise * 0.88), camZ);
+  f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.6);
+  const p = f.camera.position;
+  p.y = Math.max(p.y, maps.height(p.x, p.z) + rise * 0.86);
+  const lookH = maps.height(look.x, look.z);
+  const lookW = Math.max(0, look.s?.waterDepth ?? 0);
+  f.camera.lookAt(look.x, lookH + lookW * 0.10, look.z);
+  f.camera.updateMatrixWorld(true);
+  f.camera.updateProjectionMatrix();
+}
 
-const gh = maps.height(bank.x, bank.z);
-const lookH = maps.height(look.x, look.z);
-const lookW = Math.max(0, look.s?.waterDepth ?? mid.s?.waterDepth ?? 0);
-const vx = look.x - bank.x, vz = look.z - bank.z;
-const vl = Math.hypot(vx, vz) || 1;
+function scoreShot(run) {
+  let inFrame = 0, waterY = 0;
+  for (const pt of run) {
+    const wd = Math.max(0, pt.s.waterDepth);
+    const y = maps.height(pt.x, pt.z) + wd * 0.08;
+    const v = ndcOf(pt.x, y, pt.z);
+    if (Math.abs(v.x) < 0.80 && v.y > -0.58 && v.y < 0.38 && v.z > 0 && v.z < 1) {
+      inFrame++;
+      waterY += v.y;
+    }
+  }
+  if (inFrame < 3) return -1e9;
+  const p = f.camera.position;
+  const look = run[Math.min(run.length - 1, Math.max(2, (run.length * 2 / 3) | 0))] ?? run[0];
+  let canopy = 0, n = 0;
+  for (let t = 0.12; t < 0.88; t += 0.08) {
+    const x = p.x + (look.x - p.x) * t;
+    const z = p.z + (look.z - p.z) * t;
+    canopy += maps.canopy(x, z);
+    n++;
+  }
+  const avgY = waterY / inFrame;
+  return inFrame * 9 - Math.abs(avgY + 0.08) * 7 - (canopy / n) * 11 + maps.skyVis(p.x, p.z) * 2;
+}
 
-f.camera.position.set(
-  bank.x - (vx / vl) * 2.4,
-  gh + 4.25,
-  bank.z - (vz / vl) * 2.4,
-);
-f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.9);
-const p = f.camera.position;
-p.y = Math.max(p.y, maps.height(p.x, p.z) + 3.8);
-f.camera.lookAt(look.x, lookH + lookW * 0.10, look.z);
-f.camera.updateMatrixWorld(true);
+const origins = [];
+for (let i = 0; i < 90; i++) {
+  const a = i * 2.399963;
+  const r = 16 + (i % 14) * 13;
+  const x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
+  const s = maps.sample(x, z, {});
+  if (!s.inside) continue;
+  const wd = s.waterDepth;
+  if (wd < 0.08 || wd > 0.95) continue;
+  origins.push({
+    x, z, s,
+    rank: (wd < 0.42 ? 10 : 4) + s.moisture * 1.1 + s.skyVis * 0.7 - s.canopy * 0.5,
+  });
+}
+origins.sort((a, b) => b.rank - a.rank);
+
+let best = null, bestS = -1e9;
+const pulls = [7.6, 9.4, 6.2];
+const rises = [7.2, 8.4, 6.0];
+for (const origin of origins.slice(0, 14)) {
+  const run = walkStream(origin.x, origin.z);
+  if (run.length < 4) continue;
+  const mid = run[Math.max(0, (run.length >> 1) - 1)] ?? origin;
+  const look = run[Math.min(run.length - 1, Math.max(3, (run.length * 2 / 3) | 0))] ?? mid;
+  const bank = findBank(mid.x, mid.z);
+  if (bank.s.waterDepth > 0.02) continue;
+  for (const pull of pulls) {
+    for (const rise of rises) {
+      place(bank, look, pull, rise);
+      const sc = scoreShot(run);
+      if (sc > bestS) {
+        bestS = sc;
+        best = { origin, run, mid, look, bank, pull, rise };
+      }
+    }
+  }
+}
+
+if (!best) {
+  const origin = origins[0] ?? { x: c.x, z: c.z, s: maps.sample(c.x, c.z, {}) };
+  const run = walkStream(origin.x, origin.z);
+  const mid = run[Math.max(0, (run.length >> 1) - 1)] ?? origin;
+  const look = run[Math.min(run.length - 1, Math.max(2, run.length - 3))] ?? mid;
+  best = { origin, run, mid, look, bank: findBank(mid.x, mid.z), pull: 8.0, rise: 7.2 };
+}
+
+place(best.bank, best.look, best.pull, best.rise);
 
 if (f.forest.falling) {
   f.forest.falling.suppressed = true;
@@ -101,22 +164,38 @@ if (f.forest.falling) {
 if (f.forest.debris) f.forest.debris.suppressed = true;
 f.state.running = false;
 
-function ndc(x, y, z) {
-  const v = p.clone().set(x, y, z);
-  v.project(f.camera);
+const p = f.camera.position;
+const lookH = maps.height(best.look.x, best.look.z);
+const lookW = Math.max(0, best.look.s?.waterDepth ?? 0);
+const midH = maps.height(best.mid.x, best.mid.z);
+const midW = Math.max(0, best.mid.s?.waterDepth ?? 0);
+function pack(x, y, z) {
+  const v = ndcOf(x, y, z);
   return [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)];
+}
+
+let inFrame = 0;
+for (const pt of best.run) {
+  const wd = Math.max(0, pt.s.waterDepth);
+  const v = ndcOf(pt.x, maps.height(pt.x, pt.z) + wd * 0.08, pt.z);
+  if (Math.abs(v.x) < 0.80 && v.y > -0.58 && v.y < 0.38 && v.z > 0 && v.z < 1) inFrame++;
 }
 
 return {
   act: f.weather.actName,
   dayT: +f.weather.state.dayT.toFixed(3),
-  water: +(origin.s?.waterDepth ?? 0).toFixed(2),
-  midWater: +(mid.s?.waterDepth ?? 0).toFixed(2),
-  lookWater: +(look.s?.waterDepth ?? 0).toFixed(2),
-  bank: +(bank.s?.waterDepth ?? 0).toFixed(2),
-  run: run.length,
+  water: +(best.origin.s?.waterDepth ?? 0).toFixed(2),
+  midWater: +(best.mid.s?.waterDepth ?? 0).toFixed(2),
+  lookWater: +(best.look.s?.waterDepth ?? 0).toFixed(2),
+  bank: +(best.bank.s?.waterDepth ?? 0).toFixed(2),
+  run: best.run.length,
+  inFrame,
+  score: +bestS.toFixed(2),
+  pull: best.pull,
+  rise: best.rise,
   camY: +p.y.toFixed(1),
-  groundY: +gh.toFixed(1),
-  lookNdc: ndc(look.x, lookH + lookW * 0.12, look.z),
-  midNdc: ndc(mid.x, maps.height(mid.x, mid.z) + Math.max(0, mid.s?.waterDepth ?? 0), mid.z),
+  groundY: +maps.height(best.bank.x, best.bank.z).toFixed(1),
+  lookNdc: pack(best.look.x, lookH + lookW * 0.12, best.look.z),
+  midNdc: pack(best.mid.x, midH + midW, best.mid.z),
+  motionBlur: f.pipeline.settings.motionBlur,
 };

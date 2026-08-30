@@ -36,6 +36,42 @@ function clutterCounts(f) {
 
 catchUp(f);
 
+// a 1 m fern two metres in front of a 42° lens eats the water. Drop tall
+// plants in the near look cone; keep sedge, rock and litter on the bank.
+(function clearNearPlants(f) {
+  const clutter = f.forest.clutter;
+  if (!clutter) return;
+  const cam = f.camera.position;
+  const fwd = cam.clone();
+  f.camera.getWorldDirection(fwd);
+  const hide = new Set(['fern', 'bush', 'bramble', 'vine']);
+  for (const k of clutter.kinds) {
+    if (!hide.has(k.arch.key)) continue;
+    const reach = k.arch.key === 'vine' ? 14 : 4.6;
+    for (const v of k.variants) {
+      const d = v.bucket.data;
+      let w = 0;
+      for (let i = 0; i < v.bucket.count; i++) {
+        const o = i * 12;
+        const dx = d[o] - cam.x, dy = d[o + 1] - cam.y, dz = d[o + 2] - cam.z;
+        const dist = Math.hypot(dx, dy, dz);
+        const nd = dist || 1;
+        const facing = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / nd;
+        if (dist < reach && facing > 0.12) continue;
+        if (w !== i) d.copyWithin(w * 12, o, o + 12);
+        w++;
+      }
+      if (w !== v.bucket.count) {
+        v.bucket.count = w;
+        v.geo.instanceCount = w;
+        v.buf.needsUpdate = true;
+        v.mesh.visible = w > 0;
+        v.shadowMesh.visible = w > 0;
+      }
+    }
+  }
+})(f);
+
 return {
   fallen: f.forest.trees?.stats.fallen ?? 0,
   debris: f.forest.debris?.stats.debris ?? 0,
