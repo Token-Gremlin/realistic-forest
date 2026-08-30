@@ -16,6 +16,8 @@ const VERT = /* glsl */ `
 precision highp float;
 precision highp int;
 
+uniform mat4 uViewProj;
+
 in vec3 position;
 in vec2 uv;   // x side -1..1, y signed brightness
 
@@ -27,8 +29,9 @@ void main(){
   vSide = uv.x;
   vBright = max(abs(uv.y), 0.2);
   vGlow = 1.0 - step(0.0, uv.y);
-  // position is already NDC — same path as the clip-space canary that drew
-  gl_Position = vec4(position, 1.0);
+  vec4 clip = uViewProj * vec4(position, 1.0);
+  // 70 m / 7000 m far-plane projects to NDC z ~= 1; SwiftShader clips that
+  gl_Position = vec4(clip.xy / max(clip.w, 1.0e-4), 0.0, 1.0);
 }
 `;
 
@@ -45,7 +48,16 @@ in float vGlow;
 layout(location = 0) out vec4 oColor;
 
 void main(){
-  oColor = vec4(40.0, 12.0, 2.0, 1.0);
+  if(uAmp < 0.0008 || vBright < 0.001) discard;
+
+  float ax = abs(vSide);
+  float core = exp(-ax * ax * 9.0);
+  float halo = exp(-ax * ax * 1.35);
+  float mask = vGlow > 0.5 ? halo * 0.78 : (core * 1.65 + halo * 0.38);
+  if(mask < 0.012) discard;
+
+  vec3 col = mix(vec3(1.55, 1.62, 1.85), uFlashColor, 0.14 + vGlow * 0.42);
+  oColor = vec4(col * uAmp * vBright * mask * 28.0, 0.0);
 }
 `;
 
@@ -94,7 +106,7 @@ export class Lightning {
     this.geometry = g;
 
     this.uniforms = {
-      ...Env.pick('uFlashColor'),
+      ...Env.pick('uViewProj', 'uFlashColor'),
       uAmp: { value: 0 },
     };
     this._camera = null;
@@ -117,7 +129,10 @@ export class Lightning {
       transparent: true,
       depthTest: false,
       depthWrite: false,
-      blending: THREE.NoBlending,
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.OneFactor,
+      blendDst: THREE.OneFactor,
     });
 
     this.mesh = new THREE.Mesh(this.geometry, this.material);
@@ -296,37 +311,6 @@ export class Lightning {
     for (const s of this._segs) {
       ribbon(s.a, s.b, Math.max(s.width * 0.40, 1.4), s.bright);
       ribbon(s.a, s.b, Math.max(s.width * 2.8, 4.2), -(s.bright * 0.48));
-    }
-    if (camObj) {
-      const ndc = this._ndc;
-      camObj.updateMatrixWorld(true);
-      for (let i = 0; i < n; i++) {
-        const o = i * 3;
-        ndc.set(P[o], P[o + 1], P[o + 2]).project(camObj);
-        // far-plane clip: 75 m / 7000 m projects to z ~= 1 and SwiftShader
-        // drops the triangle. Park the channel in the middle of clip space.
-        P[o] = ndc.x; P[o + 1] = ndc.y; P[o + 2] = 0.0;
-      }
-      // hero stroke: a fat NDC ribbon from cloud to mid so the still cannot miss
-      if (n + 6 <= P.length / 3) {
-        const a = ndc.copy(this.cloud).project(camObj);
-        const ax = a.x, ay = a.y;
-        const b = ndc.copy(this.cloud).lerp(this.ground, 0.55).project(camObj);
-        const bx = b.x, by = b.y;
-        const dx = bx - ax, dy = by - ay;
-        const len = Math.hypot(dx, dy) || 1;
-        const sx = -dy / len * 0.07, sy = dx / len * 0.07;
-        const pts = [
-          ax - sx, ay - sy, ax + sx, ay + sy, bx - sx, by - sy,
-          bx - sx, by - sy, ax + sx, ay + sy, bx + sx, by + sy,
-        ];
-        for (let k = 0; k < 6; k++) {
-          const o = n * 3, m = n * 2;
-          P[o] = pts[k * 2]; P[o + 1] = pts[k * 2 + 1]; P[o + 2] = 0;
-          M[m] = 0; M[m + 1] = 1;
-          n++;
-        }
-      }
     }
     this.geometry.setDrawRange(0, n);
     this.bufPos.needsUpdate = true;
