@@ -217,6 +217,7 @@ uniform vec4 uFire;
 uniform vec4 uLeafHold;
 uniform vec4 uInsectHold;
 uniform vec4 uBirdHold;
+uniform vec4 uSmokeHold;
 uniform vec3 uSunColor;
 uniform vec3 uWind;
 uniform mat4 uViewProj;
@@ -322,6 +323,26 @@ float birdV(vec2 uv, vec2 c, float ang, float sz, float flap){
   float wing = (1.0 - smoothstep(0.06, 0.62, t)) * exp(-wingY * wingY * 48.0);
   wing *= step(0.05, t);
   return clamp(max(body, wing), 0.0, 1.0);
+}
+
+/**
+ * Display-space smoke wisp. World cards are soft discs and AgX grades
+ * them into grey fog; a few hard rising ribbons above the projected
+ * fire keep a column readable at 528 px without becoming orbs.
+ */
+float smokeWisp(vec2 uv, vec2 root, float seed, float tall){
+  vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+  float lean = (hash11(seed) - 0.5) * 0.55;
+  vec2 d = (uv - root) * aspect;
+  d.x -= lean * d.y;
+  float t = clamp(d.y / max(tall, 1.0e-4), 0.0, 1.0);
+  float jog = 0.018 * sin(t * 6.2 + seed * 9.0)
+            + 0.010 * sin(t * 13.0 - seed * 4.0);
+  float halfW = mix(0.034, 0.011, t) * (0.75 + 0.45 * hash11(seed + 3.0));
+  float body = 1.0 - smoothstep(halfW * 0.28, halfW, abs(d.x - jog));
+  body *= 1.0 - smoothstep(0.82, 1.0, t);
+  body *= smoothstep(-0.04, 0.03, d.y);
+  return pow(clamp(body, 0.0, 1.0), 1.08);
 }
 
 float rainStreak(vec2 uv, vec2 a, vec2 b, float halfW){
@@ -461,6 +482,28 @@ void main(){
         vec3 glow = vec3(0.50, 0.10, 0.01);
         mapped = max(mapped, mix(cool, hot, tongues) * tongues);
         mapped += glow * tongues * 0.40 * uFire.w;
+      }
+    }
+  }
+
+  if(uSmokeHold.w > 0.05 && uFire.w > 0.05){
+    vec4 sclip = uViewProj * vec4(uSmokeHold.xyz, 1.0);
+    if(sclip.w > 0.10){
+      vec2 suv = sclip.xy / sclip.w * 0.5 + 0.5;
+      if(suv.x > -0.08 && suv.x < 1.08 && suv.y > -0.20 && suv.y < 1.08){
+        float wisps = 0.0;
+        for(int i = 0; i < 5; i++){
+          float sd = 21.0 + float(i) * 13.7;
+          vec2 root = suv + vec2((hash11(sd) - 0.5) * 0.070, (hash11(sd + 2.0) - 0.5) * 0.020);
+          float tall = mix(0.22, 0.42, hash11(sd + 5.0));
+          wisps = max(wisps, smokeWisp(vUv, root, sd, tall) * mix(0.55, 1.0, hash11(sd + 8.0)));
+        }
+        float sceneZ = texture(uDepthTex, clamp(vUv, 0.0, 1.0)).r;
+        if(sceneZ > 0.18){
+          vec3 ash = vec3(0.10, 0.085, 0.070);
+          vec3 warm = vec3(0.18, 0.11, 0.06);
+          mapped = mix(mapped, mix(ash, warm, wisps * 0.35), wisps * 0.72);
+        }
       }
     }
   }

@@ -348,12 +348,14 @@ void main(){
   float sceneZ = texture(uSceneDepth, uv).r;
   if(gl_FragCoord.z > sceneZ + 3.0e-4) discard;
   float d = length(vUv);
-  float mask = 1.0 - smoothstep(0.35, 1.0, d);
-  if(mask < 0.04) discard;
-  vec3 col = mix(vec3(0.10, 0.08, 0.07), vec3(0.28, 0.24, 0.20), vAge);
-  col *= 0.45 + uSkyAmbient * 0.8 + uSunColor * 0.08;
-  col += uFireColor * uFire.w * 0.12 * (1.0 - vAge);
-  float a = mask * vAlpha * 0.75;
+  float ang = atan(vUv.y, vUv.x);
+  float wob = 1.0 + 0.22 * sin(ang * 3.0 + vAge * 9.0) + 0.10 * sin(ang * 7.0);
+  float mask = 1.0 - smoothstep(0.42 * wob, 0.92 * wob, d);
+  if(mask < 0.08) discard;
+  vec3 col = mix(vec3(0.08, 0.065, 0.055), vec3(0.22, 0.18, 0.15), vAge);
+  col *= 0.50 + uSkyAmbient * 0.7 + uSunColor * 0.06;
+  col += uFireColor * uFire.w * 0.10 * (1.0 - vAge);
+  float a = mask * vAlpha * 0.82;
   oColor = vec4(col * a, a);
 }
 `;
@@ -384,6 +386,7 @@ export class Fire {
     this.strength = 0;
     this.age = 0;
     this.held = false;
+    this.holdSmoke = false;
 
     this.flames = layer(
       forest,
@@ -443,17 +446,24 @@ export class Fire {
     }
 
     U.uFire.value.set(this.origin.x, this.origin.y + 0.8, this.origin.z, this.strength);
+    if (this.holdSmoke && this.strength > 0.04) {
+      U.uSmokeHold.value.set(this.origin.x, this.origin.y + 1.15, this.origin.z, 1);
+    } else {
+      U.uSmokeHold.value.set(0, 0, 0, 0);
+    }
     const on = this.strength > 0.04;
     this.flames.mesh.visible = on;
     this.embers.mesh.visible = on;
-    this.smoke.mesh.visible = on;
+    // held stills finish smoke in the grade pass after AgX
+    this.smoke.mesh.visible = on && !this.holdSmoke;
     const k = THREE.MathUtils.smoothstep(this.strength, 0.04, 0.95);
     this.flames.geo.instanceCount = on ? Math.max(1, Math.floor(this.flames.count * k)) : 0;
     this.embers.geo.instanceCount = on ? Math.max(1, Math.floor(this.embers.count * k)) : 0;
-    this.smoke.geo.instanceCount = on ? Math.max(1, Math.floor(this.smoke.count * k)) : 0;
+    this.smoke.geo.instanceCount = (on && !this.holdSmoke)
+      ? Math.max(1, Math.floor(this.smoke.count * k)) : 0;
     this.stats.flames = this.flames.geo.instanceCount;
     this.stats.embers = this.embers.geo.instanceCount;
-    this.stats.smoke = this.smoke.geo.instanceCount;
+    this.stats.smoke = this.holdSmoke ? 5 : this.smoke.geo.instanceCount;
     this.stats.strength = this.strength;
   }
 

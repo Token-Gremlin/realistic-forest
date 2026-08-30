@@ -40,6 +40,8 @@ export const Env = {
     // held insect swarm / distant flock: xyz world, w = 1 when grabbed
     uInsectHold: { value: new THREE.Vector4(0, 0, 0, 0) },
     uBirdHold: { value: new THREE.Vector4(0, 0, 0, 0) },
+    // held smoke column: xyz fire origin, w = 1 when a still has grabbed it
+    uSmokeHold: { value: new THREE.Vector4(0, 0, 0, 0) },
 
     // --- wind (consumed by GLSL_WIND)
     uWind: { value: new THREE.Vector4(0.86, 0.51, 1.6, 0.35) },
