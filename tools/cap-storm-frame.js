@@ -207,8 +207,8 @@ function clearNearPlants(f, stem, fx, fz) {
           onLog = along > -3.2 && along < H + 3 && Math.abs(across) < 4.4;
         }
         const eat = onLog
-          || (dist < 7.5 && facing > -0.28)
-          || (dist < 20 && facing > 0.04);
+          || (dist < 12 && facing > -0.08)
+          || (dist < 22 && facing > 0.10);
         if (eat) { dropped++; continue; }
         if (w !== i) d.copyWithin(w * 12, o, o + 12);
         w++;
@@ -262,9 +262,12 @@ function clearLogBandPlants(f) {
       let w = 0;
       for (let i = 0; i < v.bucket.count; i++) {
         const o = i * 12;
-        scratch.set(d[o], d[o + 1] + 0.55, d[o + 2]).project(f.camera);
-        const onLog = Math.abs(scratch.x) < 0.86 && scratch.y > -0.20 && scratch.y < 0.16
-          && scratch.z > 0 && scratch.z < 1;
+        let onLog = false;
+        for (const lift of [0.25, 0.85, 1.45]) {
+          scratch.set(d[o], d[o + 1] + lift, d[o + 2]).project(f.camera);
+          if (Math.abs(scratch.x) < 0.88 && scratch.y > -0.28 && scratch.y < 0.22
+            && scratch.z > 0 && scratch.z < 1) { onLog = true; break; }
+        }
         if (onLog) { dropped++; continue; }
         if (w !== i) d.copyWithin(w * 12, o, o + 12);
         w++;
@@ -283,10 +286,8 @@ function hideNearGrass(f) {
   const grass = f.forest.grass;
   if (!grass) return;
   for (const r of grass.rings) {
-    if (r.lod === 0) {
-      r.mesh.visible = false;
-      r.shadowMesh.visible = false;
-    }
+    r.mesh.visible = false;
+    r.shadowMesh.visible = false;
   }
 }
 
