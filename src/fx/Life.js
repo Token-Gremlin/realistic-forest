@@ -470,8 +470,8 @@ void main(){
     if(length(rt) < 0.08) rt = cross(look, vec3(1.0, 0.0, 0.0));
     rt = normalize(rt);
     vec3 up = normalize(cross(rt, look));
-    float along = mix(3.4, 9.2, h3.x);
-    p = uCamPos + look * along + rt * (h3.z - 0.5) * 2.8 + up * (h3.y - 0.42) * 2.2;
+    float along = mix(2.4, 6.4, h3.x);
+    p = uCamPos + look * along + rt * (h3.z - 0.5) * 2.2 + up * (h3.y - 0.18) * 1.6;
   } else {
     p.x = origin.x + (fract(h3.x + 0.5 + adv.x / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
     p.z = origin.z + (fract(h3.z + 0.5 + adv.y / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
@@ -502,7 +502,7 @@ void main(){
   vec3 r2 = -side * sn + fwd * cs;
 
   float len = mix(0.10, 0.22, h.z);
-  if(uHold >= 0.0) len *= 2.15;
+  if(uHold >= 0.0) len *= 3.4;
   float wid = len * 0.62;
   float minW = 1.8 / max(uProjScaleY / max(dist, 1.0), 1.0);
   wid = max(wid, minW);
@@ -527,6 +527,7 @@ uniform vec2 uResolution;
 uniform vec3 uSunColor;
 uniform vec3 uSkyAmbient;
 uniform float uSeason;
+uniform float uHold;
 
 in vec2 vUv;
 in float vAlpha;
@@ -537,7 +538,8 @@ void main(){
   if(vAlpha < 0.02) discard;
   vec2 uv = gl_FragCoord.xy / uResolution;
   float sceneZ = texture(uSceneDepth, uv).r;
-  if(gl_FragCoord.z > sceneZ + 3.0e-4) discard;
+  // held cards sit on the look ray; do not let a trunk eat them
+  if(uHold < 0.0 && gl_FragCoord.z > sceneZ + 3.0e-4) discard;
   vec2 q = vUv;
   q.y *= 1.3;
   float leaf = 1.0 - smoothstep(0.38, 1.0, length(q));
@@ -547,8 +549,9 @@ void main(){
   vec3 green = vec3(0.16, 0.28, 0.07);
   vec3 autumn = mix(vec3(0.42, 0.22, 0.05), vec3(0.55, 0.14, 0.04), fract(vAge * 3.3));
   vec3 col = mix(green, autumn, clamp(uSeason * 1.2 + fract(vAge * 5.0) * 0.25, 0.0, 1.0));
-  col *= 0.5 + uSkyAmbient * 0.7 + uSunColor * 0.15;
-  float a = mask * vAlpha * 0.92;
+  col *= 0.62 + uSkyAmbient * 0.7 + uSunColor * 0.28;
+  if(uHold >= 0.0) col *= 1.35;
+  float a = mask * vAlpha * (uHold >= 0.0 ? 1.15 : 0.92);
   oColor = vec4(col * a, a);
 }
 `;

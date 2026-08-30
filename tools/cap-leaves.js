@@ -20,17 +20,19 @@ for (let i = 0; i < 140; i++) {
   const s = maps.sample(x, z, {});
   if (!s.inside) continue;
   if (s.waterDepth > 0.02) continue;
-  const score = s.skyVis * 2.4 + (1 - s.canopy) * 1.1 + s.litter * 0.4
-    - s.slope * 1.2 - s.rock * 0.4;
+  // want a forest edge: some canopy, some sky, not a bare meadow
+  const gap = 1 - Math.abs(s.canopy - 0.45) * 1.6;
+  const score = s.skyVis * 1.2 + gap * 2.2 + s.litter * 0.3
+    - s.slope * 1.0 - s.rock * 0.3 - (s.canopy < 0.12 ? 3 : 0);
   if (score > bestS) { bestS = score; best = { x, z, s }; }
 }
 const x = best?.x ?? c.x, z = best?.z ?? c.z;
 const gh = maps.height(x, z);
-f.camera.position.set(x - 3.8, gh + 2.35, z + 4.2);
-f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.2);
+f.camera.position.set(x - 5.2, gh + 3.55, z + 5.4);
+f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.4);
 const p = f.camera.position;
-p.y = maps.height(p.x, p.z) + 2.25;
-f.camera.lookAt(x + 2.4, gh + 1.15, z - 1.6);
+p.y = maps.height(p.x, p.z) + 3.45;
+f.camera.lookAt(x + 3.2, gh + 3.8, z - 2.0);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 
@@ -42,7 +44,11 @@ if (f.forest.debris) f.forest.debris.suppressed = true;
 if (f.forest.life) {
   f.forest.life.leavesSuppressed = false;
   f.forest.life.holdLeaves = 0.38;
+  if (f.forest.life.leaves?.uniforms?.uSeason) {
+    f.forest.life.leaves.uniforms.uSeason.value = 0.78;
+  }
 }
+f.forest.trees?.setSeason?.(0.78);
 f.state.running = false;
 
 return {
