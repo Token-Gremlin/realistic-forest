@@ -287,9 +287,16 @@ async function start() {
     U.uInvViewProj.value.copy(U.uViewProj.value).invert();
     U.uProjScaleY.value = camera.projectionMatrix.elements[5] * pipeline.height * 0.5;
     if (weather.holdFlash) weather.update(0, camera.position);
-    forest.lightning?.update?.(0, camera);
-    // do not republish the bolt after pipeline.render — scene draws leave
-    // the camera in a state where project() writes off-screen UVs
+    if (forest.lightning?.held) {
+      // keep the UVs the capture script published — updateProjectionMatrix
+      // plus a second project() has been seen to rewrite them to (-2, 3)
+      if (U.uFlash.value.w < 0.8) U.uFlash.value.w = 1.6;
+      forest.lightning.uniforms.uAmp.value = Math.max(U.uFlash.value.w, 1.6);
+      forest.lightning.mesh.visible = true;
+      forest.lightning.active = true;
+    } else {
+      forest.lightning?.update?.(0, camera);
+    }
     pipeline.resetTemporal();
     pipeline.render(camera, { nightAmount: weather.nightAmount });
     window.__boltAfter = {
