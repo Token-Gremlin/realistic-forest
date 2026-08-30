@@ -21,7 +21,7 @@ export const ACTS = [
   { name: 'dawn mist',        dur: 46, dayT: 0.235, cover: 0.30, storm: 0, rain: 0,    wind: 0.9, turb: 0.20, fog: 0.0062, mist: 0.68, cirrus: 0.35 },
   { name: 'first light',      dur: 40, dayT: 0.275, cover: 0.34, storm: 0, rain: 0,    wind: 1.5, turb: 0.22, fog: 0.0044, mist: 0.50, cirrus: 0.40 },
   { name: 'morning shafts',   dur: 44, dayT: 0.335, cover: 0.40, storm: 0, rain: 0,    wind: 2.2, turb: 0.28, fog: 0.0034, mist: 0.30, cirrus: 0.30 },
-  { name: 'high sun',         dur: 40, dayT: 0.470, cover: 0.30, storm: 0, rain: 0,    wind: 3.4, turb: 0.34, fog: 0.0021, mist: 0.12, cirrus: 0.22 },
+  { name: 'high sun',         dur: 40, dayT: 0.485, cover: 0.14, storm: 0, rain: 0,    wind: 2.2, turb: 0.22, fog: 0.0010, mist: 0.03, cirrus: 0.16 },
   { name: 'wind rising',      dur: 34, dayT: 0.530, cover: 0.55, storm: 0.15, rain: 0, wind: 7.0, turb: 0.52, fog: 0.0027, mist: 0.15, cirrus: 0.30 },
   { name: 'front arriving',   dur: 32, dayT: 0.565, cover: 0.82, storm: 0.45, rain: 0.10, wind: 11.0, turb: 0.68, fog: 0.0044, mist: 0.24, cirrus: 0.15 },
   { name: 'downpour',         dur: 42, dayT: 0.600, cover: 0.97, storm: 0.85, rain: 0.85, wind: 15.0, turb: 0.85, fog: 0.0082, mist: 0.40, cirrus: 0.0 },
@@ -36,7 +36,8 @@ export class Weather {
   constructor() {
     this.actIndex = 0;
     this.actTime = 0;
-    this.timelineEnabled = true;
+    // Fair weather stays put until the player asks for rain or night.
+    this.timelineEnabled = false;
     this.timeScale = 1;
 
     this.state = {
@@ -193,7 +194,7 @@ export class Weather {
 
     const T = Sky.sunTransmittance(sunDir, 2);
     const above = clamp01((sunDir.y + 0.045) / 0.14);
-    const sunScale = 2.72 * above * lerp(1, 0.34, clamp01(s.cover * 0.9));
+    const sunScale = 3.85 * above * lerp(1, 0.52, clamp01(s.cover * 0.85));
     U.uSunColor.value.set(T[0] * sunScale, T[1] * sunScale, T[2] * sunScale);
 
     // moon opposes the sun with a tilt; phase from the timeline
@@ -208,9 +209,9 @@ export class Weather {
     U.uMoonColor.value.set(mT[0] * moonScale * 0.86, mT[1] * moonScale * 0.92, mT[2] * moonScale * 1.12);
     // cinematic night fill: cool ambient so interiors are readable, not a void
     U.uSkyAmbient.value.set(
-      lerp(0.11, 0.016, this.nightAmount),
-      lerp(0.145, 0.028, this.nightAmount),
-      lerp(0.20, 0.055, this.nightAmount),
+      lerp(0.20, 0.018, this.nightAmount),
+      lerp(0.26, 0.030, this.nightAmount),
+      lerp(0.34, 0.058, this.nightAmount),
     );
     // a late-day autumn hint so leaves turn and drop without a calendar
     const autumn = smooth(clamp01((s.dayT - 0.68) / 0.08))
@@ -218,7 +219,7 @@ export class Weather {
     U.uSeason.value = autumn * 0.62;
 
     U.uWeather.value.set(s.cover, s.storm, s.rain, s.wetness);
-    U.uFog.value.set(s.fog, 0.045 + 0.02 * s.storm, s.mist, 0.25 + 0.6 * s.storm + 0.3 * s.rain);
+    U.uFog.value.set(s.fog, 0.045 + 0.02 * s.storm, s.mist, 0.10 + 0.55 * s.storm + 0.28 * s.rain);
     U.uWind.value.set(s.windDir.x, s.windDir.y, s.wind, s.turb);
     U.uWindPhase.value.set(this.time, 0.55 + s.wind * 0.075, 1, s.storm);
     U.uFlash.value.set(this.flash.pos.x, this.flash.pos.y, this.flash.pos.z, flashAmp);

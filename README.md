@@ -13,9 +13,11 @@ npm run build      # static, self-contained bundle in dist/
 
 Optional URL parameters: `?q=tiny|low|play|medium|high|ultra` to force a quality
 tier (`play` is the default — a close grove, dense at your feet, cheap past
-~70 m) and `?act=N` to start on a given act of the environmental sequence. The
-renderer is WebGL2; if the browser also exposes WebGPU that is used only as a
-capability hint when picking a default tier.
+~70 m). The game boots in **high sun** with the weather timeline off — rain and
+storms only start if you pick them (`N`/`B`, the panel, `?act=N`, or
+`?timeline=1`). `?cine=1` turns the cinematic camera back on. The renderer is
+WebGL2; if the browser also exposes WebGPU that is used only as a capability
+hint when picking a default tier.
 
 ## Controls
 
@@ -23,7 +25,7 @@ capability hint when picking a default tier.
 | --- | --- |
 | `H` | quality / atmosphere / grade panel |
 | `C` | toggle the cinematic camera |
-| `N` / `B` | next / previous act of the sequence |
+| `N` / `B` | next / previous weather (off until you press them) |
 | `G` | walk mode (camera follows the ground) |
 | `F` | depth of field |
 | `P` | pause |

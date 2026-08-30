@@ -111,7 +111,7 @@ export function buildPanel(root, ctx) {
 
   const hint = document.createElement('div');
   hint.className = 'hint';
-  hint.textContent = 'Everything on screen is generated procedurally at runtime — no textures, meshes, HDRIs or materials are loaded. H toggles this panel.';
+  hint.textContent = 'Fair weather is the default. Rain, storm and night only start if you pick them here or with N/B. Everything on screen is generated at runtime — no textures or meshes are loaded.';
   root.append(hint);
 
   setInterval(() => { for (const r of refreshers) r(); }, 400);

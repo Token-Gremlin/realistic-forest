@@ -88,7 +88,12 @@ async function start() {
   await nextFrame();
 
   const weather = new Weather();
-  weather.setAct(params.has('act') ? parseInt(params.get('act'), 10) : 0, true);
+  // Default is high sun. Storms stay off until the player picks them (N/B,
+  // the panel, or ?act= / ?timeline=1). Dawn mist used to be the boot act
+  // and the timeline walked itself into a downpour.
+  const bootAct = params.has('act') ? parseInt(params.get('act'), 10) : 3;
+  weather.timelineEnabled = params.get('timeline') === '1';
+  weather.setAct(Number.isFinite(bootAct) ? bootAct : 3, true);
   weather.update(0.016, camera.position);
 
   // place the camera somewhere pleasant before the first bake
@@ -122,6 +127,18 @@ async function start() {
 
   const director = new CameraDirector(camera, forest);
   const controls = new Controls(camera, canvas);
+  director.enabled = params.get('cine') === '1';
+  if (!director.enabled) {
+    const look = camera.position.clone();
+    look.x += 10;
+    look.y += 1.4;
+    look.z -= 7;
+    camera.lookAt(look);
+    camera.updateMatrixWorld(true);
+    controls.syncFromCamera();
+    controls.enabled = true;
+    controls.walk = true;
+  }
   controls.onInput = () => {
     if (director.enabled) {
       director.enabled = false;
@@ -174,7 +191,7 @@ async function start() {
   let frames = 0;
   let fpsAccum = 0, fpsTime = 0, fps = 0;
   let slowFrames = 0, fastFrames = 0;
-  let exposure = 1;
+  let exposure = 1.35;
   const prevViewProj = new THREE.Matrix4();
   let hudTimer = 0;
 
@@ -212,8 +229,10 @@ async function start() {
       // adaptation keeps the shade genuinely dark while still opening up when
       // the camera breaks into a clearing.
       const luma = Math.max(pipeline.sceneLuma, 1e-5);
-      const target = THREE.MathUtils.clamp(0.0895 / Math.pow(luma, 0.65), 0.06, 9);
-      const rate = target < exposure ? 1.4 : 0.5;      // closing down is faster
+      // Keep the grove readable: a high floor so shade still shows plants,
+      // not a crushed mid-grey cave.
+      const target = THREE.MathUtils.clamp(0.155 / Math.pow(luma, 0.50), 0.62, 5.2);
+      const rate = target < exposure ? 1.1 : 0.65;
       exposure = THREE.MathUtils.lerp(exposure, target, 1 - Math.exp(-dt * rate));
       pipeline.settings.exposure = exposure;
     }
@@ -302,8 +321,8 @@ async function start() {
       <span class="k">wind</span> ${weather.state.wind.toFixed(1)} <span class="k">rain</span> ${weather.state.rain.toFixed(2)} <span class="k">storm</span> ${weather.state.storm.toFixed(2)} <span class="k">drops</span> ${forest.rain?.stats.drops ?? 0} <span class="k">debris</span> ${forest.debris?.stats.debris ?? 0} <span class="k">fall</span> ${forest.falling?.stats.falling ?? 0} <span class="k">down</span> ${forest.trees?.stats.fallen ?? 0}<br/>
       <span class="k">life</span> i${forest.life?.stats.insects ?? 0} f${forest.life?.stats.fireflies ?? 0} b${forest.life?.stats.birds ?? 0} l${forest.life?.stats.leaves ?? 0} <span class="k">fire</span> ${((forest.fire?.stats.strength ?? 0) * 100) | 0}% e${forest.fire?.stats.embers ?? 0}<br/>
       <span class="k">draws</span> ${info.calls} <span class="k">tris</span> ${(info.triangles / 1e6).toFixed(2)}M <span class="k">patches</span> ${forest.stats.patches} <span class="k">·</span> webgl2${navigator.gpu ? '+webgpu' : ''}<br/>
-      <span class="k">${director.enabled ? `shot: ${director.shot}` : 'free camera (WASD, mouse, shift, wheel)'}</span><br/>
-      <span class="k">H panel · C camera · N/B act · G walk · F dof · P pause</span>
+      <span class="k">${director.enabled ? `shot: ${director.shot}` : 'walk (WASD, mouse) · weather stays fair until you change it'}</span><br/>
+      <span class="k">H panel · C cine · N/B weather · G walk · F dof · P pause</span>
     `;
   };
 

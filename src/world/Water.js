@@ -15,8 +15,8 @@ import { Env, U } from '../core/env.js';
  * and braided shallows appear on their own.
  *
  * Shading is a forward pass over the lit scene colour so it can refract it:
- * Beer-Lambert absorption through the water column, screen-space reflection with
- * a sky-probe fallback, Fresnel, procedural caustics projected on the bed, foam
+ * Beer-Lambert absorption through a clear blue column, screen-space reflection
+ * with a sky-probe fallback, Fresnel, procedural caustics on the bed, foam
  * where the flow is fast or the water is shallow, and ripples advected along the
  * local flow direction rather than a global scroll.
  */
@@ -138,10 +138,9 @@ export class Water {
       uCellSize: { value: CELL },
       uGrid: { value: this.grid },
       uWaterWave: { value: new THREE.Vector4(1.0, 0.30, 0.5, 0.0) },
-      // tannin: amber transmits, green and blue die in the column.
-      // the old coefficients were inverted and the run read as canopy soup.
-      uAbsorb: { value: new THREE.Vector3(0.26, 0.52, 0.80) },
-      uScatter: { value: new THREE.Vector3(0.092, 0.066, 0.040) },
+      // clear lake water: red dies first, blue travels, so the column reads cyan.
+      uAbsorb: { value: new THREE.Vector3(0.48, 0.14, 0.055) },
+      uScatter: { value: new THREE.Vector3(0.030, 0.062, 0.110) },
     };
 
     this.material = new THREE.RawShaderMaterial({
@@ -317,9 +316,9 @@ void main(){
   // ---- path length through the water for absorption
   float cosV = max(dot(N, V), 0.08);
   float pathLen = min(depth / cosV, 6.0) + min(depth, 3.0);
-  // shallows stay clear so the bed and caustics read; pools go tea-brown
-  vec3 absorb = uAbsorb * mix(0.48, 1.38, smoothstep(0.07, 0.95, depth));
-  vec3 trans = exp(-absorb * pathLen * 1.55);
+  // shallows stay crystal; deeper water goes lake-blue, not tea
+  vec3 absorb = uAbsorb * mix(0.38, 1.15, smoothstep(0.07, 0.95, depth));
+  vec3 trans = exp(-absorb * pathLen * 1.15);
 
   // ---- caustics on the bed. Keep a floor in canopy shade so a forest
   // stream is not a dead brown slab the moment a trunk shadows it.
@@ -332,8 +331,8 @@ void main(){
   vec3 bedLit = bed * (1.0 + causAmt * 1.6) * trans;
 
   // ---- in-water scattering (turbidity) builds up with depth
-  vec3 inScatter = uScatter * vec3(1.18, 0.78, 0.40)
-    * (0.45 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0)))) * (1.0 - trans) * 1.55;
+  vec3 inScatter = uScatter * vec3(0.55, 0.88, 1.28)
+    * (0.50 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0)))) * (1.0 - trans) * 1.35;
 
   // ---- reflection
   vec3 R = reflect(-V, N);
@@ -343,11 +342,9 @@ void main(){
 
   float f0 = 0.02;
   float fres = f0 + (1.0 - f0) * pow(1.0 - cosV, 5.0);
-  // forest water is tannin-stained, not a lake of sky: keep Fresnel modest
-  fres = mix(fres, clamp(fres * 1.25, 0.0, 0.72), clamp(flowMag * 0.45, 0.0, 1.0));
-  // still pools keep a little more sky so they do not read as a riffle
+  fres = mix(fres, clamp(fres * 1.35, 0.0, 0.82), clamp(flowMag * 0.45, 0.0, 1.0));
   float still = 1.0 - smoothstep(0.06, 0.40, flowMag);
-  fres = min(fres, mix(0.26, 0.20, 1.0 - still));
+  fres = min(fres, mix(0.48, 0.38, 1.0 - still));
 
   vec3 col = mix(bedLit + inScatter, refl, fres);
 
@@ -386,14 +383,10 @@ void main(){
   float foam = shore * 0.70 + riffle * 0.48 * streak + rainFoam;
   foam *= mix(0.06, 1.0, lace);
   foam = clamp(foam, 0.0, 1.0);
-  // tannin stain after refraction: the bed lookup is often green bank, and
-  // Beer-Lambert alone cannot retint that into tea. Foam is mixed after
-  // so the lace stays pale on the stained column.
-  float stain = smoothstep(0.04, 0.55, depth);
-  col *= mix(vec3(1.0), vec3(1.20, 0.56, 0.22), stain * mix(0.95, 1.18, still));
-  col *= mix(1.0, mix(0.70, 0.58, still), stain);
-  // hard gold cores, not a beige wash
-  col += vec3(0.78, 0.55, 0.16) * causAmt * 1.25;
+  // a cool body tint so deep water reads as lake, not stained tea
+  float body = smoothstep(0.08, 0.70, depth);
+  col *= mix(vec3(1.0), vec3(0.72, 0.90, 1.12), body * 0.55);
+  col += vec3(0.42, 0.72, 1.0) * causAmt * 0.95;
   vec3 foamCol = vec3(0.58, 0.57, 0.50) * (0.90 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.32)
                + uSkyAmbient * 0.28 + uSunColor * sunShadowK * 0.10;
   col = mix(col, foamCol, foam * 0.44);
@@ -408,7 +401,7 @@ void main(){
   float film = fbm(wxz * 0.48 + 21.0, 3, 2.1, 0.5) * 0.5 + 0.5;
   film = smoothstep(0.56, 0.80, film) * still * smoothstep(0.14, 0.50, depth);
   film *= 1.0 - shore;
-  col = mix(col, col * vec3(0.70, 0.78, 0.38) + vec3(0.030, 0.036, 0.010), film * 0.52);
+  col = mix(col, col * vec3(0.88, 0.94, 1.02) + vec3(0.012, 0.022, 0.030), film * 0.22);
 
   // rain impact rings as colour. Fine worley cells died as speckle at
   // tiny; metre-scale rings on tea still read after AgX.
@@ -423,13 +416,10 @@ void main(){
     float ring2 = 1.0 - smoothstep(0.022, 0.080, abs(rw2.x - rad2));
     col += vec3(0.84, 0.88, 0.80) * ring2 * exp(-rw2.x * 1.8) * uWaterWave.w * 1.15;
   }
-  // tea ambient under rain so the column does not crush to a black hole
-  col += vec3(0.07, 0.048, 0.024) * uWeather.z;
-  // dawn and blue hour: sun glint dies and the run crushed to a hole
-  // under mist. A cool tea fill keeps the surface readable.
+  col += vec3(0.05, 0.08, 0.12) * uWeather.z;
   float sunUp = clamp(uSunDir.y, 0.0, 1.0);
-  col += uSkyAmbient * mix(0.38, 0.07, sunUp);
-  col += vec3(0.058, 0.044, 0.028) * mix(0.90, 0.12, sunUp);
+  col += uSkyAmbient * mix(0.32, 0.12, sunUp);
+  col += vec3(0.018, 0.042, 0.078) * mix(0.55, 0.10, sunUp);
 
   // soften the very edge so the waterline is not a hard cut
   float edgeFade = smoothstep(0.006, 0.05, depth);

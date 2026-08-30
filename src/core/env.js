@@ -17,7 +17,7 @@ export const Env = {
     uMoonDir: { value: new THREE.Vector3(0, -1, 0) },
     uMoonColor: { value: new THREE.Vector3(0, 0, 0) },
     uSkyAmbient: { value: new THREE.Vector3(0.1, 0.14, 0.2) },
-    uGroundAlbedo: { value: new THREE.Vector3(0.09, 0.08, 0.06) },
+    uGroundAlbedo: { value: new THREE.Vector3(0.12, 0.15, 0.08) },
 
     // --- weather: x cloud coverage, y storm 0..1, z rain 0..1, w wetness 0..1
     uWeather: { value: new THREE.Vector4(0.35, 0, 0, 0) },

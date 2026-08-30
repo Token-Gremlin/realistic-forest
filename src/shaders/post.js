@@ -590,23 +590,6 @@ void main(){
     }
   }
 
-  if(uWeather.z > 0.18){
-    float rain = uWeather.z;
-    vec2 wdir = normalize(uWind.xy + vec2(1.0e-4));
-    float lean = clamp(uWind.z * 0.010, 0.0, 0.22);
-    float streaks = 0.0;
-    for(int i = 0; i < 26; i++){
-      float sd = 4.7 + float(i) * 13.9;
-      vec2 a = vec2(hash11(sd), mix(-0.08, 1.08, hash11(sd + 2.4)));
-      float lng = mix(0.10, 0.26, hash11(sd + 5.1)) * (0.75 + rain * 0.45);
-      vec2 b = a + vec2(wdir.x * lean, -1.0) * lng;
-      float halfW = mix(0.0018, 0.0034, hash11(sd + 8.0)) * (0.7 + rain * 0.5);
-      streaks = max(streaks, rainStreak(vUv, a, b, halfW));
-    }
-    streaks *= rain;
-    mapped = max(mapped, vec3(0.72, 0.80, 0.90) * streaks);
-  }
-
   if(uLeafHold.w > 0.05){
     vec3 origin = uLeafHold.xyz;
     vec3 look = normalize(origin - uCamPos + vec3(1.0e-5, 0.0, 0.0));

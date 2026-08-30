@@ -141,6 +141,9 @@ void main(){
   if(s.matId > 4.5) f0 = vec3(0.03);
 
   vec3 diffCol = s.albedo;
+  // leaves and grass sit at real-leaf albedos (~0.04–0.08). Lift them so a
+  // sunny grove still shows species. Bark stays matte.
+  if(isGrass || (s.matId > 0.5 && s.matId < 1.5)) diffCol *= 1.32;
   vec3 Lo = vec3(0.0);
 
   // ---------------------------------------------------------------- sun
@@ -175,12 +178,12 @@ void main(){
   float mndl = max(dot(N, uMoonDir), 0.0);
   float mwrap = (mndl + 0.35) / 1.35;
   Lo += uMoonColor * diffCol * mwrap * (0.75 + 0.25 * shadow);
-  Lo += uSkyAmbient * diffCol * ao * 0.55;
+  Lo += uSkyAmbient * diffCol * ao * 0.92;
 
   // ------------------------------------------------------------ sky IBL
   vec3 irr = skyIrradiance(N);
   float skyOcc = ao;
-  Lo += irr * diffCol * skyOcc;
+  Lo += irr * diffCol * skyOcc * 1.22;
 
   vec3 R = reflect(-V, N);
   vec3 pref = skyRadiance(R, rough);
