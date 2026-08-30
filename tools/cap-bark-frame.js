@@ -54,13 +54,13 @@ function frameTrunk(f, t) {
   // rotate 18 deg so we see around the cylinder
   const ca = Math.cos(0.32), sa = Math.sin(0.32);
   const rx = ox * ca - oz * sa, rz = ox * sa + oz * ca;
-  const pull = 3.45;
-  f.camera.position.set(t.x + rx * pull, gh + 2.25, t.z + rz * pull);
-  f.forest.trees.pushOutOfTrunks(f.camera.position, 1.15);
+  const pull = 4.55;
+  f.camera.position.set(t.x + rx * pull, gh + 2.05, t.z + rz * pull);
+  f.forest.trees.pushOutOfTrunks(f.camera.position, 1.25);
   const p = f.camera.position;
-  p.y = maps.height(p.x, p.z) + 2.15;
-  // mid-stem, above the root flare, so the plate is a wall of bark
-  f.camera.lookAt(t.x, gh + 2.55, t.z);
+  p.y = maps.height(p.x, p.z) + 1.95;
+  // see flare, mid-stem and a bit of crown so it reads as a tree
+  f.camera.lookAt(t.x, gh + 3.35, t.z);
   f.camera.updateMatrixWorld(true);
   f.camera.updateProjectionMatrix();
   return {
@@ -72,35 +72,62 @@ function frameTrunk(f, t) {
 }
 
 function clearNear(f) {
-  const clutter = f.forest.clutter;
-  if (!clutter) return 0;
   const p = f.camera.position;
   const fwd = p.clone();
   f.camera.getWorldDirection(fwd);
-  const hide = new Set(['fern', 'bush', 'bramble', 'vine']);
-  let dropped = 0;
-  for (const k of clutter.kinds) {
-    if (!hide.has(k.arch.key)) continue;
-    for (const v of k.variants) {
-      const d = v.bucket.data;
-      let w = 0;
-      for (let i = 0; i < v.bucket.count; i++) {
-        const o = i * 12;
-        const dx = d[o] - p.x, dy = d[o + 1] - p.y, dz = d[o + 2] - p.z;
-        const dist = Math.hypot(dx, dy, dz);
-        const facing = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / (dist || 1);
-        if (dist < 5.5 && facing > 0.08) { dropped++; continue; }
-        if (w !== i) d.copyWithin(w * 12, o, o + 12);
-        w++;
+  let plants = 0;
+  const clutter = f.forest.clutter;
+  if (clutter) {
+    const hide = new Set(['fern', 'bush', 'bramble', 'vine']);
+    for (const k of clutter.kinds) {
+      if (!hide.has(k.arch.key)) continue;
+      for (const v of k.variants) {
+        const d = v.bucket.data;
+        let w = 0;
+        for (let i = 0; i < v.bucket.count; i++) {
+          const o = i * 12;
+          const dx = d[o] - p.x, dy = d[o + 1] - p.y, dz = d[o + 2] - p.z;
+          const dist = Math.hypot(dx, dy, dz);
+          const facing = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / (dist || 1);
+          if (dist < 6.5 && facing > 0.06) { plants++; continue; }
+          if (w !== i) d.copyWithin(w * 12, o, o + 12);
+          w++;
+        }
+        v.bucket.count = w;
+        v.geo.instanceCount = w;
+        v.buf.needsUpdate = true;
+        if (v.mesh) v.mesh.visible = w > 0;
+        if (v.shadowMesh) v.shadowMesh.visible = w > 0;
       }
-      v.bucket.count = w;
-      v.geo.instanceCount = w;
-      v.buf.needsUpdate = true;
-      if (v.mesh) v.mesh.visible = w > 0;
-      if (v.shadowMesh) v.shadowMesh.visible = w > 0;
     }
   }
-  return dropped;
+  let leaves = 0;
+  const trees = f.forest.trees;
+  if (trees) {
+    for (const v of trees.variants) {
+      for (const d of v.draws) {
+        if (!d.leaf || d.lod > 0) continue;
+        const bucket = v.buckets[d.lod];
+        const data = bucket.data;
+        let w = 0;
+        for (let i = 0; i < bucket.count; i++) {
+          const o = i * 12;
+          const dx = data[o] - p.x, dz = data[o + 2] - p.z;
+          const dist = Math.hypot(dx, dz);
+          const facing = (dx * fwd.x + dz * fwd.z) / (dist || 1);
+          if (dist < 7 && facing > 0.0) { leaves++; continue; }
+          if (w !== i) data.copyWithin(w * 12, o, o + 12);
+          w++;
+        }
+        bucket.count = w;
+        d.geo.instanceCount = w;
+        d.buf.needsUpdate = true;
+        d.mesh.visible = w > 0;
+        if (d.shadow) d.shadow.visible = w > 0;
+      }
+    }
+  }
+  return { plants, leaves };
 }
 
 catchUp(f);
@@ -113,7 +140,7 @@ if (framed) {
     for (let i = 0; i < 10; i++) f.forest.trees.update(0.016, f.camera, f.forest);
   }
 }
-const plants = clearNear(f);
+const cut = clearNear(f);
 if (f.forest.life) {
   f.forest.life.holdLeaves = -1;
   f.forest.life.holdInsects = -1;
@@ -128,7 +155,7 @@ if (f.forest.life) {
 }
 
 return {
-  plants,
+  ...cut,
   trunk: framed,
   lod: f.forest.trees?.stats.lod ?? null,
   trees: f.forest.trees?.stats.trees ?? 0,
