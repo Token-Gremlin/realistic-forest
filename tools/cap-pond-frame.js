@@ -60,8 +60,8 @@ function clearNearClutter(f) {
       }
     }
     if (!hide.has(k.arch.key)) continue;
-    const bulky = k.arch.key === 'log' || k.arch.key === 'limb' || k.arch.key === 'bush';
-    const near = bulky ? 16 : 11;
+    const bulky = k.arch.key === 'log' || k.arch.key === 'limb' || k.arch.key === 'bush' || k.arch.key === 'vine';
+    const near = bulky ? 18 : 12;
     for (const v of k.variants) {
       const d = v.bucket.data;
       let w = 0;

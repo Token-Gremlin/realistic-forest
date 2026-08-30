@@ -679,9 +679,9 @@ export const ARCHETYPES = [
     key: 'lily', build: buildLily, variants: 3, density: 0.16, maxDist: 22,
     score: (e) => {
       const wd = e.waterDepth;
-      if (wd < 0.12 || wd > 0.90) return 0;
-      return 0.12 + Math.max(0, 0.40 - Math.abs(wd - 0.36)) * 7.2
-        - e.slope * 1.8 - e.canopy * 0.30;
+      if (wd < 0.12 || wd > 2.4) return 0;
+      return 0.18 + Math.max(0, 0.85 - Math.abs(wd - 0.70)) * 5.4
+        - e.slope * 1.4 - e.canopy * 0.25;
     },
   },
   {

@@ -37,7 +37,7 @@ function place(bank, look, pull, rise, side = 0) {
   p.y = Math.max(p.y, maps.height(p.x, p.z) + rise * 0.86);
   const lookH = maps.height(look.x, look.z);
   const lookW = Math.max(0, look.s?.waterDepth ?? 0);
-  f.camera.lookAt(look.x, lookH + lookW * 0.08 + 2.15, look.z);
+  f.camera.lookAt(look.x, lookH + lookW * 0.08 + 1.12, look.z);
   f.camera.updateMatrixWorld(true);
   f.camera.updateProjectionMatrix();
 }
@@ -45,9 +45,9 @@ function place(bank, look, pull, rise, side = 0) {
 const PIN = {
   bank: { x: -125.5, z: 103.8 },
   look: { x: -113.9, z: 110.5 },
-  pull: 10.5,
-  rise: 5.6,
-  side: 2.4,
+  pull: 6.4,
+  rise: 3.05,
+  side: 2.1,
 };
 
 f.camera.position.set(PIN.bank.x, 48, PIN.bank.z);
