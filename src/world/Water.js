@@ -164,12 +164,11 @@ precision highp float;
 precision highp int;
 ${GLSL_COMMON}
 ${GLSL_MAPS}
+uniform float uTime;
 ${WATER_SURFACE}
 uniform mat4 uViewProj;
 uniform vec3 uCamPos;
 uniform vec4 uWind;
-uniform float uTime;
-uniform vec4 uWaterWave;
 uniform float uCellSize;
 uniform float uGrid;
 in vec3 position;
