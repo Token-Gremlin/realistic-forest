@@ -213,6 +213,7 @@ uniform mat4 uInvViewProj;
 uniform vec3 uCamPos;
 uniform vec4 uWeather;
 uniform vec4 uFlash;
+uniform vec4 uFire;
 uniform mat4 uViewProj;
 uniform vec4 uBolt;
 uniform vec4 uBoltAmp;
@@ -246,6 +247,25 @@ float boltStroke(vec2 uv, vec2 a, vec2 b, float seed){
   float core = exp(-d * d * 16000.0);
   float glow = exp(-d * d * 1800.0);
   return max(core, glow * 0.38);
+}
+
+/**
+ * Display-space flame tongue. World cards are additive HDR and AgX grades
+ * them into brown fog on this rasteriser; a few teardrops around the
+ * projected fire origin keep the still readable.
+ */
+float fireTongue(vec2 uv, vec2 root, float seed, float tall){
+  vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+  float lean = (hash11(seed) - 0.5) * 0.42;
+  vec2 d = (uv - root) * aspect;
+  d.x -= lean * d.y;
+  float t = clamp(d.y / max(tall, 1.0e-4), 0.0, 1.0);
+  float jog = (hash11(seed + floor(t * 9.0)) - 0.5) * mix(0.010, 0.003, t);
+  float halfW = mix(0.032, 0.006, t * t);
+  float body = 1.0 - smoothstep(halfW * 0.35, halfW, abs(d.x - jog));
+  body *= 1.0 - smoothstep(0.88, 1.0, t);
+  body *= smoothstep(-0.035, 0.02, d.y);
+  return pow(clamp(body, 0.0, 1.0), 1.12);
 }
 
 float cocAt(vec2 uv){
@@ -356,6 +376,27 @@ void main(){
     vec3 envelope = vec3(0.30, 0.52, 0.95);
     float a = clamp(amp, 0.0, 1.8);
     mapped = max(mapped, core * stroke + envelope * (stroke * 0.28 + cloud * 0.40) * a);
+  }
+
+  if(uFire.w > 0.05){
+    vec4 fclip = uViewProj * vec4(uFire.xyz, 1.0);
+    if(fclip.w > 0.08){
+      vec2 fuv = fclip.xy / fclip.w * 0.5 + 0.5;
+      if(fuv.x > -0.05 && fuv.x < 1.05 && fuv.y > -0.15 && fuv.y < 1.05){
+        float tongues = 0.0;
+        for(int i = 0; i < 7; i++){
+          float sd = 11.0 + float(i) * 17.3;
+          vec2 root = fuv + vec2((hash11(sd) - 0.5) * 0.058, (hash11(sd + 3.0) - 0.5) * 0.018);
+          float tall = mix(0.075, 0.175, hash11(sd + 7.0)) * (0.65 + uFire.w * 0.55);
+          tongues = max(tongues, fireTongue(vUv, root, sd, tall) * mix(0.62, 1.0, hash11(sd + 9.0)));
+        }
+        vec3 hot = vec3(1.0, 0.84, 0.32);
+        vec3 cool = vec3(0.92, 0.16, 0.02);
+        vec3 glow = vec3(0.50, 0.10, 0.01);
+        mapped = max(mapped, mix(cool, hot, tongues) * tongues);
+        mapped += glow * tongues * 0.40 * uFire.w;
+      }
+    }
   }
 
   oColor = vec4(clamp(mapped, 0.0, 1.0), 1.0);

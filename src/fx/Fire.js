@@ -103,7 +103,9 @@ void main(){
 
   p.y = ground + 0.04;
   float flick = 0.7 + 0.3 * sin(uTime * mix(9.0, 18.0, h.z) + h.w * 20.0);
-  float ht = mix(1.1, 3.4, h.z) * uFire.w * flick * (0.7 + litter * 0.5);
+  float hero = step(float(id), 11.0);
+  float ht = mix(1.4, 3.8, h.z) * uFire.w * flick * (0.75 + litter * 0.45);
+  ht *= mix(1.0, 1.55, hero);
 
   vec3 view = p - uCamPos;
   float dist = length(view);
@@ -111,7 +113,8 @@ void main(){
   vec3 up = vec3(0.0, 1.0, 0.0);
   vec3 side = normalize(cross(up, viewN));
 
-  float wid = mix(0.10, 0.28, h.w) * (0.55 + uFire.w * 0.7);
+  float wid = mix(0.14, 0.38, h.w) * (0.60 + uFire.w * 0.7);
+  wid *= mix(1.0, 1.35, hero);
   float minW = 2.0 / max(uProjScaleY / max(dist, 1.0), 1.0);
   wid = max(wid, minW);
 
@@ -147,20 +150,20 @@ void main(){
   if(dz > 0.01) discard;
 
   vec2 q = vUv;
-  q.x *= 1.15;
-  float body = 1.0 - smoothstep(0.15, 1.0, length(vec2(q.x, q.y * 0.55 + 0.15)));
-  float tip = 1.0 - smoothstep(0.2, 1.05, q.y * 0.7 + abs(q.x) * 1.4);
-  float mask = max(body, tip);
+  float t = q.y * 0.5 + 0.5;
+  float halfW = mix(0.95, 0.16, t * t);
+  float mask = 1.0 - smoothstep(halfW * 0.40, halfW, abs(q.x));
+  mask *= 1.0 - smoothstep(0.88, 1.0, t);
   if(mask < 0.05) discard;
 
-  vec3 cool = vec3(0.55, 0.04, 0.01);
-  vec3 hot = vec3(2.1, 1.15, 0.28);
-  float core = exp(-length(vec2(q.x * 1.6, q.y * 0.7 + 0.05)) * 3.4);
-  vec3 col = mix(cool, hot, clamp(vHeat * 0.55 + (1.0 - q.y) * 0.4 + core * 0.5, 0.0, 1.0));
+  vec3 cool = vec3(0.70, 0.05, 0.01);
+  vec3 hot = vec3(2.4, 1.25, 0.22);
+  float core = exp(-length(vec2(q.x / max(halfW, 0.08) * 1.4, (t - 0.12) * 1.6)) * 2.8);
+  vec3 col = mix(cool, hot, clamp(vHeat * 0.50 + (1.0 - t) * 0.35 + core * 0.55, 0.0, 1.0));
   col *= uFireColor / max(uFireColor.r, 0.2);
-  col *= 5.5 + vHeat * 8.0 + core * 10.0;
+  col *= 4.2 + vHeat * 5.5 + core * 7.0;
   float a = mask * vAlpha * (1.0 - smoothstep(0.0, 0.008, max(dz, 0.0)));
-  oColor = vec4(col * a, 0.0);
+  oColor = vec4(col * a, a);
 }
 `;
 
@@ -380,13 +383,14 @@ export class Fire {
     this.origin = new THREE.Vector3();
     this.strength = 0;
     this.age = 0;
+    this.held = false;
 
     this.flames = layer(
       forest,
       Math.max(180, Math.round(rain * 0.03)),
       FLAME_VERT, FLAME_FRAG,
       { uRadius: { value: 5.2 } },
-      true,
+      false,
     );
     this.embers = layer(
       forest,
@@ -429,7 +433,9 @@ export class Fire {
   update(dt) {
     const rain = U.uWeather.value.z;
     const wet = U.uWeather.value.w;
-    if (this.strength > 0) {
+    if (this.held && this.strength > 0) {
+      this.strength = Math.max(this.strength, 0.94);
+    } else if (this.strength > 0) {
       this.age += dt;
       const drown = rain * 0.55 + Math.max(0, wet - 0.45) * 0.25;
       this.strength = Math.max(0, this.strength - dt * (0.012 + drown));

@@ -222,7 +222,7 @@ export class RenderPipeline {
       uDofParams: { value: new THREE.Vector4(12, 14, 12, 1) },
       uMotionBlur: { value: 0.55 },
       uTime: U.uTime, uInvViewProj: U.uInvViewProj, uCamPos: U.uCamPos,
-      uWeather: U.uWeather, uFlash: U.uFlash, uViewProj: U.uViewProj,
+      uWeather: U.uWeather, uFlash: U.uFlash, uFire: U.uFire, uViewProj: U.uViewProj,
       uBolt: U.uBolt, uBoltAmp: U.uBoltAmp, uBoltF0: U.uBoltF0, uBoltF1: U.uBoltF1,
     }));
 
