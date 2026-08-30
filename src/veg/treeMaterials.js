@@ -699,66 +699,112 @@ uniform float uSeason;
 
 // Crown half-width profile as a function of height fraction.
 float crownProfile(float y, float conifer){
-  float broad = pow(max(sin(3.14159 * clamp((y - 0.22) / 0.80, 0.0, 1.0)), 0.0), 0.62);
-  broad *= 1.0 - 0.25 * smoothstep(0.85, 1.0, y);
-  float cone = clamp(1.0 - (y - 0.12) / 0.92, 0.0, 1.0);
-  cone = pow(cone, 0.85) * smoothstep(0.0, 0.12, y);
+  float broad = pow(max(sin(3.14159 * clamp((y - 0.20) / 0.82, 0.0, 1.0)), 0.0), 0.58);
+  broad *= 1.0 - 0.22 * smoothstep(0.86, 1.0, y);
+  float cone = clamp(1.0 - (y - 0.10) / 0.94, 0.0, 1.0);
+  cone = pow(cone, 0.78) * smoothstep(0.0, 0.10, y);
   return mix(broad, cone, conifer);
 }
 
 /**
- * Crown coverage as a union of foliage lobes rather than one profile modulated
- * by noise. A single profile reads as a fluffy ellipsoid — a cauliflower — which
- * is the classic tell of a billboard forest. Six seeded lobes with wobbly
- * boundaries, interior sky holes and a few protruding tips give a silhouette
- * that differs per instance and breaks up along its edge the way a real crown
- * does at two hundred metres.
+ * Distant crown coverage. Fine fbm holes and seven small lobes die as
+ * speckle or a cauliflower stamp at 528 px; this mask is built from a
+ * few metre-scale clumps (broadleaf) or stacked triangular tiers
+ * (conifer) plus one or two large sky gaps so a silhouette still reads
+ * when the whole tree is thirty pixels tall.
  */
 float crownMask(vec2 uv, float seed, out float depth, out float clump){
   float y = uv.y;
   float x = (uv.x - 0.5) * 2.0;
-  float prof = crownProfile(y, uCrown.y);
-  depth = 0.0; clump = 0.0;
-  if(prof <= 0.002) return 0.0;
+  float conifer = uCrown.y;
+  float dead = uCrown.w;
+  float prof = crownProfile(y, conifer);
+  depth = 0.0;
+  clump = fract(seed * 7.13);
+  if(prof <= 0.002 && dead < 0.5) return 0.0;
 
   float m = 0.0;
-  const int LOBES = 7;
-  for(int i = 0; i < LOBES; i++){
-    float fi = float(i);
-    vec3 h = hash33(vec3(seed * 37.1, fi * 1.7, 3.13));
-    // lobes cluster toward the upper crown, where the leaf mass actually is
-    float cy = mix(0.30, 0.96, mix(h.x, h.x * h.x, uCrown.y));
-    float pr = crownProfile(cy, uCrown.y);
-    if(pr <= 0.01) continue;
-    float cx = (h.y * 2.0 - 1.0) * pr * 0.80;
-    float rr = mix(0.24, 0.48, h.z) * (0.45 + 0.85 * pr);
-    vec2 d = vec2(x - cx, (y - cy) * 1.30);
-    float dd = length(d) / max(rr, 1e-3);
-    if(dd > 2.2) continue;
-    float ang = atan(d.y, d.x);
-    float wob = 1.0
-      + 0.34 * sin(ang * 3.0 + seed * 17.0 + fi * 2.3)
-      + 0.20 * sin(ang * 7.0 - fi * 1.7 + seed * 9.0)
-      + 0.11 * sin(ang * 15.0 + fi * 4.1);
-    float lm = smoothstep(wob, wob * 0.52, dd);
-    if(lm > m){
-      m = lm;
-      clump = fract(h.x * 7.31 + fi * 0.37);
-      depth = sqrt(max(0.0, 1.0 - min(dd, 1.0) * min(dd, 1.0))) * rr;
+
+  if(dead > 0.5){
+    // snag: a few broken limb nubs, no foliage mass
+    for(int i = 0; i < 3; i++){
+      float fi = float(i);
+      vec3 h = hash33(vec3(seed * 19.0, fi + 2.4, 5.1));
+      float cy = mix(0.42, 0.88, h.x);
+      float cx = (h.y * 2.0 - 1.0) * 0.22;
+      float rr = mix(0.10, 0.18, h.z);
+      vec2 d = vec2(x - cx, (y - cy) * 1.6);
+      float lm = smoothstep(1.15, 0.35, length(d) / rr);
+      if(lm > m){ m = lm; depth = rr * 0.4; clump = h.x; }
+    }
+    return m;
+  }
+
+  if(conifer > 0.5){
+    // four stacked wedges: a pine/fir reads as steps, not a cone blob
+    for(int i = 0; i < 4; i++){
+      float fi = float(i);
+      vec3 h = hash33(vec3(seed * 11.0, fi * 2.9, 1.7));
+      float y0 = mix(0.16, 0.78, fi / 3.0) + (h.x - 0.5) * 0.05;
+      float y1 = y0 + mix(0.20, 0.30, h.y);
+      if(y < y0 - 0.02 || y > y1 + 0.02) continue;
+      float t = clamp((y - y0) / max(y1 - y0, 1e-3), 0.0, 1.0);
+      float halfW = mix(1.05, 0.12, t) * mix(0.95, 0.38, fi / 3.5);
+      halfW *= (0.82 + 0.28 * h.z) * (1.0 + 0.16 * sin(y * 14.0 + seed * 9.0 + fi));
+      float cx = (h.y - 0.5) * 0.18;
+      float wx = abs(x - cx) / max(halfW, 1e-3);
+      float hem = 0.10 * sin((x - cx) * 11.0 + seed * 6.0 + fi * 2.1);
+      float lm = (1.0 - smoothstep(0.78 + hem, 1.08 + hem, wx)) * smoothstep(-0.03, 0.06, y - y0) * smoothstep(y1 + 0.03, y1 - 0.04, y);
+      if(lm > m){
+        m = lm;
+        clump = fract(h.x * 5.1 + fi * 0.27);
+        depth = (1.0 - t) * halfW * 0.45;
+      }
+    }
+  } else {
+    // four large irregular clumps. rr stays big so a 30 px tree still
+    // shows a scalloped outline instead of a pill.
+    const int LOBES = 4;
+    for(int i = 0; i < LOBES; i++){
+      float fi = float(i);
+      vec3 h = hash33(vec3(seed * 37.1, fi * 1.7, 3.13));
+      float cy = mix(0.36, 0.90, mix(h.x, 0.35 + 0.65 * h.x, 0.55));
+      float pr = crownProfile(cy, 0.0);
+      if(pr <= 0.02) continue;
+      float cx = (h.y * 2.0 - 1.0) * pr * 0.62;
+      float rr = mix(0.36, 0.62, h.z) * (0.55 + 0.70 * pr);
+      vec2 d = vec2(x - cx, (y - cy) * 1.15);
+      float dd = length(d) / max(rr, 1e-3);
+      if(dd > 1.85) continue;
+      float ang = atan(d.y, d.x);
+      float wob = 1.0
+        + 0.28 * sin(ang * 3.0 + seed * 17.0 + fi * 2.3)
+        + 0.14 * sin(ang * 5.0 - fi * 1.7 + seed * 9.0);
+      float lm = smoothstep(wob, wob * 0.42, dd);
+      if(lm > m){
+        m = lm;
+        clump = fract(h.x * 7.31 + fi * 0.37);
+        depth = sqrt(max(0.0, 1.0 - min(dd, 1.0) * min(dd, 1.0))) * rr;
+      }
     }
   }
   if(m <= 0.001) return 0.0;
 
-  // interior gaps: real crowns show sky through them
-  vec2 q = vec2(x * 3.1, y * 4.4) + seed * 23.0;
-  float holes = smoothstep(0.30, 0.64, fbm(q, 4, 2.1, 0.55) * 0.5 + 0.5);
-  float fine = smoothstep(0.34, 0.70, fbm(q * 3.3 + 41.0, 3, 2.1, 0.5) * 0.5 + 0.5);
-  m *= mix(0.58, 1.0, holes) * mix(0.80, 1.0, fine);
-  // a scatter of leaf clusters just outside the main mass softens the outline
-  float spray = smoothstep(0.62, 0.90, fbm(q * 6.5 + 77.0, 3, 2.1, 0.5) * 0.5 + 0.5);
-  float outer = smoothstep(1.6, 0.85, abs(x) / max(prof, 1e-3));
-  m = max(m, spray * outer * 0.42);
-  clump = mix(clump, fine, 0.35);
+  // one or two large sky gaps, not a hashed field of pinholes
+  vec3 g0 = hash33(vec3(seed * 13.0, 4.2, 8.1));
+  vec2 hole0 = vec2((g0.x - 0.5) * 1.15, mix(0.42, 0.82, g0.y));
+  float hr0 = mix(0.16, 0.28, g0.z);
+  m *= 1.0 - 0.72 * smoothstep(hr0, hr0 * 0.35, length(vec2(x, (y - hole0.y) * 1.2) - vec2(hole0.x, 0.0)));
+  if(fract(seed * 3.7) > 0.42){
+    vec3 g1 = hash33(vec3(seed * 21.0, 9.4, 2.6));
+    vec2 hole1 = vec2((g1.x - 0.5) * 1.05, mix(0.48, 0.86, g1.y));
+    float hr1 = mix(0.12, 0.22, g1.z);
+    m *= 1.0 - 0.58 * smoothstep(hr1, hr1 * 0.30, length(vec2(x - hole1.x, (y - hole1.y) * 1.15)));
+  }
+
+  // soft falloff outside the species profile so a pine stays a cone
+  float envelope = smoothstep(1.35, 0.72, abs(x) / max(prof, 1e-3));
+  m *= mix(0.15, 1.0, envelope);
   return m;
 }
 `;
@@ -780,7 +826,7 @@ void main(){
   float m = crownMask(vUv, vSeed, depth, clump);
   float trunk = 1.0 - smoothstep(0.010, 0.030, abs(vUv.x - 0.5));
   trunk *= 1.0 - smoothstep(0.30, 0.45, vUv.y);
-  if(max(m, trunk) < 0.30) discard;
+  if(max(m, trunk) < 0.28) discard;
   oCol = vec4(1.0);
 }
 `,
@@ -809,11 +855,11 @@ void main(){
   }
   float depth, clump;
   float m = crownMask(vUv, vSeed, depth, clump);
-  float trunkW = 0.012 + 0.014 * uCrown.w;
-  float trunk = 1.0 - smoothstep(trunkW, trunkW * 2.4, abs(vUv.x - 0.5));
-  trunk *= 1.0 - smoothstep(0.26, 0.46, vUv.y);
-  float cov = max(m, trunk * 0.9);
-  if(cov < 0.26 + 0.13 * ign(gl_FragCoord.xy, uTime)) discard;
+  float trunkW = 0.016 + 0.018 * uCrown.w;
+  float trunk = 1.0 - smoothstep(trunkW, trunkW * 2.6, abs(vUv.x - 0.5));
+  trunk *= 1.0 - smoothstep(0.28, 0.50, vUv.y);
+  float cov = max(m, trunk * 0.92);
+  if(cov < 0.24 + 0.12 * ign(gl_FragCoord.xy, uTime)) discard;
 
   vec3 up = vec3(0.0, 1.0, 0.0);
   // spherical crown normal so the billboard shades like a volume
@@ -829,16 +875,16 @@ void main(){
     rough = 0.9; trans = 0.0; occ = 0.55;
   } else {
     float idv = fract(vSeed * 13.7 + clump * 3.3);
-    vec3 green = mix(uLeafA, uLeafB, idv) * mix(0.55, 1.30, clump);
+    vec3 green = mix(uLeafA, uLeafB, idv) * mix(0.62, 1.22, clump);
     vec3 autumn = mix(uLeafAutumnA, uLeafAutumnB, idv);
     alb = mix(green, autumn, clamp(uSeason * (0.6 + 0.7 * idv), 0.0, 1.0));
     if(uCrown.w > 0.5) alb = mix(uBarkA, uBarkB, idv) * 0.8;
-    // self-shadowing inside the crown: the underside of a crown is very dark,
-    // which is most of what separates a tree from a green blob at distance
-    float shade = clump * 0.55 + 0.45 * smoothstep(0.25, 0.95, vUv.y);
-    alb *= mix(0.28, 1.15, shade);
-    rough = 0.52; trans = uCrown.z * 0.8;
-    occ = mix(0.30, 1.0, shade);
+    // self-shadowing: dark underside, brighter sunlit crown top. That
+    // height gradient is what stops a distant tree reading as a stamp.
+    float shade = clump * 0.40 + 0.60 * smoothstep(0.22, 0.92, vUv.y);
+    alb *= mix(0.26, 1.18, shade);
+    rough = 0.56; trans = uCrown.z * 0.72;
+    occ = mix(0.28, 1.0, shade);
   }
   alb *= mix(1.0, 0.74, uWeather.w);
   writeGBuffer(alb, occ, N, rough, trans, vCur, vPrev,
