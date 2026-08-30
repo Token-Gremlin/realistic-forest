@@ -263,7 +263,7 @@ function clearLogBandPlants(f) {
       for (let i = 0; i < v.bucket.count; i++) {
         const o = i * 12;
         scratch.set(d[o], d[o + 1] + 0.55, d[o + 2]).project(f.camera);
-        const onLog = Math.abs(scratch.x) < 0.90 && scratch.y > -0.48 && scratch.y < 0.36
+        const onLog = Math.abs(scratch.x) < 0.86 && scratch.y > -0.20 && scratch.y < 0.16
           && scratch.z > 0 && scratch.z < 1;
         if (onLog) { dropped++; continue; }
         if (w !== i) d.copyWithin(w * 12, o, o + 12);
@@ -283,7 +283,7 @@ function hideNearGrass(f) {
   const grass = f.forest.grass;
   if (!grass) return;
   for (const r of grass.rings) {
-    if (r.lod <= 1) {
+    if (r.lod === 0) {
       r.mesh.visible = false;
       r.shadowMesh.visible = false;
     }

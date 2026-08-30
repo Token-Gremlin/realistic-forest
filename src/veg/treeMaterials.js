@@ -126,7 +126,8 @@ float barkHeight(vec2 uv, float radius, out float fissure, out float plate){
 struct Bark { vec3 albedo; vec3 normal; float rough; float occ; };
 
 Bark barkSurface(vec3 wp, vec3 N, vec3 T, vec3 B, vec2 uv, float radius,
-                 float level, float heightNorm, float rnd, float lodPx, vec4 eco, float wetness){
+                 float level, float heightNorm, float rnd, float lodPx, vec4 eco, float wetness,
+                 float fallen){
   Bark o;
   float fissure, plate;
   float e = max(0.0035, lodPx * 0.5);
@@ -189,10 +190,15 @@ Bark barkSurface(vec3 wp, vec3 N, vec3 T, vec3 B, vec2 uv, float radius,
                 * (0.25 + 0.75 * upFacing) * (1.0 - mossAmt * 0.8);
   alb = mix(alb, mix(vec3(0.145, 0.150, 0.118), vec3(0.195, 0.192, 0.150), tone), lichAmt * 0.42);
 
-  // --- wet bark: darker and glossier, worst near the base
+  // --- wet bark: darker and glossier, worst near the base.
+  // a stem on the ground turns its old side into a sky face — that face
+  // should stay readable (wet sheen, not an ink slab)
   float wet = clamp(wetness * (0.55 + 0.45 * lowness) + uWeather.w * 0.85, 0.0, 1.0);
-  alb *= mix(1.0, 0.48, wet);
-  rough = mix(rough, 0.22, wet * 0.8);
+  float skyFace = clamp(nrm.y, 0.0, 1.0);
+  float crush = mix(0.64, 0.90, skyFace * fallen);
+  alb *= mix(1.0, crush, wet);
+  alb *= 1.0 + fallen * skyFace * 0.22;
+  rough = mix(rough, mix(0.22, 0.14, skyFace * fallen), wet * 0.8);
 
   o.albedo = clamp(alb, vec3(0.004), vec3(0.75));
   o.normal = nrm;
@@ -358,7 +364,7 @@ uniform mat4 projectionMatrix; uniform mat4 viewMatrix;
 uniform mat4 uViewProj; uniform mat4 uPrevViewProj;
 in vec3 position; in vec3 normal; in vec2 uv; in vec4 aExtra; in vec2 aSway;
 out vec3 vWorld; out vec3 vNormal; out vec2 vUv; out vec4 vExtra;
-out vec4 vCur; out vec4 vPrev; out float vFade;
+out vec4 vCur; out vec4 vPrev; out float vFade; out float vFallen;
 void main(){
   float phase = fract(aSway.y + iVar.x);
   vec3 wnw;
@@ -369,6 +375,7 @@ void main(){
   vUv = uv;
   vExtra = aExtra;
   vFade = iVar.w;
+  vFallen = smoothstep(0.34, 1.12, length(vec2(iRot.z, iRot.w)));
   vCur = uViewProj * vec4(world, 1.0);
   vPrev = uPrevViewProj * vec4(prevWorld, 1.0);
   gl_Position = ${opts.shadow ? 'projectionMatrix * (viewMatrix * vec4(world, 1.0))' : 'vCur'};
@@ -396,7 +403,7 @@ ${GLSL_MAPS}
 ${BARK_SURFACE}
 ${GLSL_GBUFFER_OUT}
 in vec3 vWorld; in vec3 vNormal; in vec2 vUv; in vec4 vExtra;
-in vec4 vCur; in vec4 vPrev; in float vFade;
+in vec4 vCur; in vec4 vPrev; in float vFade; in float vFallen;
 void main(){
   if(vFade < 0.999){
     float d = ign(gl_FragCoord.xy, uTime * 0.31);
@@ -416,7 +423,7 @@ void main(){
   vec4 eco = ecoSample(vWorld.xz);
   vec4 mapv = mapSample(vWorld.xz);
   Bark b = barkSurface(vWorld, N, T, B, vUv, vExtra.x, vExtra.y, vExtra.z, vExtra.w,
-                       lodPx, eco, clamp(mapv.b, 0.0, 1.0));
+                       lodPx, eco, clamp(mapv.b, 0.0, 1.0), vFallen);
   writeGBuffer(b.albedo, b.occ, b.normal, b.rough, 0.0, vCur, vPrev, ${MAT_BARK.toFixed(1)}, 0.0);
 }
 `;
