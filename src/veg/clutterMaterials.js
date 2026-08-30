@@ -409,7 +409,12 @@ void main(){
 
   vec4 eco = ecoSample(vWorld.xz);
   float wetMap = mapWetness(vWorld.xz);
-  float wet = clamp(wetMap * 0.85 + uWeather.w * 0.9, 0.0, 1.0);
+  float wd = mapWaterDepth(vWorld.xz);
+  float hAbove = vWorld.y - groundHeight(vWorld.xz);
+  // soak the lower faces of stones sitting in the wet band
+  float lip = smoothstep(-0.95, 0.04, wd) * (1.0 - smoothstep(0.10, 0.48, wd));
+  float soak = lip * (1.0 - smoothstep(0.05, 0.52, hAbove));
+  float wet = clamp(max(wetMap * 0.85 + uWeather.w * 0.9, soak * 0.94), 0.0, 1.0);
   float idv = fract(vExtra.w * 5.71 + vTint * 2.3);
   float lodPx = length(vec2(length(dFdx(vWorld.xz)), length(dFdy(vWorld.xz))));
   float det = clamp(1.0 - lodPx * 3.5, 0.0, 1.0);
@@ -505,7 +510,13 @@ void main(){
   }
 
   alb *= mix(1.0, 0.52, wet);
-  rough = clamp(rough - wet * 0.35, 0.04, 1.0);
+  if(part == ${PART.STONE}){
+    alb *= mix(1.0, 0.42, soak);
+    alb = mix(alb, vec3(0.048, 0.042, 0.032), soak * 0.40);
+    // wet stone, not chrome: keep a grit floor
+    rough = mix(rough, 0.20, soak * 0.80);
+  }
+  rough = clamp(rough - wet * 0.28, 0.14, 1.0);
   writeGBuffer(clamp(alb, vec3(0.003), vec3(0.85)), occ, N, rough, trans, vCur, vPrev, matId, 0.5);
 }
 `,
