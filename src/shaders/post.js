@@ -430,22 +430,6 @@ void main(){
     }
     streaks *= rain;
     mapped = max(mapped, vec3(0.72, 0.80, 0.90) * streaks);
-
-    // splash rings: 3D discs die in AgX the same way drops did. A few
-    // hashed rings in the lower frame keep impacts readable on water.
-    float rings = 0.0;
-    vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
-    for(int i = 0; i < 10; i++){
-      float sd = 29.0 + float(i) * 8.3;
-      vec2 c = vec2(mix(0.18, 0.82, hash11(sd)), mix(0.22, 0.78, hash11(sd + 4.0)));
-      float rad = mix(0.018, 0.055, hash11(sd + 7.0));
-      float w = mix(0.0022, 0.0048, hash11(sd + 11.0));
-      float d = length((vUv - c) * aspect);
-      float ring = 1.0 - smoothstep(0.0, w, abs(d - rad));
-      ring *= 1.0 - smoothstep(rad + w, rad + w * 2.4, d);
-      rings = max(rings, ring * mix(0.45, 1.0, hash11(sd + 15.0)));
-    }
-    mapped = max(mapped, vec3(0.78, 0.86, 0.92) * rings * rain);
   }
 
   oColor = vec4(clamp(mapped, 0.0, 1.0), 1.0);

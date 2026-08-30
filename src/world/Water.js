@@ -370,15 +370,14 @@ void main(){
     float rad = fract(uTime * 2.2) * 0.55 + 0.08;
     float ring = 1.0 - smoothstep(0.010, 0.048, abs(rw.x - rad));
     ring *= exp(-rw.x * 3.2) * uWaterWave.w;
-    col += vec3(0.42, 0.48, 0.44) * ring * 1.15;
+    col += vec3(0.70, 0.78, 0.72) * ring * 2.4;
     vec3 rw2 = worley2(wxz * 5.8 + floor(uTime * 3.1) * 9.1 + 21.0, 1.0);
     float rad2 = fract(uTime * 3.1 + 0.37) * 0.42 + 0.06;
     float ring2 = 1.0 - smoothstep(0.008, 0.036, abs(rw2.x - rad2));
-    col += vec3(0.50, 0.56, 0.52) * ring2 * exp(-rw2.x * 4.0) * uWaterWave.w * 0.75;
+    col += vec3(0.78, 0.84, 0.80) * ring2 * exp(-rw2.x * 4.0) * uWaterWave.w * 1.35;
   }
-  // keep tannin under rain so the lift does not go grey
-  col *= mix(vec3(1.0), vec3(1.10, 0.92, 0.70), uWeather.z * 0.35);
-  col *= mix(1.0, 1.08, uWeather.z);
+  // tea ambient under rain so the column does not crush to a black hole
+  col += vec3(0.07, 0.048, 0.024) * uWeather.z;
 
   // soften the very edge so the waterline is not a hard cut
   float edgeFade = smoothstep(0.006, 0.05, depth);

@@ -91,6 +91,7 @@ function scoreShot(run, look, mid) {
   const lookW = Math.max(0, look.s?.waterDepth ?? 0);
   const midW = Math.max(0, mid.s?.waterDepth ?? 0);
   if (lookW < 0.18 || midW < 0.20) return -1e9;
+  if (lookW > 0.85 || midW > 0.90) return -1e9;
   let inFrame = 0, waterY = 0;
   for (const pt of run) {
     const wd = Math.max(0, pt.s.waterDepth);
@@ -141,7 +142,7 @@ for (const origin of origins.slice(0, 16)) {
   const mid = run[Math.max(0, (run.length >> 1) - 1)] ?? origin;
   const look = run[Math.min(run.length - 1, Math.max(3, (run.length * 2 / 3) | 0))] ?? mid;
   const bank = findBank(mid.x, mid.z);
-  if (bank.s.waterDepth > 0.02) continue;
+  if (bank.s.waterDepth > 0.02 || bank.s.waterDepth < -0.70) continue;
   for (const pull of pulls) {
     for (const rise of rises) {
       place(bank, look, pull, rise);
