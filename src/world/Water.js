@@ -321,7 +321,7 @@ void main(){
   float nh = max(dot(N, H), 0.0);
   float a = 0.045 + flowMag * 0.05;
   float spec = D_GGX(nh, a) * V_SmithGGXCorrelated(cosV, max(dot(N, uSunDir), 1e-3), a);
-  col += uSunColor * spec * sunShadowK * max(dot(N, uSunDir), 0.0) * 0.42;
+  col += uSunColor * spec * sunShadowK * max(dot(N, uSunDir), 0.0) * 0.30;
   col += uMoonColor * pow(max(dot(N, normalize(uMoonDir + V)), 0.0), 220.0) * 3.0;
   if(uFlash.w > 0.001){
     vec3 fd = normalize(uFlash.xyz - vWorld);
@@ -348,11 +348,14 @@ void main(){
   float foam = shore * 0.95 + riffle * 0.78 * streak + rainFoam;
   foam *= mix(0.40, 1.0, smoothstep(0.16, 0.62, foamNoise * 0.6 + foamNoise2 * 0.45));
   foam = clamp(foam, 0.0, 1.0);
-  // lace, not a white slab: foam must sit above tannin after AgX without
-  // turning the whole run into clip
+  // tannin stain after refraction: the bed lookup is often green bank, and
+  // Beer-Lambert alone cannot retint that into tea. Foam is mixed after
+  // so the lace stays pale on the stained column.
+  float stain = smoothstep(0.05, 0.62, depth);
+  col *= mix(vec3(1.0), vec3(1.16, 0.86, 0.58), stain * 0.62);
   vec3 foamCol = vec3(0.38, 0.41, 0.40) * (0.75 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.55)
                + uSunColor * sunShadowK * 0.10;
-  col = mix(col, foamCol, foam * 0.52);
+  col = mix(col, foamCol, foam * 0.40);
   float meniscus = exp(-depth * depth * 90.0) * (1.0 - smoothstep(0.10, 0.26, depth));
   col = mix(col, foamCol * 1.05, meniscus * 0.38);
 
