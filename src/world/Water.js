@@ -96,15 +96,12 @@ float rippleHeight(vec2 p, vec2 flow, float flowMag, float depth){
 }
 
 /** Procedural caustics: interference of two rotating worley fields.
- *  3–8 m cells. Finer worley died as speckle on the close tiny plate. */
+ *  Metre-scale cores. A soft field graded to milk on the tea plate. */
 float caustics(vec2 p, float t){
-  float a = worley2(p * 0.72 + vec2(t * 0.16, -t * 0.11), 1.0).x;
-  float b = worley2(p * 1.15 + vec2(-t * 0.13, t * 0.19) + 7.0, 1.0).x;
+  float a = worley2(p * 0.95 + vec2(t * 0.16, -t * 0.11), 1.0).x;
+  float b = worley2(p * 1.40 + vec2(-t * 0.13, t * 0.19) + 7.0, 1.0).x;
   float c = 1.0 - min(a, b);
-  c = pow(clamp(c, 0.0, 1.0), 2.45);
-  float d = worley2(p * 1.95 + vec2(t * 0.29, t * 0.07) + 19.0, 1.0).x;
-  c += pow(clamp(1.0 - d, 0.0, 1.0), 3.2) * 0.38;
-  return c;
+  return smoothstep(0.64, 0.90, c);
 }
 `;
 
@@ -322,12 +319,12 @@ void main(){
   vec2 rnd = vec2(ign(gl_FragCoord.xy, uTime), ign(gl_FragCoord.yx + 7.0, uTime));
   float sunShadowK = sunShadow(vWorld, vec3(0.0, 1.0, 0.0), 1.0, viewDist, rnd, 1.0);
   float skyOpen = 0.38 + 0.62 * max(uSunDir.y, 0.0);
-  float causAmt = caus * exp(-depth * 0.38) * mix(0.55, sunShadowK, 0.45) * skyOpen;
-  vec3 bedLit = bed * (1.0 + causAmt * 2.4) * trans;
+  float causAmt = caus * exp(-depth * 0.32) * mix(0.62, sunShadowK, 0.38) * skyOpen;
+  vec3 bedLit = bed * (1.0 + causAmt * 1.6) * trans;
 
   // ---- in-water scattering (turbidity) builds up with depth
   vec3 inScatter = uScatter * vec3(1.18, 0.78, 0.40)
-    * (0.45 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0)))) * (1.0 - trans) * 2.7;
+    * (0.45 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0)))) * (1.0 - trans) * 1.55;
 
   // ---- reflection
   vec3 R = reflect(-V, N);
@@ -372,19 +369,20 @@ void main(){
   float foamNoise = fbm(wxz * 5.8 - flow * uTime * 1.5, 3, 2.1, 0.5) * 0.5 + 0.5;
   float foamNoise2 = fbm(wxz * 15.0 - flow * uTime * 2.7 + 9.0, 2, 2.1, 0.5) * 0.5 + 0.5;
   float rainFoam = uWeather.z * (0.14 + foamNoise2 * 0.28);
-  float foam = shore * 0.95 + riffle * 0.78 * streak + rainFoam;
+  float foam = shore * 0.95 + riffle * 0.48 * streak + rainFoam;
   foam *= mix(0.40, 1.0, smoothstep(0.16, 0.62, foamNoise * 0.6 + foamNoise2 * 0.45));
   foam = clamp(foam, 0.0, 1.0);
   // tannin stain after refraction: the bed lookup is often green bank, and
   // Beer-Lambert alone cannot retint that into tea. Foam is mixed after
   // so the lace stays pale on the stained column.
   float stain = smoothstep(0.04, 0.55, depth);
-  col *= mix(vec3(1.0), vec3(1.30, 0.68, 0.32), stain * 0.90);
-  // metre-scale gold on the bed so caustics survive AgX at 528 px
-  col += vec3(0.46, 0.34, 0.12) * causAmt * 0.80;
+  col *= mix(vec3(1.0), vec3(1.20, 0.56, 0.22), stain * 0.95);
+  col *= mix(1.0, 0.70, stain);
+  // hard gold cores, not a beige wash
+  col += vec3(0.78, 0.55, 0.16) * causAmt * 1.25;
   vec3 foamCol = vec3(0.42, 0.44, 0.42) * (0.88 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.40)
                + uSkyAmbient * 0.40 + uSunColor * sunShadowK * 0.10;
-  col = mix(col, foamCol, foam * 0.40);
+  col = mix(col, foamCol, foam * 0.26);
   float meniscus = exp(-depth * depth * 90.0) * (1.0 - smoothstep(0.10, 0.26, depth));
   col = mix(col, foamCol * 1.05, meniscus * 0.38);
 
