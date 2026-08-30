@@ -22,6 +22,9 @@ f.camera.position.set(x - 3.2, gh + 1.85, z + 4.6);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.4);
 const p = f.camera.position;
 p.y = maps.height(p.x, p.z) + 1.72;
+f.camera.lookAt(x + 1.2, gh + 1.55, z - 0.8);
+f.camera.updateMatrixWorld(true);
+f.camera.updateProjectionMatrix();
 
 if (f.forest.falling) {
   f.forest.falling.suppressed = true;
