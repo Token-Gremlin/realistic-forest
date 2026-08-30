@@ -84,7 +84,10 @@ function place(bank, look, pull, rise) {
   f.camera.updateProjectionMatrix();
 }
 
-function scoreShot(run) {
+function scoreShot(run, look, mid) {
+  const lookW = Math.max(0, look.s?.waterDepth ?? 0);
+  const midW = Math.max(0, mid.s?.waterDepth ?? 0);
+  if (lookW < 0.18 || midW < 0.20) return -1e9;
   let inFrame = 0, waterY = 0;
   for (const pt of run) {
     const wd = Math.max(0, pt.s.waterDepth);
@@ -97,7 +100,6 @@ function scoreShot(run) {
   }
   if (inFrame < 3) return -1e9;
   const p = f.camera.position;
-  const look = run[Math.min(run.length - 1, Math.max(2, (run.length * 2 / 3) | 0))] ?? run[0];
   let canopy = 0, n = 0;
   for (let t = 0.12; t < 0.88; t += 0.08) {
     const x = p.x + (look.x - p.x) * t;
@@ -106,7 +108,9 @@ function scoreShot(run) {
     n++;
   }
   const avgY = waterY / inFrame;
-  return inFrame * 9 - Math.abs(avgY + 0.08) * 7 - (canopy / n) * 11 + maps.skyVis(p.x, p.z) * 2;
+  return inFrame * 9 - Math.abs(avgY + 0.08) * 7 - (canopy / n) * 11
+    + maps.skyVis(p.x, p.z) * 2
+    + Math.min(lookW, 0.55) * 24 + Math.min(midW, 0.55) * 16;
 }
 
 const origins = [];
@@ -126,9 +130,9 @@ for (let i = 0; i < 90; i++) {
 origins.sort((a, b) => b.rank - a.rank);
 
 let best = null, bestS = -1e9;
-const pulls = [7.6, 9.4, 6.2];
-const rises = [7.2, 8.4, 6.0];
-for (const origin of origins.slice(0, 14)) {
+const pulls = [7.6, 9.4, 6.4];
+const rises = [6.2, 7.2];
+for (const origin of origins.slice(0, 16)) {
   const run = walkStream(origin.x, origin.z);
   if (run.length < 4) continue;
   const mid = run[Math.max(0, (run.length >> 1) - 1)] ?? origin;
@@ -138,7 +142,7 @@ for (const origin of origins.slice(0, 14)) {
   for (const pull of pulls) {
     for (const rise of rises) {
       place(bank, look, pull, rise);
-      const sc = scoreShot(run);
+      const sc = scoreShot(run, look, mid);
       if (sc > bestS) {
         bestS = sc;
         best = { origin, run, mid, look, bank, pull, rise };
