@@ -48,9 +48,9 @@ function place(bank, look, pull, rise, side = 0) {
 const PIN = {
   bank: { x: 24.4, z: -171.1 },
   look: { x: 18.2, z: -169.3 },
-  pull: 6.0,
-  rise: 3.15,
-  side: 2.6,
+  pull: 6.6,
+  rise: 3.35,
+  side: 2.8,
 };
 
 f.camera.position.set(PIN.bank.x, 48, PIN.bank.z);
