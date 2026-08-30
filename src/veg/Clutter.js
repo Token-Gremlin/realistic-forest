@@ -126,7 +126,7 @@ export class Clutter {
           leafA: [0.040, 0.090, 0.030], leafB: [0.090, 0.150, 0.048] };
       case 'sedge':
         return { ...base, leaflets: 3, serration: 0.2, transmission: 0.88, windAmp: 0.038,
-          leafA: [0.040, 0.078, 0.034], leafB: [0.095, 0.130, 0.052] };
+          leafA: [0.048, 0.082, 0.028], leafB: [0.110, 0.138, 0.042] };
       case 'lily':
         return { ...base, leaflets: 1, serration: 0, transmission: 0.12, windAmp: 0.006,
           floatWater: true, alignGround: 0,

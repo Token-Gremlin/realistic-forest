@@ -393,18 +393,19 @@ export function buildHerb(seed, opts = {}) {
 export function buildSedge(seed, opts = {}) {
   const r = new Rng(seed);
   const mb = new MeshBuilder();
-  const size = lerp(0.45, 1.25, r.f()) * (opts.scale ?? 1);
-  const blades = 9 + r.int(14);
+  // Reed-scale. Centimetre blades die as one-pixel hair at 528 px.
+  const size = lerp(0.72, 1.70, r.f()) * (opts.scale ?? 1);
+  const blades = 12 + r.int(16);
   for (let i = 0; i < blades; i++) {
     const az = r.f() * Math.PI * 2;
-    const tilt = lerp(0.05, 0.55, Math.pow(r.f(), 0.7));
-    const len = size * lerp(0.55, 1.15, r.f());
+    const tilt = lerp(0.08, 0.62, Math.pow(r.f(), 0.7));
+    const len = size * lerp(0.58, 1.18, r.f());
     const dir = V(Math.cos(az) * tilt, 1, Math.sin(az) * tilt).normalize();
     const segs = 5;
-    const pts = arc(V(Math.cos(az) * size * 0.02, 0, Math.sin(az) * size * 0.02), dir, len,
+    const pts = arc(V(Math.cos(az) * size * 0.03, 0, Math.sin(az) * size * 0.03), dir, len,
       segs, lerp(0.6, 2.6, r.f()));
-    const w = size * lerp(0.008, 0.020, r.f());
-    ribbon(mb, pts, [w, w * 0.95, w * 0.82, w * 0.6, w * 0.34, w * 0.05], PART.BLADE, {
+    const w = size * lerp(0.024, 0.058, r.f());
+    ribbon(mb, pts, [w, w * 0.96, w * 0.84, w * 0.62, w * 0.36, w * 0.08], PART.BLADE, {
       totalHeight: size, rnd: r.f(), roll: r.range(-1.2, 1.2),
       flex0: 0.1, flex1: 1.0, phase: r.f(),
     });
@@ -671,9 +672,9 @@ export const ARCHETYPES = [
     score: (e) => -0.05 + e.litter * 2.3 + e.canopy * 0.7 - Math.max(0, e.waterDepth + 0.1) * 5,
   },
   {
-    key: 'sedge', build: buildSedge, variants: 3, density: 0.28, maxDist: 44,
-    score: (e) => -0.35 + e.moisture * 1.9 + Math.max(0, 0.4 - Math.abs(e.waterDepth + 0.15)) * 6
-      - e.rock * 1.0 - e.slope * 1.2,
+    key: 'sedge', build: buildSedge, variants: 3, density: 0.42, maxDist: 48,
+    score: (e) => -0.10 + e.moisture * 1.5 + Math.max(0, 0.55 - Math.abs(e.waterDepth + 0.08)) * 8.2
+      - e.rock * 0.8 - e.slope * 1.0,
   },
   {
     key: 'lily', build: buildLily, variants: 3, density: 0.16, maxDist: 22,
