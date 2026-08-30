@@ -430,6 +430,7 @@ if (stem) {
   const H = stem.height;
   stemInfo = {
     h: +H.toFixed(1),
+    xz: [+stem.x.toFixed(1), +stem.z.toFixed(1)],
     kind: trees.variants[stem.variant]?.key ?? '?',
     dmg: +stem.damage.toFixed(2),
     side,

@@ -18,23 +18,9 @@ f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
-const c = f.camera.position;
-const origins = [];
-for (let i = 0; i < 80; i++) {
-  const a = i * 2.399963;
-  const r = 18 + (i % 10) * 11;
-  const x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
-  const s = maps.sample(x, z, {});
-  if (!s.inside) continue;
-  if (s.waterDepth > 0.04) continue;
-  if (s.slope > 0.55) continue;
-  origins.push({
-    x, z, s,
-    score: s.canopy * 1.1 + s.skyVis * 1.8 + s.litter * 0.6 - s.slope * 1.2,
-  });
-}
-origins.sort((a, b) => b.score - a.score);
-const grove = origins[0] ?? { x: c.x, z: c.z, s: maps.sample(c.x, c.z, {}) };
+// pin the grove that first read as a horizontal oak (storm14) so later
+// stills iterate the same pad instead of a new random thicket
+const grove = { x: 144.6, z: 99.6, s: maps.sample(144.6, 99.6, {}) };
 const gh = maps.height(grove.x, grove.z);
 f.camera.position.set(grove.x - 6.5, gh + 2.9, grove.z + 5.2);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.2);
