@@ -5,8 +5,8 @@ f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
 f.state.exposureAuto = false;
-f.pipeline.settings.exposure = 1.20;
-f.pipeline.settings.aerial = 0.34;
+f.pipeline.settings.exposure = 1.26;
+f.pipeline.settings.aerial = 0.32;
 f.pipeline.settings.motionBlur = 0;
 f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
@@ -35,7 +35,10 @@ function place(bank, look, pull, rise, side = 0) {
   const p = f.camera.position;
   p.y = Math.max(p.y, maps.height(p.x, p.z) + rise * 0.86);
   const lookH = maps.height(look.x, look.z);
-  f.camera.lookAt(look.x, lookH + 4.6, look.z);
+  const lookW = Math.max(0, look.s?.waterDepth ?? 0);
+  // water in the lower third, mist in the middle. +4.6 parked the run
+  // as a dark sliver under a fog wall.
+  f.camera.lookAt(look.x, lookH + lookW * 0.12 + 2.05, look.z);
   f.camera.updateMatrixWorld(true);
   f.camera.updateProjectionMatrix();
 }
@@ -43,8 +46,8 @@ function place(bank, look, pull, rise, side = 0) {
 const PIN = {
   bank: { x: 24.4, z: -171.1 },
   look: { x: 13.7, z: -167.9 },
-  pull: 11.4,
-  rise: 6.0,
+  pull: 8.8,
+  rise: 5.1,
   side: 0,
 };
 
@@ -69,6 +72,9 @@ if (f.forest.life) {
 f.state.running = false;
 
 const p = f.camera.position;
+const lookH = maps.height(PIN.look.x, PIN.look.z);
+const lookW = Math.max(0, PIN.look.s.waterDepth ?? 0);
+const ndc = new (p.constructor)(PIN.look.x, lookH + lookW * 0.12, PIN.look.z).project(f.camera);
 return {
   act: f.weather.actName,
   pin: [PIN.bank.x, PIN.bank.z],
@@ -80,6 +86,7 @@ return {
   camY: +(p.y - maps.height(p.x, p.z)).toFixed(2),
   bankWater: +(PIN.bank.s.waterDepth ?? 0).toFixed(2),
   lookWater: +(PIN.look.s.waterDepth ?? 0).toFixed(2),
+  waterNdc: [+ndc.x.toFixed(2), +ndc.y.toFixed(2), +ndc.z.toFixed(2)],
   sky: +(PIN.bank.s.skyVis ?? 0).toFixed(2),
   inside: !!(PIN.bank.s.inside && PIN.look.s.inside),
 };

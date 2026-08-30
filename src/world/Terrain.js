@@ -213,9 +213,9 @@ Ground groundSurface(vec3 wp, vec3 N, vec4 eco, vec4 mapv, vec4 ao, float lodPx)
   float wet = clamp(wetness * 1.12 + margin * 1.12, 0.0, 1.0);
   wet = max(wet, smoothstep(-0.10, 0.32, waterDepth));
   alb = mix(alb, silt * 0.42, wet * 0.62);
-  alb *= mix(1.0, 0.28, wet);
+  alb *= mix(1.0, 0.48, wet);
   // darker still right at the meniscus so the waterline reads as a line
-  alb *= mix(1.0, 0.46, margin * 0.88);
+  alb *= mix(1.0, 0.62, margin * 0.88);
   // wet dirt, not chrome: keep enough roughness that morning shafts do not blow the bank
   rough = mix(rough, 0.18, wet * 0.90);
   rough = mix(rough, 0.12, margin * 0.72);

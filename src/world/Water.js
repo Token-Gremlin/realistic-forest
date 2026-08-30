@@ -113,7 +113,7 @@ export class Water {
 
     this.uniforms = {
       ...Env.pick('uTime', 'uDelta', 'uCamPos', 'uWind', 'uWindPhase', 'uWeather',
-        'uSunDir', 'uSunColor', 'uMoonDir', 'uMoonColor', 'uJitter', 'uViewProj',
+        'uSunDir', 'uSunColor', 'uMoonDir', 'uMoonColor', 'uSkyAmbient', 'uJitter', 'uViewProj',
         'uPrevViewProj', 'uInvViewProj', 'uResolution', 'uNearFar', 'uFlash', 'uFlashColor',
         'uFire', 'uFireColor',
         'uSkyProbe', 'uSkyIrradiance', 'uShadowMap', 'uShadowMatrices', 'uShadowSplits',
@@ -184,6 +184,7 @@ precision highp int;
 precision highp sampler2DShadow;
 uniform vec3 uCamPos; uniform vec4 uWeather; uniform float uTime;
 uniform vec3 uSunDir; uniform vec3 uSunColor; uniform vec3 uMoonDir; uniform vec3 uMoonColor;
+uniform vec3 uSkyAmbient;
 uniform vec4 uFlash; uniform vec3 uFlashColor;
 uniform vec4 uFire; uniform vec3 uFireColor;
 ${GLSL_COMMON}
@@ -353,8 +354,8 @@ void main(){
   // so the lace stays pale on the stained column.
   float stain = smoothstep(0.05, 0.62, depth);
   col *= mix(vec3(1.0), vec3(1.16, 0.86, 0.58), stain * 0.62);
-  vec3 foamCol = vec3(0.38, 0.41, 0.40) * (0.75 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.55)
-               + uSunColor * sunShadowK * 0.10;
+  vec3 foamCol = vec3(0.42, 0.44, 0.42) * (0.88 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.40)
+               + uSkyAmbient * 0.40 + uSunColor * sunShadowK * 0.10;
   col = mix(col, foamCol, foam * 0.40);
   float meniscus = exp(-depth * depth * 90.0) * (1.0 - smoothstep(0.10, 0.26, depth));
   col = mix(col, foamCol * 1.05, meniscus * 0.38);
@@ -378,6 +379,11 @@ void main(){
   }
   // tea ambient under rain so the column does not crush to a black hole
   col += vec3(0.07, 0.048, 0.024) * uWeather.z;
+  // dawn and blue hour: sun glint dies and the run crushed to a hole
+  // under mist. A cool tea fill keeps the surface readable.
+  float sunUp = clamp(uSunDir.y, 0.0, 1.0);
+  col += uSkyAmbient * mix(0.38, 0.07, sunUp);
+  col += vec3(0.058, 0.044, 0.028) * mix(0.90, 0.12, sunUp);
 
   // soften the very edge so the waterline is not a hard cut
   float edgeFade = smoothstep(0.006, 0.05, depth);

@@ -68,7 +68,10 @@ float mediaDensity(vec3 p, out float mistFrac){
   float mistH = mix(2.4, 6.8, uFog.z);
   float mist = exp(-max(above, 0.0) / mistH) * uFog.z;
   mist *= 1.0 + 1.25 * smoothstep(0.15, 0.85, wetness);
-  mist *= 1.0 + 1.9 * smoothstep(-0.2, 0.6, waterDepth);
+  // Hang the extra bank on the wet margin, not as a slab on the run.
+  // 1.9x over open water is why dawn stream plates lost the surface.
+  float margin = smoothstep(-0.22, 0.06, waterDepth) * (1.0 - smoothstep(0.22, 0.70, waterDepth));
+  mist *= 1.0 + 0.95 * margin + 0.28 * smoothstep(0.05, 0.55, waterDepth);
   // hollows collect mist
   vec2 dh = vec2(groundHeight(p.xz + vec2(9.0, 0.0)) - ground, groundHeight(p.xz + vec2(0.0, 9.0)) - ground);
   mist *= 1.0 + 0.5 * clamp((dh.x + dh.y) * 0.10, -0.6, 1.2);
