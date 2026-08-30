@@ -54,12 +54,13 @@ function frameTrunk(f, t) {
   // rotate 18 deg so we see around the cylinder
   const ca = Math.cos(0.32), sa = Math.sin(0.32);
   const rx = ox * ca - oz * sa, rz = ox * sa + oz * ca;
-  const pull = 3.15;
-  f.camera.position.set(t.x + rx * pull, gh + 1.68, t.z + rz * pull);
+  const pull = 3.45;
+  f.camera.position.set(t.x + rx * pull, gh + 2.25, t.z + rz * pull);
   f.forest.trees.pushOutOfTrunks(f.camera.position, 1.15);
   const p = f.camera.position;
-  p.y = maps.height(p.x, p.z) + 1.58;
-  f.camera.lookAt(t.x, gh + 1.42, t.z);
+  p.y = maps.height(p.x, p.z) + 2.15;
+  // mid-stem, above the root flare, so the plate is a wall of bark
+  f.camera.lookAt(t.x, gh + 2.55, t.z);
   f.camera.updateMatrixWorld(true);
   f.camera.updateProjectionMatrix();
   return {
@@ -118,6 +119,12 @@ if (f.forest.life) {
   f.forest.life.holdInsects = -1;
   f.forest.life.holdBirds = -1;
   f.forest.life.update(0.016, f.camera);
+  f.forest.life.insects.mesh.visible = false;
+  f.forest.life.insects.geo.instanceCount = 0;
+  f.forest.life.stats.insects = 0;
+  f.forest.life.birds.mesh.visible = false;
+  f.forest.life.birds.geo.instanceCount = 0;
+  f.forest.life.stats.birds = 0;
 }
 
 return {

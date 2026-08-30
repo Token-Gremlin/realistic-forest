@@ -387,6 +387,8 @@ function emitBranches(sk, lod) {
     }
 
     let prev = null;
+    let first = null;
+    let firstRing = null;
     for (const ring of rings) {
       orthoBasis(ring.dir, basis);
       const twist = sp.trunkTwist * ring.t * (br.level === 0 ? 1 : 0.4);
@@ -412,10 +414,20 @@ function emitBranches(sk, lod) {
           [rr, br.level, ring.heightAbove, br.phase],
           [ring.flex, br.phase]));
       }
+      if (!first) { first = row; firstRing = ring; }
       if (prev) {
         for (let k = 0; k < radial; k++) mb.quad(prev[k], row[k], row[k + 1], prev[k + 1]);
       }
       prev = row;
+    }
+    // plug the root of a standing stem — FrontSide tubes are hollow and a
+    // close camera looking into the flare reads as a debug cave
+    if (first && firstRing && br.level === 0) {
+      const n = V().copy(firstRing.dir).negate();
+      const c = mb.vertex(firstRing.pos, n, [0, firstRing.v],
+        [firstRing.radius, br.level, firstRing.heightAbove, br.phase],
+        [firstRing.flex, br.phase]);
+      for (let k = 0; k < radial; k++) mb.tri(first[k + 1], first[k], c);
     }
     // cap the tip so twigs are not open tubes
     if (prev && br.isTip) {
