@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Rng, lerp, clamp } from '../core/rng.js';
-import { MeshBuilder, PART, tube, ribbon, card, blob, arc, orthoBasis } from './meshkit.js';
+import { MeshBuilder, PART, tube, ribbon, card, blob, arc, orthoBasis, breakFace } from './meshkit.js';
 
 /**
  * Ground-cover archetypes.
@@ -445,51 +445,66 @@ export function buildVine(seed, opts = {}) {
 export function buildLimb(seed, opts = {}) {
   const r = new Rng(seed);
   const mb = new MeshBuilder();
-  const len = lerp(1.15, 3.4, r.f()) * (opts.scale ?? 1);
-  const rad = len * lerp(0.038, 0.088, r.f());
-  const az = r.f() * Math.PI * 2;
-  const segs = 6;
+  // grow along +Z so FallingBranches can map length to the view-across axis.
+  // a random XZ heading made some variants point at the lens (hollow pipe).
+  const len = lerp(1.35, 3.2, r.f()) * (opts.scale ?? 1);
+  const rad = len * lerp(0.055, 0.095, r.f());
+  const segs = 7;
   const pts = [];
-  const kink = r.range(-0.55, 0.55);
+  const kink = r.range(-0.38, 0.38);
+  const sag = r.range(-0.22, 0.28);
   for (let i = 0; i <= segs; i++) {
     const t = i / segs;
     pts.push(V(
-      Math.cos(az) * len * t + Math.cos(az + 1.57) * kink * len * t * t * 0.32,
-      rad * (0.85 + 0.4 * Math.sin(t * 4.6)),
-      Math.sin(az) * len * t + Math.sin(az + 1.57) * kink * len * t * t * 0.32,
+      kink * len * t * t * 0.28,
+      rad * (0.55 + sag * Math.sin(t * Math.PI) + 0.18 * Math.sin(t * 5.1)),
+      t * len,
     ));
   }
-  tube(mb, pts, [rad, rad * 0.97, rad * 0.88, rad * 0.68, rad * 0.38, rad * 0.16, rad * 0.05], 6, PART.WOOD, {
-    totalHeight: rad * 2, rnd: r.f(), lumpy: 0.28, cap: true, vScale: 5,
+  // living tip stays a stub, not a needle — needle cones read as a cluster
+  const radii = [rad, rad * 0.97, rad * 0.90, rad * 0.80, rad * 0.66, rad * 0.50, rad * 0.36, rad * 0.24];
+  tube(mb, pts, radii, 8, PART.WOOD, {
+    totalHeight: rad * 2, rnd: r.f(), lumpy: 0.24, cap: true, vScale: 4.2,
   });
-  // snapped end: a few splinters so it does not read as a clean cut
-  const tip = pts[segs];
-  const splinters = 2 + r.int(3);
+  const snap = pts[0];
+  const along = V().subVectors(pts[1], pts[0]).normalize();
+  const outward = along.clone().negate();
+  breakFace(mb, snap, outward, rad * 0.96, 8, PART.WOOD, {
+    rnd: r.f(), inset: rad * 0.32, jitter: 0.28,
+  });
+  const splinters = 3 + r.int(3);
   for (let k = 0; k < splinters; k++) {
-    const sa = az + r.range(-0.7, 0.7);
-    const sl = rad * lerp(1.6, 4.2, r.f());
-    const sr = rad * lerp(0.08, 0.22, r.f());
-    const spts = [
-      V(tip.x, tip.y, tip.z),
-      V(tip.x + Math.cos(sa) * sl, tip.y + rad * 0.35, tip.z + Math.sin(sa) * sl),
-    ];
-    tube(mb, spts, [sr, sr * 0.15], 4, PART.WOOD, {
-      totalHeight: rad * 2, rnd: r.f(), lumpy: 0.15, cap: true, vScale: 5,
+    const sa = r.f() * Math.PI * 2;
+    const tilt = lerp(0.15, 0.55, r.f());
+    const sl = rad * lerp(1.4, 3.6, r.f());
+    const sr = rad * lerp(0.07, 0.18, r.f());
+    const sd = V(
+      Math.cos(sa) * tilt,
+      Math.sin(sa) * tilt * 0.65,
+      -Math.sqrt(Math.max(0.05, 1 - tilt * tilt)),
+    ).normalize();
+    const spts = [snap.clone(), snap.clone().addScaledVector(sd, sl)];
+    tube(mb, spts, [sr, sr * 0.12], 4, PART.WOOD, {
+      totalHeight: rad * 2, rnd: r.f(), lumpy: 0.2, cap: true, vScale: 5,
     });
   }
-  if (r.f() < 0.78) {
-    const si = 1 + r.int(3);
+  const forks = 1 + (r.f() < 0.42 ? 1 : 0);
+  for (let f = 0; f < forks; f++) {
+    const si = 2 + r.int(3);
     const base = pts[si];
-    const sa = az + r.range(0.7, 1.9) * (r.f() < 0.5 ? 1 : -1);
-    const slen = len * lerp(0.24, 0.55, r.f());
+    const yaw = r.range(0.55, 1.25) * (r.f() < 0.5 ? 1 : -1);
+    const pitch = r.range(-0.28, 0.48);
+    const slen = len * lerp(0.36, 0.68, r.f());
+    const fdir = V(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).normalize();
     const spts = [];
-    for (let i = 0; i <= 3; i++) {
-      const t = i / 3;
-      spts.push(V(base.x + Math.cos(sa) * slen * t, base.y + rad * 0.55 * t, base.z + Math.sin(sa) * slen * t));
+    for (let i = 0; i <= 4; i++) {
+      const t = i / 4;
+      const bow = Math.sin(t * Math.PI) * slen * 0.08;
+      spts.push(base.clone().addScaledVector(fdir, slen * t).add(V(0, bow, 0)));
     }
-    const sr = rad * 0.48;
-    tube(mb, spts, [sr, sr * 0.72, sr * 0.36, sr * 0.07], 5, PART.WOOD, {
-      totalHeight: rad * 2, rnd: r.f(), lumpy: 0.22, cap: true, vScale: 5,
+    const sr = rad * lerp(0.38, 0.58, r.f());
+    tube(mb, spts, [sr, sr * 0.86, sr * 0.64, sr * 0.40, sr * 0.18], 6, PART.WOOD, {
+      totalHeight: rad * 2, rnd: r.f(), lumpy: 0.2, cap: true, vScale: 4.4,
     });
   }
   return { mesh: mb, height: mb.height, radius: mb.radius, material: 'solid', sink: rad * 0.5 };

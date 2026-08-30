@@ -56,8 +56,8 @@ Fall place(float tShift){
 
   float drive = max(uDrive, uBurst.w * 1.4);
   float alive = step(h.x, mix(0.10, 1.0, smoothstep(0.10, 0.88, drive)));
-  // a held still wants a few metre-plus limbs, not eighty twigs on the lens
-  if(uPhase >= 0.0) alive *= step(h.x, 0.05);
+  // a held still wants one or two metre-plus forks, not a cone swarm
+  if(uPhase >= 0.0) alive *= step(h.x, 0.026);
   if(alive < 0.5 || drive < 0.07){
     return o;
   }
@@ -88,9 +88,9 @@ Fall place(float tShift){
     rt = normalize(rt);
     vec3 lift = normalize(cross(rt, look));
     base = origin
-      + look * mix(9.2, 13.0, h3.x)
-      + rt * (h3.z - 0.5) * 3.4
-      + lift * (h3.y - 0.5) * 2.2;
+      + look * mix(7.8, 11.2, h3.x)
+      + rt * (h3.z - 0.5) * 1.8
+      + lift * (h3.y - 0.5) * 1.2;
   } else {
     base.x = origin.x + (fract(h3.x + 0.5 + adv.x / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
     base.z = origin.z + (fract(h3.z + 0.5 + adv.y / max(vol.x * 2.0, 0.01)) - 0.5) * vol.x * 2.0;
@@ -146,9 +146,9 @@ Fall place(float tShift){
     if(length(across) < 1e-4) across = vec3(1.0, 0.0, 0.0);
     across = normalize(across);
     vec3 lift = normalize(cross(across, view));
-    float tip = (h3.y - 0.5) * 1.1;
+    float tip = (h3.y - 0.5) * 0.55;
     longA = normalize(across * cos(tip) + lift * sin(tip));
-    longA = rotateAxis(longA, view, (h.w - 0.5) * 1.6);
+    longA = rotateAxis(longA, view, (h.w - 0.5) * 0.85);
     up = lift;
   }
   vec3 side = normalize(cross(up, longA));
@@ -254,21 +254,41 @@ void main(){
   vec3 T = normalize(cross(N, vec3(0.0, 1.0, 0.0)) + vec3(1e-4, 0.0, 0.0));
   vec3 B = cross(N, T);
   float idv = fract(vTint * 5.71 + vExtra.w * 2.3);
-  float wet = clamp(mapWetness(vWorld.xz) * 0.7 + uWeather.w * 0.95, 0.0, 1.0);
-  float grain = fbm(vec3(vWorld.x * 2.2, vWorld.y * 36.0, vWorld.z * 2.2) + idv * 13.0, 3, 2.1, 0.5) * 0.5 + 0.5;
-  float ridge = ridged(vec2(vUv.x * 5.0, vUv.y * 0.7) + idv * 9.0, 3, 2.15, 0.5);
-  vec3 woodA = vec3(0.050, 0.038, 0.024);
-  vec3 woodB = vec3(0.125, 0.095, 0.062);
-  vec3 alb = mix(woodA, woodB, grain * 0.65 + ridge * 0.35);
-  float rot = smoothstep(0.45, 0.9, fbm(vWorld * 1.7 + 61.0, 3, 2.1, 0.5) * 0.5 + 0.5);
-  alb = mix(alb, mix(vec3(0.080, 0.074, 0.064), vec3(0.140, 0.130, 0.112), grain), rot * 0.55);
-  vec3 d1 = noised(vec2(vUv.x * 9.0, vUv.y * 1.2) + idv * 5.0);
-  N = normalize(N - (T * d1.y + B * d1.z) * 0.28);
-  float rough = mix(0.72, 0.94, grain);
-  alb *= mix(1.0, 0.66, wet);
-  rough = clamp(rough - wet * 0.28, 0.08, 1.0);
-  float occ = mix(0.58, 1.0, ridge);
-  writeGBuffer(clamp(alb, vec3(0.004), vec3(0.55)), occ, N, rough, 0.0, vCur, vPrev, ${MAT_BARK.toFixed(1)}, 0.35);
+  float wet = clamp(mapWetness(vWorld.xz) * 0.45 + uWeather.w * 0.70, 0.0, 1.0);
+  // along-grain fissures: uv.x around, uv.y along. stretched like real bark
+  vec2 bp = vec2(vUv.x * 3.4, vUv.y * 0.78) + idv * 5.0;
+  float r1 = ridged(vec2(bp.x, bp.y * 0.18), 4, 2.13, 0.52);
+  float r2 = ridged(vec2(bp.x * 2.6, bp.y * 0.40) + 7.0, 3, 2.2, 0.5);
+  float ridge = r1 * 0.68 + r2 * 0.32;
+  float fissure = smoothstep(0.28, 0.86, ridge);
+  float grain = fbm(vec3(vWorld.x * 2.4, vWorld.y * 28.0, vWorld.z * 2.4) + idv * 13.0, 3, 2.1, 0.5) * 0.5 + 0.5;
+  vec3 woodA = vec3(0.078, 0.054, 0.032);
+  vec3 woodB = vec3(0.168, 0.122, 0.074);
+  vec3 alb = mix(woodA, woodB, grain * 0.55 + fissure * 0.45);
+  alb *= mix(0.48, 1.08, smoothstep(0.0, 0.62, ridge));
+  float rot = smoothstep(0.55, 0.94, fbm(vWorld * 1.5 + 61.0, 3, 2.1, 0.5) * 0.5 + 0.5);
+  alb = mix(alb, mix(vec3(0.070, 0.066, 0.056), vec3(0.125, 0.116, 0.098), grain), rot * 0.28);
+  vec3 w = worley2(vec2(bp.x * 0.85, bp.y * 0.28) + 3.7, 1.0);
+  float plate = smoothstep(0.06, 0.44, w.x);
+  alb *= mix(0.78, 1.04, plate);
+  float hx = ridged(vec2(bp.x + 0.02, bp.y * 0.18), 3, 2.13, 0.52);
+  float hy = ridged(vec2(bp.x, (bp.y + 0.02) * 0.18), 3, 2.13, 0.52);
+  N = normalize(N - (T * (hx - r1) + B * (hy - r1)) * 2.4);
+  float endGrain = step(1.5, vExtra.z);
+  if(endGrain > 0.5){
+    float rr = length(vUv - 0.5);
+    float rings = 0.5 + 0.5 * sin(rr * 42.0 + idv * 9.0);
+    vec3 heart = mix(vec3(0.145, 0.100, 0.058), vec3(0.210, 0.155, 0.090), rings);
+    alb = mix(heart * (0.75 + 0.35 * grain), alb, 0.18);
+  }
+  float rough = mix(0.88, 0.96, grain);
+  rough = mix(rough, 0.70, endGrain);
+  // wet bark darkens a little; keep it matte so it does not read as metal
+  alb *= mix(1.0, 0.84, wet * (1.0 - endGrain));
+  rough = clamp(rough - wet * 0.10, 0.62, 1.0);
+  float occ = mix(0.52, 1.0, fissure);
+  occ = mix(occ, 0.78, endGrain);
+  writeGBuffer(clamp(alb, vec3(0.010), vec3(0.42)), occ, N, rough, 0.0, vCur, vPrev, ${MAT_BARK.toFixed(1)}, 0.0);
 }
 `;
 

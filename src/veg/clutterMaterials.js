@@ -413,8 +413,13 @@ void main(){
     rough = mix(rough, 0.95, moss);
   } else if(part == ${PART.WOOD} || part == ${PART.BARK}){
     float grain = fbm(vec3(vWorld.x * 2.2, vWorld.y * 42.0, vWorld.z * 2.2) + idv * 13.0, 3, 2.1, 0.5) * 0.5 + 0.5;
-    float ridge = ridged(vec2(vUv.x * 5.0, vUv.y * 0.7) + idv * 9.0, 3, 2.15, 0.5);
-    vec3 wood = mix(uWoodA, uWoodB, grain * 0.65 + ridge * 0.35);
+    float ridge = ridged(vec2(vUv.x * 3.4, vUv.y * 0.22) + idv * 9.0, 4, 2.13, 0.52);
+    vec3 wood = mix(uWoodA, uWoodB, grain * 0.55 + ridge * 0.45);
+    if(vExtra.z > 1.5){
+      float rr = length(vUv - 0.5);
+      float rings = 0.5 + 0.5 * sin(rr * 38.0 + idv * 8.0);
+      wood = mix(vec3(0.145, 0.102, 0.062), vec3(0.205, 0.150, 0.088), rings);
+    }
     // rotting wood goes grey and soft
     float rot = smoothstep(0.45, 0.9, fbm(vWorld * 1.7 + 61.0, 3, 2.1, 0.5) * 0.5 + 0.5);
     wood = mix(wood, mix(vec3(0.085, 0.080, 0.070), vec3(0.145, 0.138, 0.122), grain), rot * 0.7);

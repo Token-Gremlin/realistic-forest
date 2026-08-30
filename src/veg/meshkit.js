@@ -78,6 +78,7 @@ export function tube(mb, points, radii, radial, part, opts = {}) {
   const basis = { t: V(), b: V() };
   const total = points.length;
   let prev = null;
+  let first = null;
   const totalH = opts.totalHeight ?? Math.max(...points.map((p) => p.y)) ?? 1;
   let vAlong = 0;
   for (let i = 0; i < total; i++) {
@@ -106,6 +107,7 @@ export function tube(mb, points, radii, radial, part, opts = {}) {
     }
     if (i > 0) vAlong += points[i].distanceTo(points[i - 1]) * (opts.vScale ?? 3.0);
     if (prev) for (let k = 0; k < radial; k++) mb.quad(prev[k], row[k], row[k + 1], prev[k + 1]);
+    if (!first) first = row;
     prev = row;
   }
   if (opts.cap && prev) {
@@ -116,7 +118,46 @@ export function tube(mb, points, radii, radial, part, opts = {}) {
       [opts.flex1 ?? 1, opts.phase ?? 0]);
     for (let k = 0; k < radial; k++) mb.tri(prev[k], prev[k + 1], c);
   }
+  if (opts.capStart && first) {
+    const firstP = points[0];
+    const dir = V().subVectors(points[0], points[1]).normalize();
+    const c = mb.vertex(firstP, dir, [0, 0],
+      [part, 0, Math.max(firstP.y, 0) / Math.max(totalH, 1e-3), opts.rnd ?? 0],
+      [opts.flex0 ?? 0, opts.phase ?? 0]);
+    for (let k = 0; k < radial; k++) mb.tri(first[k + 1], first[k], c);
+  }
   return prev;
+}
+
+/**
+ * Recessed, jagged break on a snapped stem. extra.z = 2 marks the face as
+ * end-grain so bark shaders can draw rings instead of a hollow lid.
+ */
+export function breakFace(mb, center, outward, radius, radial, part, opts = {}) {
+  const dir = outward.clone().normalize();
+  const basis = { t: V(), b: V() };
+  orthoBasis(dir, basis);
+  const inset = opts.inset ?? radius * 0.28;
+  const cpos = V().copy(center).addScaledVector(dir, -inset);
+  const rnd = opts.rnd ?? 0;
+  const jitter = opts.jitter ?? 0.22;
+  const grain = 2.0;
+  const c = mb.vertex(cpos, dir, [0.5, 0.5], [part, radius, grain, rnd], [0, opts.phase ?? 0]);
+  const rim = [];
+  for (let k = 0; k <= radial; k++) {
+    const kk = k % radial;
+    const a = (kk / radial) * Math.PI * 2;
+    const jag = 1 + jitter * Math.sin(a * 3.0 + rnd * 17.0) + jitter * 0.55 * Math.sin(a * 7.0 - rnd * 9.0);
+    const along = inset * 0.35 * Math.sin(a * 5.0 + rnd * 11.0);
+    const vp = V().copy(center)
+      .addScaledVector(basis.t, Math.cos(a) * radius * jag)
+      .addScaledVector(basis.b, Math.sin(a) * radius * jag)
+      .addScaledVector(dir, along);
+    rim.push(mb.vertex(vp, dir, [0.5 + Math.cos(a) * 0.5, 0.5 + Math.sin(a) * 0.5],
+      [part, radius, grain, rnd], [0, opts.phase ?? 0]));
+  }
+  for (let k = 0; k < radial; k++) mb.tri(c, rim[k], rim[k + 1]);
+  return rim;
 }
 
 /**
