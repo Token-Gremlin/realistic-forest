@@ -511,30 +511,23 @@ void main(){
   }
 
   if(uInsectHold.w > 0.05){
-    // Tight UV cloud on sky. Projected world holds land on foliage;
-    // a fixed air-band root keeps the swarm readable at tiny.
-    vec2 root = vec2(0.50, 0.44);
-    vec4 c0 = uViewProj * vec4(uInsectHold.xyz, 1.0);
-    if(c0.w > 0.16){
-      vec2 pr = c0.xy / c0.w * 0.5 + 0.5;
-      float sceneAt = texture(uDepthTex, clamp(pr, 0.0, 1.0)).r;
-      if(sceneAt > 0.80 && pr.x > 0.18 && pr.x < 0.82 && pr.y > 0.24 && pr.y < 0.76)
-        root = mix(root, pr, 0.40);
-    }
+    // Tight UV cloud in the air band. A far-depth gate culls the swarm
+    // when haze or a cloud writes the sky; only skip near foliage.
+    vec2 root = vec2(0.50, 0.46);
     for(int i = 0; i < 12; i++){
       float sd = 8.4 + float(i) * 9.3;
-      float rad = mix(0.008, 0.078, hash11(sd));
+      float rad = mix(0.010, 0.072, hash11(sd));
       float phi = hash11(sd + 2.1) * 6.2831853;
-      vec2 c = root + vec2(cos(phi) * rad * 1.05, sin(phi) * rad * 0.62);
-      if(c.x < 0.10 || c.x > 0.90 || c.y < 0.16 || c.y > 0.86) continue;
+      vec2 c = root + vec2(cos(phi) * rad * 1.08, sin(phi) * rad * 0.58);
+      if(c.x < 0.12 || c.x > 0.88 || c.y < 0.20 || c.y > 0.82) continue;
       float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
-      if(sceneZ < 0.80) continue;
+      if(sceneZ < 0.22) continue;
       float ang = (hash11(sd + 5.0) - 0.5) * 2.2;
-      float sz = mix(0.018, 0.030, hash11(sd + 6.2));
+      float sz = mix(0.020, 0.034, hash11(sd + 6.2));
       float body = insectMote(vUv, c, ang, sz);
       if(body < 0.08) continue;
-      vec3 bug = vec3(0.045, 0.040, 0.028);
-      mapped = mix(mapped, bug, clamp(body * 0.90, 0.0, 1.0));
+      // relative darken so dashes read on both pale sky and grey haze
+      mapped *= mix(1.0, 0.16, clamp(body, 0.0, 1.0));
     }
   }
 
