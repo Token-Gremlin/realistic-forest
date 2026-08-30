@@ -301,8 +301,8 @@ export class Lightning {
       write(p2, -1, bright); write(p1, 1, bright); write(p3, 1, bright);
     };
     for (const s of this._segs) {
-      ribbon(s.a, s.b, Math.max(s.width * 0.55, 2.8), s.bright);
-      ribbon(s.a, s.b, Math.max(s.width * 4.4, 9.0), -(s.bright * 0.5));
+      ribbon(s.a, s.b, Math.max(s.width * 0.40, 1.4), s.bright);
+      ribbon(s.a, s.b, Math.max(s.width * 2.8, 4.2), -(s.bright * 0.48));
     }
     this.geometry.setDrawRange(0, n);
     this.bufPos.needsUpdate = true;

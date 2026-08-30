@@ -78,29 +78,6 @@ const mid = {
   z: (bolt?.cloud.z + bolt?.ground.z) * 0.5,
 };
 
-// clip-space canary: if this triangle is missing, the forward pass is dead
-const CanaryGeo = f.forest.lightning.geometry.constructor;
-const canaryG = new CanaryGeo();
-canaryG.setAttribute('position', new (f.forest.lightning.bufPos.constructor)(new Float32Array([
-  -0.55, -0.15, 0,
-   0.55, -0.15, 0,
-   0.00,  0.65, 0,
-]), 3));
-const RawMat = f.forest.lightning.material.constructor;
-const canaryMat = new RawMat({
-  glslVersion: f.forest.lightning.material.glslVersion,
-  vertexShader: 'precision highp float; in vec3 position; void main(){ gl_Position = vec4(position, 1.0); }',
-  fragmentShader: 'precision highp float; layout(location=0) out vec4 oColor; void main(){ oColor = vec4(40.0, 8.0, 0.2, 1.0); }',
-  depthTest: false,
-  depthWrite: false,
-  blending: 0,
-});
-const canary = new f.forest.lightning.mesh.constructor(canaryG, canaryMat);
-canary.frustumCulled = false;
-canary.matrixAutoUpdate = false;
-canary.name = 'flash-canary';
-f.forest.fscene.add(canary);
-
 const P = f.forest.lightning._pos;
 const v0 = P ? ndc(P[0], P[1], P[2]) : null;
 const v1 = P ? ndc(P[6], P[7], P[8]) : null;
