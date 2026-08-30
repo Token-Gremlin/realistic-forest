@@ -38,11 +38,11 @@ function clearNearFerns(f) {
   const p = f.camera.position;
   const fwd = p.clone();
   f.camera.getWorldDirection(fwd);
-  const hide = new Set(['fern', 'bush', 'bramble', 'vine', 'herb', 'log', 'limb']);
+  const hide = new Set(['fern', 'bush', 'bramble', 'vine', 'herb', 'log', 'limb', 'sedge']);
   let dropped = 0;
   for (const k of clutter.kinds) {
     if (!hide.has(k.arch.key)) continue;
-    const near = (k.arch.key === 'log' || k.arch.key === 'limb') ? 16 : 12;
+    const near = (k.arch.key === 'log' || k.arch.key === 'limb') ? 18 : 16;
     for (const v of k.variants) {
       const d = v.bucket.data;
       let w = 0;
