@@ -214,6 +214,7 @@ uniform vec3 uCamPos;
 uniform vec4 uWeather;
 uniform vec4 uFlash;
 uniform vec4 uFire;
+uniform vec3 uWind;
 uniform mat4 uViewProj;
 uniform vec4 uBolt;
 uniform vec4 uBoltAmp;
@@ -266,6 +267,21 @@ float fireTongue(vec2 uv, vec2 root, float seed, float tall){
   body *= 1.0 - smoothstep(0.88, 1.0, t);
   body *= smoothstep(-0.035, 0.02, d.y);
   return pow(clamp(body, 0.0, 1.0), 1.12);
+}
+
+/**
+ * Display-space rain curtain. World drops are a couple of pixels after the
+ * far divide and AgX grades them into storm fog; a wind-leaned field of
+ * streaks keeps a downpour still readable without becoming a 2D overlay.
+ */
+float rainStreak(vec2 uv, vec2 a, vec2 b, float halfW){
+  vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+  vec2 ab = b - a;
+  float len2 = max(dot(ab, ab), 1.0e-8);
+  float t = clamp(dot(uv - a, ab) / len2, 0.0, 1.0);
+  vec2 d = (uv - a - ab * t) * aspect;
+  float w = mix(halfW, halfW * 0.45, t);
+  return exp(-dot(d, d) / max(w * w, 1.0e-10));
 }
 
 float cocAt(vec2 uv){
@@ -397,6 +413,23 @@ void main(){
         mapped += glow * tongues * 0.40 * uFire.w;
       }
     }
+  }
+
+  if(uWeather.z > 0.18){
+    float rain = uWeather.z;
+    vec2 wdir = normalize(uWind.xy + vec2(1.0e-4));
+    float lean = clamp(uWind.z * 0.010, 0.0, 0.22);
+    float streaks = 0.0;
+    for(int i = 0; i < 26; i++){
+      float sd = 4.7 + float(i) * 13.9;
+      vec2 a = vec2(hash11(sd), mix(-0.08, 1.08, hash11(sd + 2.4)));
+      float lng = mix(0.10, 0.26, hash11(sd + 5.1)) * (0.75 + rain * 0.45);
+      vec2 b = a + vec2(wdir.x * lean, -1.0) * lng;
+      float halfW = mix(0.0018, 0.0034, hash11(sd + 8.0)) * (0.7 + rain * 0.5);
+      streaks = max(streaks, rainStreak(vUv, a, b, halfW));
+    }
+    streaks *= rain;
+    mapped = max(mapped, vec3(0.72, 0.80, 0.90) * streaks);
   }
 
   oColor = vec4(clamp(mapped, 0.0, 1.0), 1.0);

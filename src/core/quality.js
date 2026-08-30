@@ -17,7 +17,7 @@ export const PRESETS = {
     grassCount: 192, grassSpacing: 0.08, grassDensity: 1.0, grassRings: 3, grassRadius: 20,
     treeDensity: 0.38, treeRadius: 120, treeDetail: 0,
     clutterDensity: 0.52, clutterRadius: 26,
-    rainParticles: 6000,
+    rainParticles: 8000,
     ao: true, dof: true, taa: true, volumetrics: true,
   },
   low: {

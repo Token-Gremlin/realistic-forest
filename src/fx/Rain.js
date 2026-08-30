@@ -60,6 +60,7 @@ void main(){
   uint id = uint(iSeed + 0.5);
   vec4 h = hashI4(id * 17u + 3u);
   vec3 h3 = hashI3(id * 31u + 9u);
+  float hero = step(float(id), 72.0);
 
   float rain = uWeather.z;
   // thin the field at the start of a shower so it builds instead of popping on
@@ -82,6 +83,7 @@ void main(){
 
   vec3 origin = uCamPos + vec3(0.0, 1.4, 0.0);
   vec3 vol = uVolume;
+  if(hero > 0.5) vol *= 0.38;
   // wrap a box that follows the camera; wind slides the lattice so streaks
   // travel through the stand rather than hovering
   vec3 cell = h3;
@@ -129,14 +131,17 @@ void main(){
   if(sl < 0.04) side = cross(along, vec3(0.0, 1.0, 0.0));
   side = normalize(side);
 
-  // close drops stay bead-like; distant ones become streaks
-  float near = 1.0 - smoothstep(1.6, 9.5, dist);
-  float streak = mix(0.08, 0.32, rain) * mix(0.55, 1.45, h.w)
-               + relSp * 0.014
-               + near * 0.03;
-  float thick = mix(0.0065, 0.018, h.y) * mix(1.0, 1.85, near);
-  // stay above a pixel so they do not sparkle out
-  float minW = 2.1 / max(uProjScaleY / max(dist, 1.0), 1.0);
+  // close drops stay bead-like; distant ones become streaks. A handful of
+  // hero beads sit in a tighter volume so a still has readable 3D drops,
+  // not only sub-pixel sparkle after AgX.
+  float near = 1.0 - smoothstep(1.4, 8.5, dist);
+  float streak = mix(0.12, 0.48, rain) * mix(0.65, 1.55, h.w)
+               + relSp * 0.018
+               + near * 0.06;
+  streak *= mix(1.0, 1.7, hero);
+  float thick = mix(0.012, 0.032, h.y) * mix(1.0, 2.2, near);
+  thick *= mix(1.0, 2.4, hero);
+  float minW = mix(3.2, 5.0, hero) / max(uProjScaleY / max(dist, 1.0), 1.0);
   thick = max(thick, minW);
 
   vec3 world = p + along * (position.y * streak * 0.5) + side * (position.x * thick);
@@ -193,11 +198,11 @@ void main(){
   mask = clamp(mask, 0.0, 1.0);
   if(mask < 0.02) discard;
 
-  vec3 col = vec3(0.82, 0.88, 0.96) * (0.55 + vKind * 0.65);
-  col += uSkyAmbient * 1.15;
-  col += uSunColor * 0.35;
+  vec3 col = vec3(0.90, 0.94, 1.0) * (0.85 + vKind * 0.85);
+  col += uSkyAmbient * 0.85;
+  col += uSunColor * 0.22;
   col += uFlashColor * uFlash.w * 0.85;
-  float a = mask * vAlpha * mix(0.55, 1.25, uWeather.z);
+  float a = mask * vAlpha * mix(0.90, 1.65, uWeather.z);
   oColor = vec4(col * a, a);
 }
 `;
@@ -271,9 +276,9 @@ void main(){
   }
 
   float grow = 1.0 - exp(-age * 7.0);
-  float rad = mix(0.04, 0.22, h.y) * mix(0.7, 1.35, rain) * mix(0.45, 1.4, grow);
-  if(kind > 1.5) rad *= 0.45;
-  if(kind > 0.5 && kind < 1.5) rad *= 1.25;
+  float rad = mix(0.10, 0.42, h.y) * mix(0.8, 1.45, rain) * mix(0.45, 1.4, grow);
+  if(kind > 1.5) rad *= 0.50;
+  if(kind > 0.5 && kind < 1.5) rad *= 1.55;
 
   vec3 world = vec3(xz.x, y, xz.y);
   // mostly a horizontal disc; a little camera-facing lift so rings read at grazing angles
@@ -334,9 +339,9 @@ void main(){
   }
   if(mask < 0.02) discard;
 
-  vec3 col = vec3(0.82, 0.88, 0.94) * 0.55 + uSkyAmbient * 0.7 + uSunColor * 0.12;
+  vec3 col = vec3(0.88, 0.92, 0.98) * 0.85 + uSkyAmbient * 0.55 + uSunColor * 0.10;
   col += uFlashColor * uFlash.w * 0.55;
-  float a = mask * vAlpha * 0.85;
+  float a = mask * vAlpha * 1.15;
   oColor = vec4(col * a, a);
 }
 `;
@@ -430,8 +435,8 @@ export class Rain {
     }
 
     // tighten the volume as the shower thickens so the same budget reads denser
-    const span = THREE.MathUtils.lerp(20, 14, THREE.MathUtils.clamp(rain, 0, 1));
-    const height = THREE.MathUtils.lerp(12, 16, THREE.MathUtils.clamp(rain, 0, 1));
+    const span = THREE.MathUtils.lerp(16, 11, THREE.MathUtils.clamp(rain, 0, 1));
+    const height = THREE.MathUtils.lerp(11, 15, THREE.MathUtils.clamp(rain, 0, 1));
     this.dropMat.uniforms.uVolume.value.set(span, height, span);
     this.splashMat.uniforms.uVolume.value.set(span, height, span);
 

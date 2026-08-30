@@ -21,6 +21,7 @@ function catchUp(f) {
   }
   if (f.forest.life) f.forest.life.update(0.016, f.camera);
   if (f.forest.fire) f.forest.fire.update(0.016);
+  if (f.forest.rain) f.forest.rain.update(0.016, f.camera);
 }
 
 function clutterCounts(f) {
@@ -82,6 +83,7 @@ return {
   water: f.forest.water?.stats?.cells ?? 0,
   clutter: f.forest.clutter?.stats.instances ?? 0,
   kinds: clutterCounts(f),
+  rain: f.forest.rain?.stats ?? null,
   flash: +f.weather.flash.intensity.toFixed(2),
   bolt: !!f.forest.lightning?.mesh?.visible,
   segs: f.forest.lightning?.stats?.segs ?? 0,

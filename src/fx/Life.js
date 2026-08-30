@@ -594,6 +594,7 @@ export class Life {
     ];
     this.stats = { insects: 0, fireflies: 0, birds: 0, leaves: 0 };
     this.holdPulse = -1;
+    this.leavesSuppressed = false;
   }
 
   update(_dt, camera) {
@@ -634,7 +635,8 @@ export class Life {
       ? Math.max(1, Math.floor(this.birds.count * THREE.MathUtils.smoothstep(birdDrive, 0.08, 0.9)))
       : 0;
 
-    const leafDrive = (season * 0.95 + THREE.MathUtils.smoothstep(wind, 2.6, 9) * 0.28 + 0.06)
+    const leafDrive = this.leavesSuppressed ? 0
+      : (season * 0.95 + THREE.MathUtils.smoothstep(wind, 2.6, 9) * 0.28 + 0.06)
       * (1 - THREE.MathUtils.smoothstep(storm, 0.32, 0.72));
     this.leaves.mesh.visible = leafDrive > 0.05;
     this.leaves.geo.instanceCount = this.leaves.mesh.visible
