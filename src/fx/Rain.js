@@ -215,8 +215,10 @@ ${GLSL_MAPS}
 
 uniform mat4 uViewProj;
 uniform vec3 uCamPos;
+uniform vec3 uCamFwd;
 uniform vec4 uWeather;
 uniform float uTime;
+uniform float uHold;
 uniform vec3 uVolume;
 
 in vec3 position;
@@ -232,8 +234,9 @@ void main(){
   vec4 h = hashI4(id * 23u + 5u);
   vec3 h3 = hashI3(id * 41u + 11u);
 
-  float rain = uWeather.z;
+  float rain = max(uWeather.z, step(0.0, uHold) * 0.55);
   float alive = step(h.x, mix(0.12, 1.0, smoothstep(0.04, 0.95, rain)));
+  if(uHold >= 0.0) alive = step(float(id), 5.5);
   if(alive < 0.5 || rain < 0.03){
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vAlpha = 0.0; vUv = vec2(0.0); vKind = 0.0; vAge = 0.0;
@@ -241,7 +244,9 @@ void main(){
   }
 
   float rate = mix(2.4, 5.6, h.y) * mix(0.75, 1.35, rain);
-  float age = fract(uTime * rate + h.z);
+  float age = uHold >= 0.0
+    ? mix(0.16, 0.46, h.z)
+    : fract(uTime * rate + h.z);
   // short life: expand and die
   if(age > 0.55){
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
@@ -251,21 +256,42 @@ void main(){
 
   vec3 origin = uCamPos;
   float span = uVolume.x * 1.15;
-  vec2 xz = origin.xz + (h3.xz - 0.5) * span * 2.0;
+  vec2 xz;
+  if(uHold >= 0.0){
+    vec3 look = normalize(uCamFwd + vec3(1e-5, 0.0, 0.0));
+    vec3 rt = cross(look, vec3(0.0, 1.0, 0.0));
+    if(length(rt) < 0.08) rt = cross(look, vec3(1.0, 0.0, 0.0));
+    rt = normalize(rt);
+    xz = origin.xz + look.xz * mix(6.2, 12.0, h3.x) + rt.xz * (h3.z - 0.5) * 4.2;
+  } else {
+    xz = origin.xz + (h3.xz - 0.5) * span * 2.0;
+  }
   vec4 mapv = mapSample(xz);
+  float water = max(mapv.g - mapv.r, 0.0);
+  if(uHold >= 0.0 && water < 0.06){
+    vec3 look = normalize(uCamFwd + vec3(1e-5, 0.0, 0.0));
+    xz += look.xz * 2.8;
+    mapv = mapSample(xz);
+    water = max(mapv.g - mapv.r, 0.0);
+  }
   vec4 eco = ecoSample(xz);
   float ground = mapv.r;
-  float water = max(mapv.g - mapv.r, 0.0);
   float canopy = clamp(eco.g, 0.0, 1.0);
 
   float kind = 0.0;
   float y = ground + 0.025;
   if(water > 0.05){
     kind = 1.0;
-    y = mapv.g + 0.03;
+    y = mapv.g + 0.04;
   } else if(canopy > 0.45 && h.w > 0.55){
     kind = 2.0;
     y = ground + mix(5.0, 14.0, canopy) * (0.72 + h.y * 0.28);
+  }
+
+  if(uHold >= 0.0 && kind < 0.5){
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    vAlpha = 0.0; vUv = vec2(0.0); vKind = 0.0; vAge = age;
+    return;
   }
 
   // fewer ground hits under a closed canopy (those drops never arrived)
@@ -278,7 +304,7 @@ void main(){
   float grow = 1.0 - exp(-age * 7.0);
   float rad = mix(0.12, 0.50, h.y) * mix(0.85, 1.50, rain) * mix(0.45, 1.4, grow);
   if(kind > 1.5) rad *= 0.50;
-  if(kind > 0.5 && kind < 1.5) rad *= 2.35;
+  if(kind > 0.5 && kind < 1.5) rad *= uHold >= 0.0 ? 4.8 : 2.8;
 
   vec3 world = vec3(xz.x, y, xz.y);
   // mostly a horizontal disc; a little camera-facing lift so rings read at grazing angles
@@ -290,7 +316,9 @@ void main(){
 
   float dist = length(world - uCamPos);
   float fade = 1.0 - smoothstep(span * 0.55, span * 1.05, dist);
-  vAlpha = fade * (1.0 - age / 0.55) * (1.0 - age / 0.55) * mix(0.4, 1.0, rain);
+  vAlpha = fade * (uHold >= 0.0
+    ? 0.92
+    : (1.0 - age / 0.55) * (1.0 - age / 0.55) * mix(0.4, 1.0, rain));
   vUv = position.xy;
   vKind = kind;
   vAge = age;
@@ -326,11 +354,11 @@ void main(){
   float r = length(vUv);
   float mask = 0.0;
   if(vKind > 0.5 && vKind < 1.5){
-    // water: expanding ring, fat enough to survive AgX
-    float ring = abs(r - mix(0.12, 0.88, vAge / 0.55));
-    mask = 1.0 - smoothstep(0.025, 0.11, ring);
+    // water: expanding ring, fat enough to survive AgX and a tiny plate
+    float ring = abs(r - mix(0.18, 0.82, vAge / 0.55));
+    mask = 1.0 - smoothstep(0.045, 0.16, ring);
     mask *= 1.0 - smoothstep(0.95, 1.05, r);
-    mask = max(mask, exp(-r * r * 7.0) * (1.0 - vAge / 0.55) * 0.55);
+    mask = max(mask, exp(-r * r * 9.0) * (1.0 - vAge / 0.55) * 0.28);
   } else {
     // ground / canopy: soft crown that thins as it grows
     float inner = smoothstep(0.0, 0.18, r);
@@ -354,6 +382,8 @@ export class Rain {
     this.quality = quality;
     this.dropCount = quality.rainParticles ?? 24000;
     this.splashCount = Math.max(800, Math.round(this.dropCount * 0.18));
+    this.holdSplash = -1;
+    this._fwd = new THREE.Vector3(0, 0, -1);
 
     this.dropGeo = cardGeometry();
     this.dropGeo.setAttribute('iSeed', seedAttribute(this.dropCount));
@@ -397,6 +427,8 @@ export class Rain {
       uniforms: {
         ...shared,
         uCount: { value: this.splashCount },
+        uHold: { value: -1 },
+        uCamFwd: { value: this._fwd },
       },
       vertexShader: SPLASH_VERT,
       fragmentShader: SPLASH_FRAG,
@@ -426,10 +458,14 @@ export class Rain {
   }
 
   update(dt, camera) {
+    if (camera) camera.getWorldDirection(this._fwd);
     const rain = U.uWeather.value.z;
-    const on = rain > 0.018;
-    this.dropMesh.visible = on;
-    this.splashMesh.visible = rain > 0.03;
+    const held = this.holdSplash >= 0;
+    const on = rain > 0.018 || held;
+    this.dropMesh.visible = on && !held;
+    this.splashMesh.visible = rain > 0.03 || held;
+    this.splashMat.uniforms.uHold.value = this.holdSplash;
+    this.splashMat.uniforms.uCamFwd.value.copy(this._fwd);
     if (!on) {
       this.stats.drops = 0;
       this.stats.splashes = 0;
@@ -444,10 +480,10 @@ export class Rain {
 
     const dropN = Math.max(1, Math.floor(this.dropCount * THREE.MathUtils.smoothstep(rain, 0.02, 0.95)));
     const splashN = Math.max(1, Math.floor(this.splashCount * THREE.MathUtils.smoothstep(rain, 0.04, 0.95)));
-    this.dropGeo.instanceCount = dropN;
-    this.splashGeo.instanceCount = splashN;
-    this.stats.drops = dropN;
-    this.stats.splashes = splashN;
+    this.dropGeo.instanceCount = held ? 0 : dropN;
+    this.splashGeo.instanceCount = held ? 8 : splashN;
+    this.stats.drops = held ? 0 : dropN;
+    this.stats.splashes = held ? 6 : splashN;
   }
 
   beforeForward(_colorTex, depthTex) {

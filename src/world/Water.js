@@ -73,11 +73,11 @@ vec3 rippleNormal(vec2 p, vec2 flow, float flowMag, float depth, float lodPx){
   grad += vec2(d3.y, d3.z) * flowMag * uWaterWave.z * 0.6 * det;
 
   if(uWaterWave.w > 0.001){
-    // rain impact rings
-    vec3 w = worley2(p * 9.0 + floor(t * 3.0) * 17.3, 1.0);
-    float ring = sin(w.x * 42.0 - fract(t * 3.0) * 22.0) * exp(-w.x * 6.0);
-    vec3 wg = noised(p * 9.0 + floor(t * 3.0) * 17.3);
-    grad += wg.yz * ring * uWaterWave.w * 1.05;
+    // rain impact rings — cell size ~1.2 m so they survive a tiny plate
+    vec3 w = worley2(p * 0.85 + floor(t * 1.4) * 9.1, 1.0);
+    float ring = sin(w.x * 18.0 - fract(t * 1.4) * 14.0) * exp(-w.x * 3.4);
+    vec3 wg = noised(p * 0.85 + floor(t * 1.4) * 9.1);
+    grad += wg.yz * ring * uWaterWave.w * 1.35;
   }
   return normalize(vec3(-grad.x, 1.0, -grad.y));
 }
@@ -363,18 +363,18 @@ void main(){
   float silt = shore * smoothstep(0.35, 0.85, foamNoise) * 0.5;
   col = mix(col, col * vec3(1.25, 1.05, 0.78), silt);
 
-  // rain impact rings as colour, not only a normal bump. Storm AgX was
-  // flattening the column to wet gravel; pale rings on tea survive it.
+  // rain impact rings as colour. Fine worley cells died as speckle at
+  // tiny; metre-scale rings on tea still read after AgX.
   if(uWaterWave.w > 0.02){
-    vec3 rw = worley2(wxz * 3.6 + floor(uTime * 2.2) * 13.7, 1.0);
-    float rad = fract(uTime * 2.2) * 0.55 + 0.08;
-    float ring = 1.0 - smoothstep(0.010, 0.048, abs(rw.x - rad));
-    ring *= exp(-rw.x * 3.2) * uWaterWave.w;
-    col += vec3(0.70, 0.78, 0.72) * ring * 2.4;
-    vec3 rw2 = worley2(wxz * 5.8 + floor(uTime * 3.1) * 9.1 + 21.0, 1.0);
-    float rad2 = fract(uTime * 3.1 + 0.37) * 0.42 + 0.06;
-    float ring2 = 1.0 - smoothstep(0.008, 0.036, abs(rw2.x - rad2));
-    col += vec3(0.78, 0.84, 0.80) * ring2 * exp(-rw2.x * 4.0) * uWaterWave.w * 1.35;
+    vec3 rw = worley2(wxz * 0.62 + floor(uTime * 1.05) * 6.3, 1.0);
+    float rad = mix(0.16, 0.46, fract(rw.z * 4.1 + uTime * 0.28));
+    float ring = 1.0 - smoothstep(0.030, 0.110, abs(rw.x - rad));
+    ring *= exp(-rw.x * 1.35) * uWaterWave.w;
+    col += vec3(0.84, 0.90, 0.82) * ring * 3.6;
+    vec3 rw2 = worley2(wxz * 1.05 + floor(uTime * 1.35) * 8.2 + 17.0, 1.0);
+    float rad2 = mix(0.12, 0.38, fract(rw2.z * 5.7 + uTime * 0.41));
+    float ring2 = 1.0 - smoothstep(0.022, 0.080, abs(rw2.x - rad2));
+    col += vec3(0.90, 0.94, 0.88) * ring2 * exp(-rw2.x * 1.8) * uWaterWave.w * 2.2;
   }
   // tea ambient under rain so the column does not crush to a black hole
   col += vec3(0.07, 0.048, 0.024) * uWeather.z;
