@@ -73,6 +73,7 @@ uniform vec3 uLeafB;
 uniform vec3 uStemA;
 uniform vec3 uStemB;
 uniform vec4 uPlantParams;   // x transmission, y leaflet count, z serration, w petal hue spread
+uniform float uLitter;       // 1 = papery fallen leaves, not living foliage
 
 /**
  * Pinnate frond mask. uv.y runs along the rachis, uv.x across it. Leaflets are
@@ -201,6 +202,7 @@ export function makePlantMaterial(maps, cfg, opts = {}) {
     uPlantHeight: { value: cfg.height ?? 0.6 },
     uWindAmp: { value: cfg.windAmp ?? 0.030 },
     uAlignGround: { value: cfg.alignGround ?? 0 },
+    uLitter: { value: cfg.litter ? 1 : 0 },
     uLeafA: { value: new THREE.Vector3(...(cfg.leafA ?? [0.030, 0.072, 0.024])) },
     uLeafB: { value: new THREE.Vector3(...(cfg.leafB ?? [0.070, 0.130, 0.040])) },
     uStemA: { value: new THREE.Vector3(...(cfg.stemA ?? [0.045, 0.058, 0.026])) },
@@ -282,6 +284,8 @@ void main(){
     occ = mix(0.55, 1.0, vExtra.z);
     matId = ${MAT_FOLIAGE.toFixed(1)};
     thin = 0.2;
+    alb *= mix(1.0, 0.70, wet);
+    rough = clamp(rough - wet * 0.18, 0.12, 1.0);
   } else if(part == ${PART.PETAL}){
     // saturated but not neon: real petals sit around 0.2-0.45 albedo
     vec3 h = vec3(0.5) + 0.42 * cos(6.2831853 * (uPlantParams.w + idv * 0.85) + vec3(0.0, 2.09, 4.19));
@@ -292,11 +296,37 @@ void main(){
     occ = mix(0.7, 1.0, vUv.y);
     matId = ${MAT_FOLIAGE.toFixed(1)};
     thin = 0.95;
+    alb *= mix(1.0, 0.78, wet);
+    rough = clamp(rough - wet * 0.16, 0.18, 1.0);
   } else if(part == ${PART.CENTRE}){
     alb = mix(vec3(0.26, 0.20, 0.045), vec3(0.35, 0.27, 0.06), idv);
     rough = 0.62; trans = 0.05; occ = 0.75;
     matId = ${MAT_FOLIAGE.toFixed(1)};
     thin = 0.2;
+    alb *= mix(1.0, 0.75, wet);
+    rough = clamp(rough - wet * 0.12, 0.28, 1.0);
+  } else if(uLitter > 0.5){
+    // hardwood litter: ochre, rust, umber, a few leftover green blades.
+    // papery and matte — the living-leaf wet path made these plastic.
+    vec3 ochre = mix(uLeafA, uLeafB, fract(idv * 2.9));
+    vec3 rust = vec3(0.155, 0.052, 0.022);
+    vec3 umber = vec3(0.072, 0.048, 0.026);
+    vec3 olive = vec3(0.062, 0.064, 0.028);
+    float kind = fract(idv * 9.1);
+    alb = mix(ochre, rust, smoothstep(0.52, 0.88, kind));
+    alb = mix(alb, umber, smoothstep(0.18, 0.0, kind) * 0.70);
+    alb = mix(alb, olive, smoothstep(0.22, 0.08, kind) * 0.45);
+    alb *= mix(0.70, 1.08, fract(idv * 4.7));
+    alb *= mix(1.0, 0.58, rib * 0.85);
+    float across = vUv.x * 2.0 - 1.0;
+    N = normalize(N + T * across * 2.0 + B * (vUv.y - 0.5) * 1.25);
+    rough = mix(0.80, 0.96, fract(idv * 4.1));
+    trans = 0.16;
+    occ = mix(0.52, 0.94, clamp(vUv.y, 0.0, 1.0));
+    matId = ${MAT_FOLIAGE.toFixed(1)};
+    thin = 0.82;
+    alb *= mix(1.0, 0.80, wet);
+    rough = clamp(rough - wet * 0.06, 0.68, 1.0);
   } else {
     // frond leaflets and leaf blades
     float lush = clamp(0.35 + eco.r * 0.7 - eco.b * 0.35, 0.0, 1.3);
@@ -315,10 +345,10 @@ void main(){
     occ = mix(0.45, 1.0, clamp(vExtra.z * 1.3, 0.0, 1.0));
     matId = ${MAT_FOLIAGE.toFixed(1)};
     thin = 1.0 - rib * 0.55;
+    alb *= mix(1.0, 0.70, wet);
+    rough = clamp(rough - wet * 0.22, 0.05, 1.0);
   }
 
-  alb *= mix(1.0, 0.70, wet);
-  rough = clamp(rough - wet * 0.22, 0.05, 1.0);
   writeGBuffer(alb, occ, N, rough, trans, vCur, vPrev, matId, thin);
 }
 `,
@@ -437,7 +467,7 @@ void main(){
   } else if(part == ${PART.CAP}){
     float hue = uSolidParams.x + idv * 0.12;
     vec3 base = vec3(0.5) + 0.40 * cos(6.2831853 * (hue) + vec3(0.0, 1.1, 2.2));
-    base *= mix(0.16, 0.40, fract(idv * 3.3));
+    base *= mix(0.22, 0.48, fract(idv * 3.3));
     // radial fibres and a paler margin
     float fib = fbm(vec2(atan(vWorld.z, vWorld.x) * 6.0, vUv.y * 5.0) + idv * 17.0, 3, 2.1, 0.5) * 0.5 + 0.5;
     base *= 0.78 + 0.45 * fib;

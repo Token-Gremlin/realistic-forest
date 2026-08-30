@@ -147,7 +147,7 @@ export function buildFlower(seed, opts = {}) {
 export function buildMushroom(seed, opts = {}) {
   const r = new Rng(seed);
   const mb = new MeshBuilder();
-  const size = lerp(0.045, 0.16, Math.pow(r.f(), 1.4)) * (opts.scale ?? 1);
+  const size = lerp(0.055, 0.20, Math.pow(r.f(), 1.25)) * (opts.scale ?? 1);
   const clump = 1 + r.int(4);
   const totalH = size * 1.6;
   for (let c = 0; c < clump; c++) {
@@ -163,7 +163,7 @@ export function buildMushroom(seed, opts = {}) {
       pts.push(V(ox + lean * t * t * stemH, t * stemH, oz + lean * 0.6 * t * t * stemH));
     }
     const sr = s * lerp(0.10, 0.19, r.f());
-    tube(mb, pts, [sr * 1.25, sr, sr * 0.92, sr * 0.9, sr * 0.95], 7, PART.STEM, {
+    tube(mb, pts, [sr * 1.25, sr, sr * 0.92, sr * 0.9, sr * 0.95], 7, PART.WOOD, {
       totalHeight: totalH, rnd: r.f(), flex0: 0, flex1: 0.05, phase: r.f(), lumpy: 0.08,
     });
     // cap: a hemisphere flattened by age
@@ -339,23 +339,54 @@ export function buildLog(seed, opts = {}) {
 export function buildLeafPatch(seed, opts = {}) {
   const r = new Rng(seed);
   const mb = new MeshBuilder();
-  const size = lerp(0.18, 0.45, r.f()) * (opts.scale ?? 1);
-  const leaves = 7 + r.int(10);
+  const size = lerp(0.20, 0.52, r.f()) * (opts.scale ?? 1);
+  const leaves = 9 + r.int(11);
   for (let i = 0; i < leaves; i++) {
     const az = r.f() * Math.PI * 2;
-    const rr = size * Math.sqrt(r.f());
-    const c = V(Math.cos(az) * rr, 0.006 + r.f() * 0.022, Math.sin(az) * rr);
+    const rr = size * Math.pow(r.f(), 0.65);
+    const crumpled = r.f() > 0.78;
+    const y = crumpled ? lerp(0.012, 0.055, r.f()) : 0.004 + r.f() * 0.018;
+    const c = V(Math.cos(az) * rr, y, Math.sin(az) * rr);
     const roll = r.f() * Math.PI * 2;
-    // leaves lie nearly flat but curl at the edges
-    const tiltA = r.range(-0.42, 0.42), tiltB = r.range(-0.42, 0.42);
+    // most lie nearly flat; a few sit on edge so the mat has thickness
+    const tiltA = crumpled ? r.range(-1.1, 1.1) : r.range(-0.55, 0.55);
+    const tiltB = crumpled ? r.range(-0.9, 0.9) : r.range(-0.48, 0.48);
     const ax = V(Math.cos(roll), tiltA, Math.sin(roll)).normalize();
     const ay = V(-Math.sin(roll), tiltB, Math.cos(roll)).normalize();
-    const w = size * lerp(0.30, 0.60, r.f());
-    card(mb, c, ax, ay, w, w * lerp(1.0, 1.6, r.f()), PART.BLADE, {
-      totalHeight: 0.05, rnd: r.f(), param: w, flex: 0.0, phase: r.f(),
+    const w = size * lerp(0.22, crumpled ? 0.48 : 0.62, r.f());
+    card(mb, c, ax, ay, w, w * lerp(1.05, 1.85, r.f()), PART.BLADE, {
+      totalHeight: 0.08, rnd: r.f(), param: w, flex: 0.0, phase: r.f(),
+      droop: crumpled ? 0.55 : 0.22,
     });
   }
-  return { mesh: mb, height: 0.06, radius: mb.radius, material: 'litter' };
+  return { mesh: mb, height: 0.08, radius: mb.radius, material: 'litter' };
+}
+
+/* ----------------------------------------------------------- woodland herb */
+export function buildHerb(seed, opts = {}) {
+  const r = new Rng(seed);
+  const mb = new MeshBuilder();
+  const size = lerp(0.07, 0.16, r.f()) * (opts.scale ?? 1);
+  const clumps = 3 + r.int(4);
+  for (let c = 0; c < clumps; c++) {
+    const az = r.f() * Math.PI * 2;
+    const rr = size * 1.4 * Math.sqrt(r.f());
+    const ox = Math.cos(az) * rr, oz = Math.sin(az) * rr;
+    const leaflets = 3;
+    for (let l = 0; l < leaflets; l++) {
+      const pa = (l / leaflets) * Math.PI * 2 + r.range(-0.2, 0.2);
+      const outward = V(Math.cos(pa), lerp(0.18, 0.55, r.f()), Math.sin(pa)).normalize();
+      const ax = V().crossVectors(outward, V(0, 1, 0));
+      if (ax.lengthSq() < 1e-6) ax.set(1, 0, 0);
+      ax.normalize();
+      const w = size * lerp(0.28, 0.48, r.f());
+      const centre = V(ox, size * 0.12, oz).addScaledVector(outward, w * 0.55);
+      card(mb, centre, ax, outward, w, w * lerp(0.85, 1.15, r.f()), PART.BLADE, {
+        totalHeight: size, rnd: r.f(), param: w, flex: 0.35, phase: r.f(), droop: 0.25,
+      });
+    }
+  }
+  return { mesh: mb, height: size * 0.55, radius: mb.radius, material: 'plant' };
 }
 
 /* ---------------------------------------------------------------- sedge tuft */
@@ -589,12 +620,17 @@ export const ARCHETYPES = [
       - Math.max(0, e.waterDepth + 0.3) * 3,
   },
   {
-    key: 'flower', build: buildFlower, variants: 3, density: 0.58, maxDist: 26,
-    score: (e) => 0.02 + (1 - e.canopy) * 2.1 + e.moisture * 0.5 - e.rock * 1.2 - e.slope * 0.7
-      - Math.max(0, e.waterDepth + 0.2) * 4,
+    key: 'flower', build: buildFlower, variants: 3, density: 0.62, maxDist: 26,
+    score: (e) => 0.10 + e.moisture * 0.95 + e.litter * 0.45 + (1 - e.canopy) * 0.85
+      - e.rock * 1.0 - e.slope * 0.6 - Math.max(0, e.waterDepth + 0.2) * 4,
   },
   {
-    key: 'mushroom', build: buildMushroom, variants: 3, density: 0.34, maxDist: 16,
+    key: 'herb', build: buildHerb, variants: 2, density: 0.72, maxDist: 14,
+    score: (e) => 0.08 + e.canopy * 1.4 + e.moisture * 1.1 + e.litter * 0.35
+      - e.rock * 1.1 - e.slope * 0.8 - Math.max(0, e.waterDepth + 0.15) * 4,
+  },
+  {
+    key: 'mushroom', build: buildMushroom, variants: 3, density: 0.42, maxDist: 16,
     score: (e) => -0.15 + e.litter * 1.9 + e.canopy * 1.2 + e.moisture * 1.1 - e.rock * 1.5
       - Math.max(0, e.waterDepth + 0.2) * 4,
   },

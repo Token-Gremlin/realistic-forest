@@ -128,9 +128,12 @@ export class Clutter {
         return { ...base, leaflets: 3, serration: 0.2, transmission: 0.88, windAmp: 0.038,
           leafA: [0.040, 0.078, 0.034], leafB: [0.095, 0.130, 0.052] };
       case 'leafPatch':
-        return { ...base, leaflets: 5, serration: 1.2, transmission: 0.45, windAmp: 0.004,
-          alignGround: 1.0,
-          leafA: [0.130, 0.078, 0.030], leafB: [0.205, 0.138, 0.052] };
+        return { ...base, leaflets: 5, serration: 1.2, transmission: 0.18, windAmp: 0.004,
+          alignGround: 1.0, litter: true,
+          leafA: [0.145, 0.088, 0.032], leafB: [0.088, 0.055, 0.026] };
+      case 'herb':
+        return { ...base, leaflets: 3, serration: 0.4, transmission: 0.82, windAmp: 0.028,
+          leafA: [0.034, 0.078, 0.026], leafB: [0.072, 0.132, 0.042] };
       case 'mushroom':
         return { ...base, alignGround: 0.45, windAmp: 0.002, capHue: 0.075, mossBias: 0 };
       case 'rock':
@@ -239,7 +242,8 @@ export class Clutter {
     let nearSum0 = 0;
     for (let k = 0; k < ARCHETYPES.length; k++) {
       const key = ARCHETYPES[k].key;
-      if (key === 'leafPatch' || key === 'moss' || key === 'mushroom' || key === 'twig' || key === 'flower') {
+      if (key === 'leafPatch' || key === 'moss' || key === 'mushroom'
+        || key === 'twig' || key === 'flower' || key === 'herb' || key === 'rock') {
         nearIdx.push(k);
         nearSum0 += ARCHETYPES[k].density;
       }
