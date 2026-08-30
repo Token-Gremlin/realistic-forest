@@ -98,7 +98,8 @@ export function buildBush(seed, opts = {}) {
 export function buildFlower(seed, opts = {}) {
   const r = new Rng(seed);
   const mb = new MeshBuilder();
-  const size = lerp(0.16, 0.48, r.f()) * (opts.scale ?? 1);
+  // Daisy-scale heads. The old 2-5 cm corollas died as coloured dots at 528 px.
+  const size = lerp(0.34, 0.82, r.f()) * (opts.scale ?? 1);
   const stems = 1 + r.int(3);
   const totalH = size;
   for (let i = 0; i < stems; i++) {
@@ -108,7 +109,7 @@ export function buildFlower(seed, opts = {}) {
     const segs = 4;
     const len = size * lerp(0.8, 1.0, r.f());
     const pts = arc(V(Math.cos(az) * size * 0.05, 0, Math.sin(az) * size * 0.05), dir, len, segs, lerp(0.2, 0.9, r.f()));
-    const rad = size * 0.011;
+    const rad = size * 0.016;
     tube(mb, pts, [rad, rad * 0.9, rad * 0.8, rad * 0.7, rad * 0.6], 3, PART.STEM, {
       totalHeight: totalH, rnd: r.f(), flex0: 0.15, flex1: 1.0, phase: r.f(),
     });
@@ -122,8 +123,8 @@ export function buildFlower(seed, opts = {}) {
     }
     // corolla: petals radiating from the stem tip
     const head = pts[segs].clone();
-    const petals = 4 + r.int(4);
-    const pw = size * lerp(0.055, 0.11, r.f());
+    const petals = 5 + r.int(4);
+    const pw = size * lerp(0.12, 0.20, r.f());
     const hue = r.f();
     for (let p = 0; p < petals; p++) {
       const pa = (p / petals) * Math.PI * 2 + r.range(-0.15, 0.15);
@@ -680,7 +681,7 @@ export const ARCHETYPES = [
     key: 'lily', build: buildLily, variants: 3, density: 0.16, maxDist: 22,
     score: (e) => {
       const wd = e.waterDepth;
-      if (wd < 0.12 || wd > 2.4) return 0;
+      if (wd < 0.50 || wd > 2.4) return 0;
       return 0.18 + Math.max(0, 0.85 - Math.abs(wd - 0.70)) * 5.4
         - e.slope * 1.4 - e.canopy * 0.25;
     },
