@@ -859,7 +859,7 @@ void main(){
   float trunk = 1.0 - smoothstep(trunkW, trunkW * 2.6, abs(vUv.x - 0.5));
   trunk *= 1.0 - smoothstep(0.28, 0.50, vUv.y);
   float cov = max(m, trunk * 0.92);
-  if(cov < 0.24 + 0.12 * ign(gl_FragCoord.xy, uTime)) discard;
+  if(cov < 0.30 + 0.10 * ign(gl_FragCoord.xy, uTime)) discard;
 
   vec3 up = vec3(0.0, 1.0, 0.0);
   // spherical crown normal so the billboard shades like a volume
