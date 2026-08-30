@@ -35,7 +35,7 @@ if (f.forest.falling) {
   f.forest.falling.suppressed = true;
   f.forest.falling.holdPhase = -1;
 }
-if (f.forest.debris) f.forest.debris.suppressed = false;
+if (f.forest.debris) f.forest.debris.suppressed = true;
 f.state.running = false;
 
 return {

@@ -207,8 +207,8 @@ function clearNearPlants(f, stem, fx, fz) {
           onLog = along > -3.2 && along < H + 3 && Math.abs(across) < 4.4;
         }
         const eat = onLog
-          || (dist < 12 && facing > -0.08)
-          || (dist < 22 && facing > 0.10);
+          || dist < 16
+          || (dist < 28 && facing > -0.05);
         if (eat) { dropped++; continue; }
         if (w !== i) d.copyWithin(w * 12, o, o + 12);
         w++;
@@ -232,13 +232,13 @@ function fellThieves(trees, cam, scratch, stem) {
       const dist = Math.hypot(t.x - cx, t.z - cz);
       if (dist < 1.4 || dist > 16) continue;
       const v = ndcOf(cam, scratch, t.x, t.y + t.height * 0.38, t.z);
-      if (Math.abs(v[0]) > 0.34 || v[1] < -0.28 || v[1] > 0.52) continue;
+      if (Math.abs(v[0]) > 0.62 || v[1] < -0.42 || v[1] > 0.62) continue;
       thieves.push({ t, dist, ax: Math.abs(v[0]) });
     }
   }
   thieves.sort((a, b) => a.ax - b.ax || a.dist - b.dist);
   let n = 0;
-  for (const th of thieves.slice(0, 2)) {
+  for (const th of thieves.slice(0, 3)) {
     const nn = Math.hypot(th.t.x - cx, th.t.z - cz) || 1;
     th.t.fallDirX = (th.t.x - cx) / nn;
     th.t.fallDirZ = (th.t.z - cz) / nn;
@@ -264,7 +264,7 @@ function clearLogBandPlants(f) {
         let onLog = false;
         for (const lift of [0.25, 0.85, 1.45]) {
           scratch.set(d[o], d[o + 1] + lift, d[o + 2]).project(f.camera);
-          if (Math.abs(scratch.x) < 0.88 && scratch.y > -0.28 && scratch.y < 0.22
+          if (Math.abs(scratch.x) < 0.96 && scratch.y > -0.55 && scratch.y < 0.48
             && scratch.z > 0 && scratch.z < 1) { onLog = true; break; }
         }
         if (onLog) { dropped++; continue; }
@@ -406,8 +406,7 @@ if (stem) {
   trees._rebuildBuckets(cam);
 
   if (f.forest.debris) {
-    f.forest.debris.onLightning({ x: stem.x, y: place.gh + 2, z: stem.z });
-    f.forest.debris.burst.t = 0.06;
+    f.forest.debris.suppressed = true;
     f.forest.debris.update(0.016);
   }
   if (f.forest.falling) {
