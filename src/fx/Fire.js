@@ -387,6 +387,7 @@ export class Fire {
     this.age = 0;
     this.held = false;
     this.holdSmoke = false;
+    this.holdEmbers = false;
 
     this.flames = layer(
       forest,
@@ -451,18 +452,25 @@ export class Fire {
     } else {
       U.uSmokeHold.value.set(0, 0, 0, 0);
     }
+    if (this.holdEmbers && this.strength > 0.04) {
+      U.uEmberHold.value.set(this.origin.x, this.origin.y + 1.35, this.origin.z, 1);
+    } else {
+      U.uEmberHold.value.set(0, 0, 0, 0);
+    }
     const on = this.strength > 0.04;
     this.flames.mesh.visible = on;
-    this.embers.mesh.visible = on;
+    // held stills finish sparks in the grade pass after AgX
+    this.embers.mesh.visible = on && !this.holdEmbers;
     // held stills finish smoke in the grade pass after AgX
     this.smoke.mesh.visible = on && !this.holdSmoke;
     const k = THREE.MathUtils.smoothstep(this.strength, 0.04, 0.95);
     this.flames.geo.instanceCount = on ? Math.max(1, Math.floor(this.flames.count * k)) : 0;
-    this.embers.geo.instanceCount = on ? Math.max(1, Math.floor(this.embers.count * k)) : 0;
+    this.embers.geo.instanceCount = (on && !this.holdEmbers)
+      ? Math.max(1, Math.floor(this.embers.count * k)) : 0;
     this.smoke.geo.instanceCount = (on && !this.holdSmoke)
       ? Math.max(1, Math.floor(this.smoke.count * k)) : 0;
     this.stats.flames = this.flames.geo.instanceCount;
-    this.stats.embers = this.embers.geo.instanceCount;
+    this.stats.embers = this.holdEmbers ? 12 : this.embers.geo.instanceCount;
     this.stats.smoke = this.holdSmoke ? 5 : this.smoke.geo.instanceCount;
     this.stats.strength = this.strength;
   }

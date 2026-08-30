@@ -218,6 +218,7 @@ uniform vec4 uLeafHold;
 uniform vec4 uInsectHold;
 uniform vec4 uBirdHold;
 uniform vec4 uSmokeHold;
+uniform vec4 uEmberHold;
 uniform vec3 uSunColor;
 uniform vec3 uWind;
 uniform mat4 uViewProj;
@@ -343,6 +344,22 @@ float smokeWisp(vec2 uv, vec2 root, float seed, float tall){
   body *= 1.0 - smoothstep(0.82, 1.0, t);
   body *= smoothstep(-0.04, 0.03, d.y);
   return pow(clamp(body, 0.0, 1.0), 1.05);
+}
+
+/**
+ * Display-space ember. World sparks are additive HDR and AgX grades
+ * them into brown fog; short hard dashes above the fire keep a
+ * handful readable at 528 px without becoming orbs.
+ */
+float emberSpark(vec2 uv, vec2 c, float ang, float sz){
+  vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+  vec2 d = (uv - c) * aspect;
+  float ca = cos(ang), sa = sin(ang);
+  vec2 q = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y) / max(sz, 1.0e-4);
+  float ax = abs(q.x);
+  float ay = abs(q.y);
+  float halfW = mix(0.22, 0.06, smoothstep(0.04, 0.92, ay));
+  return (1.0 - smoothstep(halfW, halfW + 0.12, ax)) * (1.0 - smoothstep(0.72, 1.02, ay));
 }
 
 float rainStreak(vec2 uv, vec2 a, vec2 b, float halfW){
@@ -504,6 +521,31 @@ void main(){
           vec3 pale = vec3(0.46, 0.38, 0.30);
           vec3 ember = vec3(0.62, 0.32, 0.10);
           mapped = mix(mapped, mix(pale, ember, wisps * 0.35), clamp(wisps * 0.78, 0.0, 1.0));
+        }
+      }
+    }
+  }
+
+  if(uEmberHold.w > 0.05 && uFire.w > 0.05){
+    vec4 eclip = uViewProj * vec4(uEmberHold.xyz, 1.0);
+    if(eclip.w > 0.10){
+      vec2 euv = eclip.xy / eclip.w * 0.5 + 0.5;
+      if(euv.x > -0.08 && euv.x < 1.08 && euv.y > -0.20 && euv.y < 1.08){
+        vec2 root = euv + vec2(0.0, 0.10);
+        for(int i = 0; i < 12; i++){
+          float sd = 31.0 + float(i) * 8.7;
+          float rad = mix(0.028, 0.16, hash11(sd));
+          float phi = hash11(sd + 2.2) * 6.2831853;
+          vec2 c = root + vec2(cos(phi) * rad * 0.85, sin(phi) * rad * 1.15 + hash11(sd + 4.0) * 0.08);
+          if(c.x < 0.08 || c.x > 0.92 || c.y < 0.08 || c.y > 0.92) continue;
+          float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
+          if(sceneZ < 0.18) continue;
+          float ang = -1.15 + (hash11(sd + 6.0) - 0.5) * 0.55;
+          float sz = mix(0.022, 0.038, hash11(sd + 7.1));
+          float body = emberSpark(vUv, c, ang, sz);
+          if(body < 0.14) continue;
+          vec3 hot = mix(vec3(1.0, 0.72, 0.18), vec3(0.95, 0.28, 0.04), hash11(sd + 9.0));
+          mapped = max(mapped, hot * body);
         }
       }
     }

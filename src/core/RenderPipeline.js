@@ -227,6 +227,7 @@ export class RenderPipeline {
       uInsectHold: U.uInsectHold,
       uBirdHold: U.uBirdHold,
       uSmokeHold: U.uSmokeHold,
+      uEmberHold: U.uEmberHold,
       uSunColor: U.uSunColor,
       uViewProj: U.uViewProj,
       uBolt: U.uBolt, uBoltAmp: U.uBoltAmp, uBoltF0: U.uBoltF0, uBoltF1: U.uBoltF1,
