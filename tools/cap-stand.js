@@ -18,12 +18,12 @@ const pinned = maps.sample(PIN.x, PIN.z, {});
 const x = PIN.x;
 const z = PIN.z;
 const gh = maps.height(x, z);
-f.camera.position.set(x - 6.4, gh + 3.45, z + 7.2);
+f.camera.position.set(x - 4.8, gh + 4.15, z + 5.4);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.8);
 const p = f.camera.position;
-p.y = maps.height(p.x, p.z) + 3.30;
-// almost horizontal, into the stand — not up into a leaf wall
-f.camera.lookAt(x + 22.0, gh + 4.1, z - 10.0);
+p.y = maps.height(p.x, p.z) + 4.00;
+// out through the sky-gap: receding stems, layered crowns, air in the upper third
+f.camera.lookAt(x + 28.0, gh + 6.2, z - 14.0);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 
