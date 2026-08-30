@@ -124,8 +124,10 @@ export class Water {
       uCellSize: { value: CELL },
       uGrid: { value: GRID },
       uWaterWave: { value: new THREE.Vector4(1.0, 0.30, 0.5, 0.0) },
-      uAbsorb: { value: new THREE.Vector3(0.62, 0.26, 0.44) },
-      uScatter: { value: new THREE.Vector3(0.055, 0.088, 0.068) },
+      // tannin: amber transmits, green and blue die in the column.
+      // the old coefficients were inverted and the run read as canopy soup.
+      uAbsorb: { value: new THREE.Vector3(0.24, 0.64, 0.94) },
+      uScatter: { value: new THREE.Vector3(0.10, 0.068, 0.036) },
     };
 
     this.material = new THREE.RawShaderMaterial({
@@ -295,10 +297,10 @@ void main(){
   float sunShadowK = sunShadow(vWorld, vec3(0.0, 1.0, 0.0), 1.0, viewDist, rnd, 1.0);
   float skyOpen = 0.38 + 0.62 * max(uSunDir.y, 0.0);
   float causAmt = caus * exp(-depth * 0.52) * mix(0.42, sunShadowK, 0.58) * skyOpen;
-  vec3 bedLit = bed * (1.0 + causAmt * 3.6) * trans;
+  vec3 bedLit = bed * (1.0 + causAmt * 4.0) * trans;
 
   // ---- in-water scattering (turbidity) builds up with depth
-  vec3 inScatter = uScatter * skyIrradiance(vec3(0.0, 1.0, 0.0)) * (1.0 - trans) * 3.4;
+  vec3 inScatter = uScatter * skyIrradiance(vec3(0.0, 1.0, 0.0)) * (1.0 - trans) * 2.55;
 
   // ---- reflection
   vec3 R = reflect(-V, N);
@@ -310,7 +312,7 @@ void main(){
   float fres = f0 + (1.0 - f0) * pow(1.0 - cosV, 5.0);
   // forest water is tannin-stained, not a lake of sky: keep Fresnel modest
   fres = mix(fres, clamp(fres * 1.25, 0.0, 0.72), clamp(flowMag * 0.45, 0.0, 1.0));
-  fres = min(fres, 0.46);
+  fres = min(fres, 0.36);
 
   vec3 col = mix(bedLit + inScatter, refl, fres);
 
