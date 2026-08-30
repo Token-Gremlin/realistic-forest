@@ -223,6 +223,7 @@ export class RenderPipeline {
       uMotionBlur: { value: 0.55 },
       uTime: U.uTime, uInvViewProj: U.uInvViewProj, uCamPos: U.uCamPos,
       uWeather: U.uWeather,
+      uBolt: U.uBolt, uBoltAmp: U.uBoltAmp, uBoltF0: U.uBoltF0, uBoltF1: U.uBoltF1,
     }));
 
     // Scene-referred auto exposure: average log-luminance of the lit frame,

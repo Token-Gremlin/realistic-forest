@@ -26,6 +26,12 @@ export const Env = {
     // lightning: xyz flash world position, w intensity
     uFlash: { value: new THREE.Vector4(0, 0, 0, 0) },
     uFlashColor: { value: new THREE.Vector3(0.75, 0.83, 1.0) },
+    // display-space channel (vUv): xy cloud, zw ground. Survives AgX.
+    uBolt: { value: new THREE.Vector4(0, 0, 0, 0) },
+    // x amp (0 = off), y jog seed, z reserved, w reserved
+    uBoltAmp: { value: new THREE.Vector4(0, 0, 0, 0) },
+    uBoltF0: { value: new THREE.Vector4(0, 0, 0, 0) },
+    uBoltF1: { value: new THREE.Vector4(0, 0, 0, 0) },
     // forest fire: xyz world, w intensity. Warmer and longer-lived than a flash.
     uFire: { value: new THREE.Vector4(0, 0, 0, 0) },
     uFireColor: { value: new THREE.Vector3(1.0, 0.42, 0.10) },

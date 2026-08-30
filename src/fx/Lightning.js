@@ -133,6 +133,8 @@ export class Lightning {
     this.mesh.visible = false;
     this.mesh.renderOrder = 20;
     this.forwardMeshes = [this.mesh];
+    this._uvA = new THREE.Vector3();
+    this._uvB = new THREE.Vector3();
   }
 
   _rnd() {
@@ -350,6 +352,7 @@ export class Lightning {
     if (!this.active) {
       this.mesh.visible = false;
       this.uniforms.uAmp.value = 0;
+      U.uBoltAmp.value.set(0, 0, 0, 0);
       return;
     }
     const live = U.uFlash.value.w > 0.0008;
@@ -368,6 +371,55 @@ export class Lightning {
       this.uniforms.uAmp.value = 0;
     }
     if (this.mesh.visible) this._rebuild(this._camera);
+    this._publishBolt(this._camera);
+  }
+
+  /**
+   * Project the channel into vUv and publish it for the grade pass. The
+   * world ribbon is the 3D source of truth for lighting; the visible stroke
+   * is finished after AgX so it cannot grade into storm fog.
+   */
+  _publishBolt(camera) {
+    const live = this.mesh.visible && this.active;
+    if (!live || !camera || !camera.isCamera) {
+      U.uBoltAmp.value.set(0, 0, 0, 0);
+      return;
+    }
+    camera.updateMatrixWorld(true);
+    const toUv = (src, dst) => {
+      dst.copy(src).project(camera);
+      dst.x = dst.x * 0.5 + 0.5;
+      dst.y = dst.y * 0.5 + 0.5;
+      return dst;
+    };
+    const a = toUv(this.cloud, this._uvA);
+    const b = toUv(this.ground, this._uvB);
+    U.uBolt.value.set(a.x, a.y, b.x, b.y);
+    U.uBoltAmp.value.set(
+      Math.max(this.uniforms.uAmp.value, 1.15),
+      (this.seed & 1023) * 0.17 + 1.3,
+      1,
+      0,
+    );
+
+    let f0 = false, f1 = false;
+    U.uBoltF0.value.set(a.x, a.y, a.x, a.y);
+    U.uBoltF1.value.set(a.x, a.y, a.x, a.y);
+    for (const s of this._segs) {
+      if (s.bright < 0.28 || s.bright > 0.72) continue;
+      toUv(s.a, this._uvA);
+      toUv(s.b, this._uvB);
+      const dx = this._uvB.x - this._uvA.x, dy = this._uvB.y - this._uvA.y;
+      if (dx * dx + dy * dy < 4e-5) continue;
+      if (!f0) {
+        U.uBoltF0.value.set(this._uvA.x, this._uvA.y, this._uvB.x, this._uvB.y);
+        f0 = true;
+      } else if (!f1) {
+        U.uBoltF1.value.set(this._uvA.x, this._uvA.y, this._uvB.x, this._uvB.y);
+        f1 = true;
+        break;
+      }
+    }
   }
 
 }

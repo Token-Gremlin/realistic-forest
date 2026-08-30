@@ -212,8 +212,38 @@ uniform float uTime;
 uniform mat4 uInvViewProj;
 uniform vec3 uCamPos;
 uniform vec4 uWeather;
+uniform vec4 uBolt;
+uniform vec4 uBoltAmp;
+uniform vec4 uBoltF0;
+uniform vec4 uBoltF1;
 layout(location = 0) out vec4 oColor;
 in vec2 vUv;
+
+/**
+ * Jagged screen-space stroke. Midpoint-style jogs live in vUv so a 70 m
+ * channel still reads after AgX has flattened world-space HDR into fog.
+ */
+float boltStroke(vec2 uv, vec2 a, vec2 b, float seed){
+  vec2 ab = b - a;
+  float len = length(ab);
+  if(len < 1.0e-4) return 0.0;
+  vec2 dir = ab / len;
+  vec2 nrm = vec2(-dir.y, dir.x);
+  float t = clamp(dot(uv - a, dir) / len, 0.0, 1.0);
+  float cell = t * 18.0;
+  float i0 = floor(cell);
+  float f = fract(cell);
+  float s0 = hash11(seed + i0) - 0.5;
+  float s1 = hash11(seed + i0 + 1.0) - 0.5;
+  float jog = mix(s0, s1, f * f * (3.0 - 2.0 * f)) * 0.034;
+  jog += sin(t * 71.0 + seed) * 0.008;
+  jog += sin(t * 163.0 + seed * 2.1) * 0.003;
+  vec2 q = a + dir * (t * len) + nrm * jog;
+  float d = length(uv - q);
+  float core = exp(-d * d * 24000.0);
+  float glow = exp(-d * d * 1800.0);
+  return max(core, glow * 0.48);
+}
 
 float cocAt(vec2 uv){
   float d = texture(uDepthTex, uv).r;
@@ -294,6 +324,20 @@ void main(){
   // ---- grain, stronger in the shadows like real film
   float g = ign(gl_FragCoord.xy, uTime * 13.7) - 0.5;
   mapped += g * uGrade.z * (0.30 + 0.70 * (1.0 - luma(mapped)));
+
+  // ---- lightning channel, display-referred. A 70 m world ribbon is one
+  // pixel after the far divide and AgX then grades 16-nit lines into fog;
+  // finishing the bolt here is how a plate would get a readable strike.
+  if(uBoltAmp.x > 0.02){
+    float stroke = boltStroke(vUv, uBolt.xy, uBolt.zw, uBoltAmp.y);
+    stroke = max(stroke, boltStroke(vUv, uBoltF0.xy, uBoltF0.zw, uBoltAmp.y + 17.0) * 0.55);
+    stroke = max(stroke, boltStroke(vUv, uBoltF1.xy, uBoltF1.zw, uBoltAmp.y + 31.0) * 0.40);
+    float cloud = exp(-dot(vUv - uBolt.xy, vUv - uBolt.xy) * 110.0);
+    vec3 core = vec3(0.97, 0.98, 1.0);
+    vec3 envelope = vec3(0.32, 0.52, 0.95);
+    float amp = clamp(uBoltAmp.x, 0.0, 2.4);
+    mapped = max(mapped, core * stroke * amp + envelope * (stroke * 0.40 + cloud * 0.50) * amp);
+  }
 
   oColor = vec4(clamp(mapped, 0.0, 1.0), 1.0);
 }

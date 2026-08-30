@@ -102,4 +102,11 @@ return {
   groundNdc: bolt ? ndc(bolt.ground.x, bolt.ground.y, bolt.ground.z) : null,
   falling: bolt ? f.forest.falling?.stats ?? null : null,
   debris: f.forest.debris?.stats ?? null,
+  boltUv: [
+    +f.pipeline.compositePass.material.uniforms.uBolt.value.x.toFixed(3),
+    +f.pipeline.compositePass.material.uniforms.uBolt.value.y.toFixed(3),
+    +f.pipeline.compositePass.material.uniforms.uBolt.value.z.toFixed(3),
+    +f.pipeline.compositePass.material.uniforms.uBolt.value.w.toFixed(3),
+  ],
+  boltAmp: +f.pipeline.compositePass.material.uniforms.uBoltAmp.value.x.toFixed(2),
 };
