@@ -3,7 +3,7 @@ function catchUp(f) {
   f.forest.terrain.selectView(f.camera);
   if (f.forest.trees) {
     f.forest.trees.pending.length = 0;
-    for (let i = 0; i < 20; i++) f.forest.trees.update(0.016, f.camera, f.forest);
+    for (let i = 0; i < 22; i++) f.forest.trees.update(0.016, f.camera, f.forest);
   }
   if (f.forest.clutter) {
     f.forest.clutter.pending.length = 0;
@@ -29,21 +29,28 @@ function catchUp(f) {
     f.forest.life.update(0.016, f.camera);
     f.forest.life.insects.mesh.visible = false;
     f.forest.life.insects.geo.instanceCount = 0;
+    f.forest.life.stats.insects = 0;
     f.forest.life.birds.mesh.visible = false;
     f.forest.life.birds.geo.instanceCount = 0;
+    f.forest.life.stats.birds = 0;
   }
 }
 
-function clearNearFerns(f) {
+function clearNearClutter(f) {
   const clutter = f.forest.clutter;
   if (!clutter) return 0;
   const p = f.camera.position;
   const fwd = p.clone();
   f.camera.getWorldDirection(fwd);
-  const hide = new Set(['fern', 'bush', 'bramble', 'vine', 'herb', 'sedge']);
+  const hide = new Set([
+    'fern', 'bush', 'bramble', 'vine', 'herb', 'sedge',
+    'mushroom', 'flower', 'rock', 'log', 'limb',
+  ]);
   let dropped = 0;
   for (const k of clutter.kinds) {
     if (!hide.has(k.arch.key)) continue;
+    const bulky = k.arch.key === 'log' || k.arch.key === 'limb' || k.arch.key === 'rock' || k.arch.key === 'bush';
+    const near = bulky ? 14 : 10;
     for (const v of k.variants) {
       const d = v.bucket.data;
       let w = 0;
@@ -52,7 +59,7 @@ function clearNearFerns(f) {
         const dx = d[o] - p.x, dy = d[o + 1] - p.y, dz = d[o + 2] - p.z;
         const dist = Math.hypot(dx, dy, dz);
         const facing = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / (dist || 1);
-        if (dist < 6.2 && facing > -0.02) { dropped++; continue; }
+        if (dist < near && facing > -0.04) { dropped++; continue; }
         if (w !== i) d.copyWithin(w * 12, o, o + 12);
         w++;
       }
@@ -66,11 +73,47 @@ function clearNearFerns(f) {
   return dropped;
 }
 
+function stripLookCone(f) {
+  const trees = f.forest.trees;
+  if (!trees) return 0;
+  const p = f.camera.position;
+  const fwd = p.clone();
+  f.camera.getWorldDirection(fwd);
+  let dropped = 0;
+  for (const v of trees.variants) {
+    for (let lod = 0; lod < 3; lod++) {
+      const bucket = v.buckets[lod];
+      const data = bucket.data;
+      let w = 0;
+      for (let i = 0; i < bucket.count; i++) {
+        const o = i * 12;
+        const dx = data[o] - p.x, dz = data[o + 2] - p.z;
+        const dist = Math.hypot(dx, dz);
+        const facing = (dx * fwd.x + dz * fwd.z) / (dist || 1);
+        if (dist < 14 && facing > 0.04) { dropped++; continue; }
+        if (w !== i) data.copyWithin(w * 12, o, o + 12);
+        w++;
+      }
+      bucket.count = w;
+      for (const d of v.draws) {
+        if (d.lod !== lod) continue;
+        d.geo.instanceCount = w;
+        d.buf.needsUpdate = true;
+        d.mesh.visible = w > 0;
+        if (d.shadow) d.shadow.visible = w > 0;
+      }
+    }
+  }
+  return dropped;
+}
+
 catchUp(f);
-const plants = clearNearFerns(f);
+const plants = clearNearClutter(f);
+const treesDropped = stripLookCone(f);
 
 return {
   plants,
+  treesDropped,
   trees: f.forest.trees?.stats.trees ?? 0,
   cells: f.forest.water?.stats?.cells ?? 0,
   caustic: !!(f.forest.water?._causticHeld),

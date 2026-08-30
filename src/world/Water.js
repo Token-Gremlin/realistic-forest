@@ -366,18 +366,20 @@ void main(){
   }
 
   // ---- foam: meniscus, riffle streaks along the flow, rain agitation
-  float shore = 1.0 - smoothstep(0.0, 0.24, depth);
+  // Shore lace has to be a few decimetres wide or the waterline dies at
+  // 528 px. Keep it broken so it is not a painted white stripe.
+  float shore = 1.0 - smoothstep(0.0, 0.38, depth);
   float riffle = smoothstep(0.20, 0.72, flowMag) * (1.0 - smoothstep(0.50, 1.35, depth));
   float across = dot(wxz, vec2(-flow.y, flow.x));
   float along = dot(wxz, flow);
-  // metre-scale lace. Fine fbm died as speckle on the close tiny plate.
   float streak = fbm(vec2(across * 1.15, along * 0.22 - uTime * (0.55 + flowMag * 1.4)), 3, 2.15, 0.5);
   streak = smoothstep(0.28, 0.74, streak * 0.5 + 0.5);
   float foamNoise = fbm(wxz * 1.65 - flow * uTime * 0.8, 3, 2.1, 0.5) * 0.5 + 0.5;
   float foamNoise2 = fbm(wxz * 3.4 - flow * uTime * 1.3 + 9.0, 2, 2.1, 0.5) * 0.5 + 0.5;
   float rainFoam = uWeather.z * (0.14 + foamNoise2 * 0.28);
-  float foam = shore * 0.95 + riffle * 0.48 * streak + rainFoam;
-  foam *= mix(0.40, 1.0, smoothstep(0.16, 0.62, foamNoise * 0.6 + foamNoise2 * 0.45));
+  float lace = smoothstep(0.24, 0.72, foamNoise * 0.52 + foamNoise2 * 0.48);
+  float foam = shore * 0.90 + riffle * 0.52 * streak + rainFoam;
+  foam *= mix(0.16, 1.0, lace);
   foam = clamp(foam, 0.0, 1.0);
   // tannin stain after refraction: the bed lookup is often green bank, and
   // Beer-Lambert alone cannot retint that into tea. Foam is mixed after
@@ -387,11 +389,11 @@ void main(){
   col *= mix(1.0, 0.70, stain);
   // hard gold cores, not a beige wash
   col += vec3(0.78, 0.55, 0.16) * causAmt * 1.25;
-  vec3 foamCol = vec3(0.42, 0.44, 0.42) * (0.88 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.40)
-               + uSkyAmbient * 0.40 + uSunColor * sunShadowK * 0.10;
-  col = mix(col, foamCol, foam * 0.40);
-  float meniscus = exp(-depth * depth * 55.0) * (1.0 - smoothstep(0.12, 0.30, depth));
-  col = mix(col, foamCol * 1.12, meniscus * 0.58);
+  vec3 foamCol = vec3(0.70, 0.68, 0.60) * (0.90 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.32)
+               + uSkyAmbient * 0.32 + uSunColor * sunShadowK * 0.12;
+  col = mix(col, foamCol, foam * 0.58);
+  float meniscus = exp(-depth * depth * 36.0) * (1.0 - smoothstep(0.16, 0.40, depth));
+  col = mix(col, foamCol * 1.16, meniscus * 0.72);
 
   // ---- sediment plume near the banks
   float silt = shore * smoothstep(0.35, 0.85, foamNoise) * 0.5;
