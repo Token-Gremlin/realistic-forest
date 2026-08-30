@@ -519,9 +519,9 @@ void main(){
     vec2 root = vec2(0.50, 0.46);
     for(int i = 0; i < 12; i++){
       float sd = 8.4 + float(i) * 9.3;
-      float rad = mix(0.010, 0.072, hash11(sd));
+      float rad = mix(0.030, 0.118, hash11(sd));
       float phi = hash11(sd + 2.1) * 6.2831853;
-      vec2 c = root + vec2(cos(phi) * rad * 1.08, sin(phi) * rad * 0.58);
+      vec2 c = root + vec2(cos(phi) * rad * 1.20, sin(phi) * rad * 0.70);
       if(c.x < 0.12 || c.x > 0.88 || c.y < 0.20 || c.y > 0.82) continue;
       float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
       if(sceneZ < 0.22) continue;
