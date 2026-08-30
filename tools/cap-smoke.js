@@ -12,26 +12,33 @@ f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
-const PIN = { x: 156.3, z: -69.3 };
-f.camera.position.set(PIN.x, 48, PIN.z);
-f.forest.ensureMaps(f.camera);
-
+const SEEDS = [
+  { x: 156.3, z: -69.3 },
+  { x: 97.3, z: -216.7 },
+  { x: 40, z: -80 },
+];
 const scratch = {};
-let fx = PIN.x, fz = PIN.z;
+let fx = SEEDS[0].x, fz = SEEDS[0].z;
 let bestS = -1e9;
-for (let i = 0; i < 64; i++) {
-  const a = i * 0.393;
-  const r = 3 + (i % 10) * 1.8;
-  const x = PIN.x + Math.cos(a) * r;
-  const z = PIN.z + Math.sin(a) * r;
-  const s = maps.sample(x, z, scratch);
-  if (!s.inside) continue;
-  if (s.waterDepth > 0.02) continue;
-  if (s.canopy > 0.55) continue;
-  const score = s.litter * 1.8 + (1 - s.moisture) * 1.5 + s.skyVis * 1.4
-    - s.canopy * 1.6 - s.slope * 1.0;
-  if (score > bestS) { bestS = score; fx = x; fz = z; }
+for (const seed of SEEDS) {
+  f.camera.position.set(seed.x, 48, seed.z);
+  f.forest.ensureMaps(f.camera);
+  for (let i = 0; i < 48; i++) {
+    const a = i * 0.393;
+    const r = 3 + (i % 10) * 1.8;
+    const x = seed.x + Math.cos(a) * r;
+    const z = seed.z + Math.sin(a) * r;
+    const s = maps.sample(x, z, scratch);
+    if (!s.inside) continue;
+    if (s.waterDepth > 0.02) continue;
+    if (s.canopy > 0.28) continue;
+    const score = s.litter * 1.8 + (1 - s.moisture) * 1.5 + s.skyVis * 1.6
+      - s.canopy * 2.2 - s.slope * 1.0;
+    if (score > bestS) { bestS = score; fx = x; fz = z; }
+  }
 }
+f.camera.position.set(fx, 48, fz);
+f.forest.ensureMaps(f.camera);
 const ignite = maps.sample(fx, fz, {});
 const gh = maps.height(fx, fz);
 
@@ -47,7 +54,9 @@ f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 2.2);
 const p = f.camera.position;
 p.y = maps.height(p.x, p.z) + 3.05;
 // fire in the lower third, column into the upper sky
-f.camera.lookAt(fx, gh + 5.6, fz);
+// fire in the lower third so tongues stay in frame; wisps rise through
+// the middle. lookAt gh+5.6 put the fire at NDC y = -1.44.
+f.camera.lookAt(fx, gh + 2.15, fz);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 
@@ -84,5 +93,5 @@ return {
   inside: !!ignite.inside,
   camY: +(p.y - maps.height(p.x, p.z)).toFixed(2),
   fireNdc: ndc(fx, gh + 0.9, fz),
-  colNdc: ndc(fx, gh + 5.6, fz),
+  colNdc: ndc(fx, gh + 5.2, fz),
 };
