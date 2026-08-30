@@ -304,10 +304,11 @@ float insectMote(vec2 uv, vec2 c, float ang, float sz){
   vec2 d = (uv - c) * aspect;
   float ca = cos(ang), sa = sin(ang);
   vec2 q = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y) / max(sz, 1.0e-4);
-  // hard dash: a soft gaussian dies into sky grain at 528 px
+  // tapered needle: hard enough to read at 528, not a gizmo bar
   float ax = abs(q.x);
   float ay = abs(q.y);
-  return (1.0 - smoothstep(0.11, 0.30, ax)) * (1.0 - smoothstep(0.70, 1.05, ay));
+  float halfW = mix(0.20, 0.05, smoothstep(0.05, 0.95, ay));
+  return (1.0 - smoothstep(halfW, halfW + 0.11, ax)) * (1.0 - smoothstep(0.78, 1.04, ay));
 }
 
 float birdV(vec2 uv, vec2 c, float ang, float sz, float flap){
@@ -525,11 +526,11 @@ void main(){
       float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
       if(sceneZ < 0.22) continue;
       float ang = (hash11(sd + 5.0) - 0.5) * 2.6;
-      float sz = mix(0.028, 0.046, hash11(sd + 6.2));
+      float sz = mix(0.024, 0.038, hash11(sd + 6.2));
       float body = insectMote(vUv, c, ang, sz);
       if(body < 0.12) continue;
-      vec3 bug = vec3(0.035, 0.030, 0.022);
-      mapped = mix(mapped, bug, clamp(body * 0.92, 0.0, 1.0));
+      vec3 bug = vec3(0.055, 0.046, 0.030);
+      mapped = mix(mapped, bug, clamp(body * 0.80, 0.0, 1.0));
     }
   }
 
