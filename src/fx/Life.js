@@ -502,7 +502,7 @@ void main(){
   vec3 r2 = -side * sn + fwd * cs;
 
   float len = mix(0.10, 0.22, h.z);
-  if(uHold >= 0.0) len *= 3.4;
+  if(uHold >= 0.0) len *= 5.2;
   float wid = len * 0.62;
   float minW = 1.8 / max(uProjScaleY / max(dist, 1.0), 1.0);
   wid = max(wid, minW);
@@ -548,10 +548,11 @@ void main(){
   if(mask < 0.04) discard;
   vec3 green = vec3(0.16, 0.28, 0.07);
   vec3 autumn = mix(vec3(0.42, 0.22, 0.05), vec3(0.55, 0.14, 0.04), fract(vAge * 3.3));
-  vec3 col = mix(green, autumn, clamp(uSeason * 1.2 + fract(vAge * 5.0) * 0.25, 0.0, 1.0));
+  float turn = uHold >= 0.0 ? 1.0 : clamp(uSeason * 1.2 + fract(vAge * 5.0) * 0.25, 0.0, 1.0);
+  vec3 col = mix(green, autumn, turn);
   col *= 0.62 + uSkyAmbient * 0.7 + uSunColor * 0.28;
-  if(uHold >= 0.0) col *= 1.35;
-  float a = mask * vAlpha * (uHold >= 0.0 ? 1.15 : 0.92);
+  if(uHold >= 0.0) col = mix(col, vec3(0.62, 0.22, 0.05), 0.55) * 1.55;
+  float a = mask * vAlpha * (uHold >= 0.0 ? 1.25 : 0.92);
   oColor = vec4(col * a, a);
 }
 `;

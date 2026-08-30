@@ -21,8 +21,12 @@ function catchUp(f) {
   if (f.forest.life) {
     f.forest.life.leavesSuppressed = false;
     f.forest.life.holdLeaves = 0.38;
+    if (f.forest.life.leaves?.uniforms?.uSeason) {
+      f.forest.life.leaves.uniforms.uSeason.value = 0.78;
+    }
     f.forest.life.update(0.016, f.camera);
   }
+  f.forest.trees?.setSeason?.(0.78);
 }
 
 function clearNearPlants(f) {
@@ -43,7 +47,7 @@ function clearNearPlants(f) {
         const dx = d[o] - p.x, dy = d[o + 1] - p.y, dz = d[o + 2] - p.z;
         const dist = Math.hypot(dx, dy, dz);
         const facing = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / (dist || 1);
-        if (dist < 3.4 && facing > 0.12) { dropped++; continue; }
+        if (dist < 8.5 && facing > 0.06) { dropped++; continue; }
         if (w !== i) d.copyWithin(w * 12, o, o + 12);
         w++;
       }
@@ -57,8 +61,41 @@ function clearNearPlants(f) {
   return dropped;
 }
 
+function clearNearTreeLeaves(f) {
+  const trees = f.forest.trees;
+  if (!trees) return 0;
+  const p = f.camera.position;
+  const fwd = p.clone();
+  f.camera.getWorldDirection(fwd);
+  let dropped = 0;
+  for (const v of trees.variants) {
+    for (const d of v.draws) {
+      if (!d.leaf || d.lod > 0) continue;
+      const bucket = v.buckets[d.lod];
+      const data = bucket.data;
+      let w = 0;
+      for (let i = 0; i < bucket.count; i++) {
+        const o = i * 12;
+        const dx = data[o] - p.x, dz = data[o + 2] - p.z;
+        const dist = Math.hypot(dx, dz);
+        const facing = (dx * fwd.x + dz * fwd.z) / (dist || 1);
+        if (dist < 9 && facing > 0.0) { dropped++; continue; }
+        if (w !== i) data.copyWithin(w * 12, o, o + 12);
+        w++;
+      }
+      bucket.count = w;
+      d.geo.instanceCount = w;
+      d.buf.needsUpdate = true;
+      d.mesh.visible = w > 0;
+      if (d.shadow) d.shadow.visible = w > 0;
+    }
+  }
+  return dropped;
+}
+
 catchUp(f);
 const plants = clearNearPlants(f);
+const leaves = clearNearTreeLeaves(f);
 if (f.forest.life) {
   f.forest.life.holdLeaves = 0.38;
   f.forest.life.update(0.016, f.camera);
@@ -66,6 +103,7 @@ if (f.forest.life) {
 
 return {
   plants,
+  treeLeaves: leaves,
   holdLeaves: f.forest.life?.holdLeaves ?? -1,
   life: f.forest.life?.stats ?? null,
   trees: f.forest.trees?.stats.trees ?? 0,
