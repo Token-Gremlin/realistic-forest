@@ -126,8 +126,8 @@ function placeAlong(maps, stem, fx, fz, side) {
   const fxw = mx - px * 7.1;
   const fzw = mz - pz * 7.1;
   return {
-    from: [fxw, maps.height(fxw, fzw) + 1.58, fzw],
-    look: [mx, maps.height(mx, mz) + 0.62, mz],
+    from: [fxw, maps.height(fxw, fzw) + 2.12, fzw],
+    look: [mx, maps.height(mx, mz) + 0.58, mz],
     gh, H, px, pz,
   };
 }
@@ -146,7 +146,7 @@ function pushOutOfFallen(pos, maps, stem, fx, fz) {
     if (d < 1e-4) { pos.x = px + 1; pos.z = pz; d = 1; }
     pos.x = px + (dx / d) * rad;
     pos.z = pz + (dz / d) * rad;
-    pos.y = maps.height(pos.x, pos.z) + 1.58;
+    pos.y = maps.height(pos.x, pos.z) + 2.12;
   }
 }
 
@@ -154,7 +154,7 @@ function scoreView(trees, cam, scratch, stem, fx, fz, place) {
   cam.position.set(place.from[0], place.from[1], place.from[2]);
   trees.pushOutOfTrunks(cam.position, 1.8);
   pushOutOfFallen(cam.position, trees.forest.maps, stem, fx, fz);
-  cam.position.y = trees.forest.maps.height(cam.position.x, cam.position.z) + 1.58;
+  cam.position.y = trees.forest.maps.height(cam.position.x, cam.position.z) + 2.12;
   cam.lookAt(place.look[0], place.look[1], place.look[2]);
   cam.updateMatrixWorld(true);
 
@@ -247,6 +247,47 @@ function fellThieves(trees, cam, scratch, stem) {
     n++;
   }
   return n;
+}
+
+function clearLogBandPlants(f) {
+  const clutter = f.forest.clutter;
+  if (!clutter) return 0;
+  const hide = new Set(['fern', 'bush', 'bramble', 'vine', 'sedge', 'flower', 'limb']);
+  const scratch = f.camera.position.clone();
+  let dropped = 0;
+  for (const k of clutter.kinds) {
+    if (!hide.has(k.arch.key)) continue;
+    for (const v of k.variants) {
+      const d = v.bucket.data;
+      let w = 0;
+      for (let i = 0; i < v.bucket.count; i++) {
+        const o = i * 12;
+        scratch.set(d[o], d[o + 1] + 0.55, d[o + 2]).project(f.camera);
+        const onLog = Math.abs(scratch.x) < 0.90 && scratch.y > -0.48 && scratch.y < 0.36
+          && scratch.z > 0 && scratch.z < 1;
+        if (onLog) { dropped++; continue; }
+        if (w !== i) d.copyWithin(w * 12, o, o + 12);
+        w++;
+      }
+      v.bucket.count = w;
+      v.geo.instanceCount = w;
+      v.buf.needsUpdate = true;
+      if (v.mesh) v.mesh.visible = w > 0;
+      if (v.shadowMesh) v.shadowMesh.visible = w > 0;
+    }
+  }
+  return dropped;
+}
+
+function hideNearGrass(f) {
+  const grass = f.forest.grass;
+  if (!grass) return;
+  for (const r of grass.rings) {
+    if (r.lod <= 1) {
+      r.mesh.visible = false;
+      r.shadowMesh.visible = false;
+    }
+  }
 }
 
 function dodgeStanding(trees, cam, look, perp) {
@@ -347,10 +388,10 @@ if (stem) {
   cam.position.set(place.from[0], place.from[1], place.from[2]);
   trees.pushOutOfTrunks(cam.position, 1.8);
   pushOutOfFallen(cam.position, maps, stem, FX, FZ);
-  cam.position.y = maps.height(cam.position.x, cam.position.z) + 1.58;
+  cam.position.y = maps.height(cam.position.x, cam.position.z) + 2.12;
   hits = dodgeStanding(trees, cam, place.look, [place.px, place.pz]);
   pushOutOfFallen(cam.position, maps, stem, FX, FZ);
-  cam.position.y = maps.height(cam.position.x, cam.position.z) + 1.58;
+  cam.position.y = maps.height(cam.position.x, cam.position.z) + 2.12;
   cam.lookAt(place.look[0], place.look[1], place.look[2]);
   cam.updateMatrixWorld(true);
   cam.updateProjectionMatrix();
@@ -377,6 +418,8 @@ if (stem) {
     for (let i = 0; i < 16; i++) f.forest.clutter.update(0.016, cam);
   }
   plants = clearNearPlants(f, stem, FX, FZ);
+  plants += clearLogBandPlants(f);
+  hideNearGrass(f);
 }
 
 const fmt = (v) => v && v.map((n) => +n.toFixed(2));
