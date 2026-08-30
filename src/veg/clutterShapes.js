@@ -466,9 +466,10 @@ export function buildLimb(seed, opts = {}) {
     const t = i / segs;
     radii.push(rad * (1.0 - t * 0.62) * (1 + 0.06 * Math.sin(t * 7.0)));
   }
-  // start the tube inset so the snap has no open rim to see through
-  tube(mb, pts.slice(2), radii.slice(2), 10, PART.WOOD, {
-    totalHeight: rad * 2, rnd: r.f(), lumpy: 0.26, cap: true, vScale: 4.2,
+  // start one segment in so the snap is owned by solid chunks, and
+  // close that new first ring so it is not another pipe
+  tube(mb, pts.slice(1), radii.slice(1), 10, PART.WOOD, {
+    totalHeight: rad * 2, rnd: r.f(), lumpy: 0.26, cap: true, capStart: true, vScale: 4.2,
   });
   const snap = pts[0];
   const along = V().subVectors(pts[1], pts[0]).normalize();
@@ -494,9 +495,10 @@ export function buildLimb(seed, opts = {}) {
     }
     for (let k = at / 3; k < mb.extra.length / 4; k++) mb.extra[k * 4 + 2] = 2;
   };
-  placeKnob(0, 0, rad * 0.35, rad * 1.35, rad * 1.35, rad * 1.85);
-  placeKnob(rad * 0.20, rad * 0.08, -rad * 0.25, rad * 0.72, rad * 0.62, rad * 0.95);
-  placeKnob(-rad * 0.16, -rad * 0.10, rad * 0.85, rad * 0.85, rad * 0.78, rad * 1.10);
+  // elongated cork from just behind the snap into the first tube segment
+  placeKnob(0, 0, len * 0.07, rad * 1.22, rad * 1.22, len * 0.14);
+  placeKnob(rad * 0.18, rad * 0.10, -rad * 0.15, rad * 0.70, rad * 0.58, rad * 0.88);
+  placeKnob(-rad * 0.14, -rad * 0.08, rad * 0.20, rad * 0.62, rad * 0.55, rad * 0.80);
   const splinters = 2;
   for (let k = 0; k < splinters; k++) {
     const sa = r.f() * Math.PI * 2;
