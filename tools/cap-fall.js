@@ -18,24 +18,8 @@ f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
-const c = f.camera.position;
-const origins = [];
-for (let i = 0; i < 100; i++) {
-  const a = i * 2.399963;
-  const r = 14 + (i % 12) * 10;
-  const x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
-  const s = maps.sample(x, z, {});
-  if (!s.inside) continue;
-  if (s.waterDepth > 0.05) continue;
-  if (s.slope > 0.50) continue;
-  if ((s.skyVis ?? 0) < 0.38) continue;
-  origins.push({
-    x, z, s,
-    score: (s.skyVis ?? 0) * 2.6 - s.slope * 1.0 - Math.abs((s.canopy ?? 0.5) - 0.45) * 0.8,
-  });
-}
-origins.sort((a, b) => b.score - a.score);
-const gap = origins[0] ?? { x: c.x, z: c.z, s: maps.sample(c.x, c.z, {}) };
+// pin the pad where a tumbling limb first read (fall12)
+const gap = { x: -148.5, z: -155.5, s: maps.sample(-148.5, -155.5, {}) };
 const gh = maps.height(gap.x, gap.z);
 f.camera.position.set(gap.x, gh + 5.8, gap.z);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 2.2);
