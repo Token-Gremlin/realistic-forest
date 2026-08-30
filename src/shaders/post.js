@@ -237,15 +237,15 @@ float boltStroke(vec2 uv, vec2 a, vec2 b, float seed){
   float f = fract(cell);
   float s0 = hash11(seed + i0) - 0.5;
   float s1 = hash11(seed + i0 + 1.0) - 0.5;
-  float jog = mix(s0, s1, f * f * (3.0 - 2.0 * f)) * 0.034;
-  jog += sin(t * 71.0 + seed) * 0.008;
-  jog += sin(t * 163.0 + seed * 2.1) * 0.003;
+  float jog = mix(s0, s1, f * f * (3.0 - 2.0 * f)) * 0.026;
+  jog += sin(t * 71.0 + seed) * 0.006;
+  jog += sin(t * 163.0 + seed * 2.1) * 0.0024;
   vec2 q = a + dir * (t * len) + nrm * jog;
   vec2 dp = (uv - q) * vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
   float d = length(dp);
-  float core = exp(-d * d * 9000.0);
-  float glow = exp(-d * d * 700.0);
-  return max(core, glow * 0.55);
+  float core = exp(-d * d * 16000.0);
+  float glow = exp(-d * d * 1800.0);
+  return max(core, glow * 0.38);
 }
 
 float cocAt(vec2 uv){
@@ -351,11 +351,11 @@ void main(){
     stroke = max(stroke, boltStroke(vUv, uBoltF0.xy, uBoltF0.zw, seed + 17.0) * 0.55);
     stroke = max(stroke, boltStroke(vUv, uBoltF1.xy, uBoltF1.zw, seed + 31.0) * 0.40);
     vec2 cdp = (vUv - cloudUv) * vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
-    float cloud = exp(-dot(cdp, cdp) * 70.0);
-    vec3 core = vec3(0.97, 0.98, 1.0);
-    vec3 envelope = vec3(0.28, 0.50, 0.96);
-    float a = clamp(amp, 0.0, 2.4);
-    mapped = max(mapped, core * stroke * min(a, 1.0) + envelope * (stroke * 0.45 + cloud * 0.55) * a);
+    float cloud = exp(-dot(cdp, cdp) * 110.0);
+    vec3 core = vec3(0.96, 0.98, 1.0);
+    vec3 envelope = vec3(0.30, 0.52, 0.95);
+    float a = clamp(amp, 0.0, 1.8);
+    mapped = max(mapped, core * stroke + envelope * (stroke * 0.28 + cloud * 0.40) * a);
   }
 
   oColor = vec4(clamp(mapped, 0.0, 1.0), 1.0);
