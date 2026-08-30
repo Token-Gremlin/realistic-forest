@@ -338,11 +338,11 @@ float smokeWisp(vec2 uv, vec2 root, float seed, float tall){
   float t = clamp(d.y / max(tall, 1.0e-4), 0.0, 1.0);
   float jog = 0.018 * sin(t * 6.2 + seed * 9.0)
             + 0.010 * sin(t * 13.0 - seed * 4.0);
-  float halfW = mix(0.034, 0.011, t) * (0.75 + 0.45 * hash11(seed + 3.0));
-  float body = 1.0 - smoothstep(halfW * 0.28, halfW, abs(d.x - jog));
+  float halfW = mix(0.058, 0.020, t) * (0.80 + 0.40 * hash11(seed + 3.0));
+  float body = 1.0 - smoothstep(halfW * 0.22, halfW, abs(d.x - jog));
   body *= 1.0 - smoothstep(0.82, 1.0, t);
   body *= smoothstep(-0.04, 0.03, d.y);
-  return pow(clamp(body, 0.0, 1.0), 1.08);
+  return pow(clamp(body, 0.0, 1.0), 1.05);
 }
 
 float rainStreak(vec2 uv, vec2 a, vec2 b, float halfW){
@@ -501,9 +501,9 @@ void main(){
         float sceneZ = texture(uDepthTex, clamp(vUv, 0.0, 1.0)).r;
         if(sceneZ > 0.18){
           // pale-warm on a dark plate; dark ash vanishes into blue hour
-          vec3 pale = vec3(0.40, 0.34, 0.28);
-          vec3 ember = vec3(0.58, 0.30, 0.10);
-          mapped = max(mapped, mix(pale, ember, wisps * 0.40) * wisps);
+          vec3 pale = vec3(0.46, 0.38, 0.30);
+          vec3 ember = vec3(0.62, 0.32, 0.10);
+          mapped = mix(mapped, mix(pale, ember, wisps * 0.35), clamp(wisps * 0.78, 0.0, 1.0));
         }
       }
     }

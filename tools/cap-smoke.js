@@ -12,33 +12,10 @@ f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
-const SEEDS = [
-  { x: 156.3, z: -69.3 },
-  { x: 97.3, z: -216.7 },
-  { x: 40, z: -80 },
-];
-const scratch = {};
-let fx = SEEDS[0].x, fz = SEEDS[0].z;
-let bestS = -1e9;
-for (const seed of SEEDS) {
-  f.camera.position.set(seed.x, 48, seed.z);
-  f.forest.ensureMaps(f.camera);
-  for (let i = 0; i < 48; i++) {
-    const a = i * 0.393;
-    const r = 3 + (i % 10) * 1.8;
-    const x = seed.x + Math.cos(a) * r;
-    const z = seed.z + Math.sin(a) * r;
-    const s = maps.sample(x, z, scratch);
-    if (!s.inside) continue;
-    if (s.waterDepth > 0.02) continue;
-    if (s.canopy > 0.28) continue;
-    const score = s.litter * 1.8 + (1 - s.moisture) * 1.5 + s.skyVis * 1.6
-      - s.canopy * 2.2 - s.slope * 1.0;
-    if (score > bestS) { bestS = score; fx = x; fz = z; }
-  }
-}
-f.camera.position.set(fx, 48, fz);
+const PIN = { x: 107.2, z: -226.3 };
+f.camera.position.set(PIN.x, 48, PIN.z);
 f.forest.ensureMaps(f.camera);
+const fx = PIN.x, fz = PIN.z;
 const ignite = maps.sample(fx, fz, {});
 const gh = maps.height(fx, fz);
 
