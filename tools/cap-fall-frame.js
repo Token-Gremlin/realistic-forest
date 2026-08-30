@@ -59,13 +59,28 @@ function aimSkyHole(f) {
     if (!best || score > best.score) best = { fx, fz, sky, stems, score };
   }
 
-  // back away from any stem sitting in the chosen look
   if (best && best.stems > 0) {
     p.x -= best.fx * 3.2;
     p.z -= best.fz * 3.2;
-    trees?.pushOutOfTrunks?.(p, 2.2);
-    p.y = maps.height(p.x, p.z) + 5.7;
   }
+  // a neighbour 3 m to the side still owns the left of an up-look
+  for (let k = 0; k < 4; k++) {
+    let near = null, nd = 1e9;
+    for (const list of trees?.chunks?.values?.() ?? []) {
+      for (const t of list) {
+        if (t.height < 10) continue;
+        const d = Math.hypot(t.x - p.x, t.z - p.z);
+        if (d < nd) { nd = d; near = t; }
+      }
+    }
+    if (!near || nd >= 7.4) break;
+    const ax = p.x - near.x, az = p.z - near.z;
+    const al = Math.hypot(ax, az) || 1;
+    p.x += (ax / al) * (7.6 - nd);
+    p.z += (az / al) * (7.6 - nd);
+    trees?.pushOutOfTrunks?.(p, 2.2);
+  }
+  p.y = maps.height(p.x, p.z) + 5.7;
 
   const fx = best?.fx ?? 1, fz = best?.fz ?? 0;
   cam.lookAt(p.x + fx * 16, p.y + 7.4, p.z + fz * 16);
