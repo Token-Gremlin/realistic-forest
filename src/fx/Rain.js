@@ -236,7 +236,7 @@ void main(){
 
   float rain = max(uWeather.z, step(0.0, uHold) * 0.55);
   float alive = step(h.x, mix(0.12, 1.0, smoothstep(0.04, 0.95, rain)));
-  if(uHold >= 0.0) alive = step(float(id), 5.5);
+  if(uHold >= 0.0) alive = step(float(id), 3.5);
   if(alive < 0.5 || rain < 0.03){
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vAlpha = 0.0; vUv = vec2(0.0); vKind = 0.0; vAge = 0.0;
@@ -317,7 +317,7 @@ void main(){
   float dist = length(world - uCamPos);
   float fade = 1.0 - smoothstep(span * 0.55, span * 1.05, dist);
   vAlpha = fade * (uHold >= 0.0
-    ? 0.92
+    ? 0.62
     : (1.0 - age / 0.55) * (1.0 - age / 0.55) * mix(0.4, 1.0, rain));
   vUv = position.xy;
   vKind = kind;
@@ -368,10 +368,10 @@ void main(){
   }
   if(mask < 0.02) discard;
 
-  vec3 col = vec3(0.92, 0.96, 1.0) * mix(0.95, 1.35, step(0.5, vKind) * (1.0 - step(1.5, vKind)));
-  col += uSkyAmbient * 0.45 + uSunColor * 0.08;
-  col += uFlashColor * uFlash.w * 0.55;
-  float a = mask * vAlpha * mix(1.15, 1.85, step(0.5, vKind) * (1.0 - step(1.5, vKind)));
+  vec3 col = vec3(0.86, 0.90, 0.88) * mix(0.90, 1.12, step(0.5, vKind) * (1.0 - step(1.5, vKind)));
+  col += uSkyAmbient * 0.28 + uSunColor * 0.05;
+  col += uFlashColor * uFlash.w * 0.35;
+  float a = mask * vAlpha * mix(1.05, 1.35, step(0.5, vKind) * (1.0 - step(1.5, vKind)));
   oColor = vec4(col * a, a);
 }
 `;
@@ -483,7 +483,7 @@ export class Rain {
     this.dropGeo.instanceCount = held ? 0 : dropN;
     this.splashGeo.instanceCount = held ? 8 : splashN;
     this.stats.drops = held ? 0 : dropN;
-    this.stats.splashes = held ? 6 : splashN;
+    this.stats.splashes = held ? 4 : splashN;
   }
 
   beforeForward(_colorTex, depthTex) {

@@ -370,11 +370,11 @@ void main(){
     float rad = mix(0.16, 0.46, fract(rw.z * 4.1 + uTime * 0.28));
     float ring = 1.0 - smoothstep(0.030, 0.110, abs(rw.x - rad));
     ring *= exp(-rw.x * 1.35) * uWaterWave.w;
-    col += vec3(0.84, 0.90, 0.82) * ring * 3.6;
+    col += vec3(0.78, 0.84, 0.76) * ring * 1.7;
     vec3 rw2 = worley2(wxz * 1.05 + floor(uTime * 1.35) * 8.2 + 17.0, 1.0);
     float rad2 = mix(0.12, 0.38, fract(rw2.z * 5.7 + uTime * 0.41));
     float ring2 = 1.0 - smoothstep(0.022, 0.080, abs(rw2.x - rad2));
-    col += vec3(0.90, 0.94, 0.88) * ring2 * exp(-rw2.x * 1.8) * uWaterWave.w * 2.2;
+    col += vec3(0.84, 0.88, 0.80) * ring2 * exp(-rw2.x * 1.8) * uWaterWave.w * 1.15;
   }
   // tea ambient under rain so the column does not crush to a black hole
   col += vec3(0.07, 0.048, 0.024) * uWeather.z;
@@ -383,7 +383,7 @@ void main(){
   float edgeFade = smoothstep(0.006, 0.05, depth);
   col = mix(bed, col, edgeFade);
 
-  oColor = vec4(max(col, 0.0), 1.0);
+  oColor = vec4(clamp(col, vec3(0.0), vec3(2.2)), 1.0);
 }
 `;
   }
