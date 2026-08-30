@@ -56,8 +56,9 @@ Fall place(float tShift){
 
   float drive = max(uDrive, uBurst.w * 1.4);
   float alive = step(h.x, mix(0.10, 1.0, smoothstep(0.10, 0.88, drive)));
-  // a held still wants one forked limb, not a cone swarm
-  if(uPhase >= 0.0) alive *= step(h.x, 0.045);
+  // a held still wants exactly one instance — two copies of the same
+  // fork stacked into a cone pile
+  if(uPhase >= 0.0) alive = step(abs(iSeed - 11.0), 0.5);
   if(alive < 0.5 || drive < 0.07){
     return o;
   }

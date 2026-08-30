@@ -462,42 +462,55 @@ export function buildLimb(seed, opts = {}) {
     ));
   }
   // living tip stays a stub, not a needle — needle cones read as a cluster
-  const radii = [rad, rad * 0.97, rad * 0.90, rad * 0.80, rad * 0.66, rad * 0.50, rad * 0.36, rad * 0.24];
+  const radii = [rad, rad * 0.97, rad * 0.90, rad * 0.80, rad * 0.68, rad * 0.54, rad * 0.42, rad * 0.32];
   tube(mb, pts, radii, 10, PART.WOOD, {
     totalHeight: rad * 2, rnd: r.f(), lumpy: 0.22, cap: true, capStart: true, vScale: 4.2,
   });
   const snap = pts[0];
   const along = V().subVectors(pts[1], pts[0]).normalize();
   const outward = along.clone().negate();
-  // flush jagged lid — a deep recess left a pipe ring around the face
-  breakFace(mb, snap, outward, rad * 1.02, 10, PART.WOOD, {
-    rnd: r.f(), inset: rad * 0.05, jitter: 0.34,
+  breakFace(mb, snap, outward, rad * 1.04, 10, PART.WOOD, {
+    rnd: r.f(), inset: rad * 0.04, jitter: 0.30,
   });
-  const plug = [snap.clone().addScaledVector(along, rad * 0.08), snap.clone().addScaledVector(along, rad * 0.55)];
-  tube(mb, plug, [rad * 0.92, rad * 0.02], 8, PART.WOOD, {
-    totalHeight: rad * 2, rnd: r.f(), lumpy: 0.08, cap: true, vScale: 3,
+  // solid broken knob — a paper disc still reads as a pipe when edge-on
+  const knobAt = mb.pos.length;
+  blob(mb, r, {
+    radial: 8, rings: 4, hemi: true,
+    rx: rad * 1.06, ry: rad * 0.62, rz: rad * 1.06,
+    rough: 0.48, part: PART.WOOD, rnd: r.f(),
   });
-  const splinters = 3 + r.int(3);
+  for (let k = knobAt; k < mb.pos.length; k += 3) {
+    const x = mb.pos[k], y = mb.pos[k + 1], z = mb.pos[k + 2];
+    mb.pos[k] = snap.x + x;
+    mb.pos[k + 1] = snap.y + z;
+    mb.pos[k + 2] = snap.z - y;
+    const nx = mb.nrm[k], ny = mb.nrm[k + 1], nz = mb.nrm[k + 2];
+    mb.nrm[k] = nx;
+    mb.nrm[k + 1] = nz;
+    mb.nrm[k + 2] = -ny;
+  }
+  for (let k = knobAt / 3; k < mb.extra.length / 4; k++) mb.extra[k * 4 + 2] = 2;
+  const splinters = 2;
   for (let k = 0; k < splinters; k++) {
     const sa = r.f() * Math.PI * 2;
-    const tilt = lerp(0.15, 0.55, r.f());
-    const sl = rad * lerp(1.4, 3.6, r.f());
-    const sr = rad * lerp(0.07, 0.18, r.f());
+    const tilt = lerp(0.20, 0.48, r.f());
+    const sl = rad * lerp(1.1, 2.4, r.f());
+    const sr = rad * lerp(0.08, 0.16, r.f());
     const sd = V(
       Math.cos(sa) * tilt,
       Math.sin(sa) * tilt * 0.65,
       -Math.sqrt(Math.max(0.05, 1 - tilt * tilt)),
     ).normalize();
     const spts = [snap.clone(), snap.clone().addScaledVector(sd, sl)];
-    tube(mb, spts, [sr, sr * 0.12], 4, PART.WOOD, {
-      totalHeight: rad * 2, rnd: r.f(), lumpy: 0.2, cap: true, vScale: 5,
+    tube(mb, spts, [sr, sr * 0.18], 4, PART.WOOD, {
+      totalHeight: rad * 2, rnd: r.f(), lumpy: 0.18, cap: true, capStart: true, vScale: 5,
     });
   }
   const si = 2 + r.int(2);
   const base = pts[si];
-  const yaw = r.range(0.72, 1.15) * (r.f() < 0.5 ? 1 : -1);
-  const pitch = r.range(-0.18, 0.38);
-  const slen = len * lerp(0.42, 0.70, r.f());
+  const yaw = r.range(0.78, 1.12) * (r.f() < 0.5 ? 1 : -1);
+  const pitch = r.range(-0.12, 0.32);
+  const slen = len * lerp(0.40, 0.62, r.f());
   const fdir = V(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).normalize();
   const spts = [];
   for (let i = 0; i <= 4; i++) {
@@ -505,9 +518,9 @@ export function buildLimb(seed, opts = {}) {
     const bow = Math.sin(t * Math.PI) * slen * 0.10;
     spts.push(base.clone().addScaledVector(fdir, slen * t).add(V(0, bow, 0)));
   }
-  const sr = rad * lerp(0.52, 0.72, r.f());
-  tube(mb, spts, [sr, sr * 0.90, sr * 0.70, sr * 0.46, sr * 0.22], 7, PART.WOOD, {
-    totalHeight: rad * 2, rnd: r.f(), lumpy: 0.18, cap: true, vScale: 4.4,
+  const sr = rad * lerp(0.55, 0.74, r.f());
+  tube(mb, spts, [sr, sr * 0.90, sr * 0.72, sr * 0.50, sr * 0.28], 7, PART.WOOD, {
+    totalHeight: rad * 2, rnd: r.f(), lumpy: 0.18, cap: true, capStart: true, vScale: 4.4,
   });
   return { mesh: mb, height: mb.height, radius: mb.radius, material: 'solid', sink: rad * 0.5 };
 }
