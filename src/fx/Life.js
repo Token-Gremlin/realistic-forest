@@ -648,12 +648,12 @@ export class Life {
     }
     if (this.holdInsects >= 0 && camera) {
       const maps = this.forest.maps;
-      const ax = camera.position.x + this._fwd.x * 3.8;
-      const az = camera.position.z + this._fwd.z * 3.8;
+      const ax = camera.position.x + this._fwd.x * 6.4;
+      const az = camera.position.z + this._fwd.z * 6.4;
       const ground = maps?.height?.(ax, az) ?? (camera.position.y - 1.6);
       U.uInsectHold.value.set(
         ax,
-        Math.max(camera.position.y + this._fwd.y * 3.8, ground + 1.45),
+        Math.max(camera.position.y + this._fwd.y * 6.4, ground + 2.35),
         az,
         1.0,
       );
@@ -685,7 +685,9 @@ export class Life {
       * (1 - THREE.MathUtils.smoothstep(rain, 0.16, 0.52))
       * (1 - THREE.MathUtils.smoothstep(storm, 0.5, 0.88));
     const heldInsects = this.holdInsects >= 0;
-    this.insects.mesh.visible = !heldInsects && insectDrive > 0.05;
+    const heldBirds = this.holdBirds >= 0;
+    // a sky still must not sprout world gnats; a swarm still must not sprout a flock
+    this.insects.mesh.visible = !heldInsects && !heldBirds && insectDrive > 0.05;
     this.insects.geo.instanceCount = heldInsects ? 0
       : this.insects.mesh.visible
       ? Math.max(1, Math.floor(this.insects.count * THREE.MathUtils.smoothstep(insectDrive, 0.05, 0.85)))
@@ -701,8 +703,7 @@ export class Life {
     const birdDrive = (1 - THREE.MathUtils.smoothstep(night, 0.42, 0.78))
       * (1 - THREE.MathUtils.smoothstep(storm, 0.55, 0.92))
       * (1 - THREE.MathUtils.smoothstep(rain, 0.45, 0.85));
-    const heldBirds = this.holdBirds >= 0;
-    this.birds.mesh.visible = !heldBirds && birdDrive > 0.08;
+    this.birds.mesh.visible = !heldBirds && !heldInsects && birdDrive > 0.08;
     this.birds.geo.instanceCount = heldBirds ? 0
       : this.birds.mesh.visible
       ? Math.max(1, Math.floor(this.birds.count * THREE.MathUtils.smoothstep(birdDrive, 0.08, 0.9)))

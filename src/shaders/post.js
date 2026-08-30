@@ -304,7 +304,8 @@ float insectMote(vec2 uv, vec2 c, float ang, float sz){
   vec2 d = (uv - c) * aspect;
   float ca = cos(ang), sa = sin(ang);
   vec2 q = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y) / max(sz, 1.0e-4);
-  return exp(-q.x * q.x * 7.5 - q.y * q.y * 1.8);
+  // thin body dash; circular glints read as trunk sparks at tiny
+  return exp(-q.x * q.x * 16.0 - q.y * q.y * 1.55);
 }
 
 float birdV(vec2 uv, vec2 c, float ang, float sz, float flap){
@@ -510,34 +511,30 @@ void main(){
   }
 
   if(uInsectHold.w > 0.05){
-    vec3 origin = uInsectHold.xyz;
-    vec3 look = normalize(origin - uCamPos + vec3(1.0e-5, 0.0, 0.0));
-    vec3 rt = cross(look, vec3(0.0, 1.0, 0.0));
-    if(length(rt) < 0.08) rt = cross(look, vec3(1.0, 0.0, 0.0));
-    rt = normalize(rt);
-    vec3 upv = normalize(cross(rt, look));
-    for(int i = 0; i < 12; i++){
-      float sd = 8.4 + float(i) * 9.3;
-      vec3 p = origin
-        + rt * (hash11(sd) - 0.5) * 1.55
-        + upv * (hash11(sd + 1.7) - 0.5) * 1.15
-        + look * (hash11(sd + 3.1) - 0.5) * 1.35;
-      vec4 c4 = uViewProj * vec4(p, 1.0);
-      if(c4.w < 0.16) continue;
-      vec2 c = c4.xy / c4.w * 0.5 + 0.5;
-      if(c.x < 0.04 || c.x > 0.96 || c.y < 0.06 || c.y > 0.92) continue;
-      float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
-      float z = c4.z / c4.w * 0.5 + 0.5;
-      if(z > sceneZ + 0.006) continue;
-      float ang = (hash11(sd + 5.0) - 0.5) * 1.8;
-      float sz = mix(0.018, 0.032, hash11(sd + 6.2));
-      float body = insectMote(vUv, c, ang, sz);
-      if(body < 0.04) continue;
-      vec3 bug = vec3(0.11, 0.10, 0.06);
-      mapped = mix(mapped, bug, clamp(body * 0.72, 0.0, 1.0));
-      vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
-      float glint = exp(-length((vUv - c) * aspect) / max(sz * 0.22, 1.0e-4));
-      mapped = max(mapped, uSunColor * glint * mix(0.35, 0.85, step(0.45, hash11(sd + 9.0))));
+    // World offsets collapse onto trunks in a crawl. Plant a loose swarm
+    // in UV around the projected hold, and only over open air.
+    vec4 c0 = uViewProj * vec4(uInsectHold.xyz, 1.0);
+    if(c0.w > 0.16){
+      vec2 root = c0.xy / c0.w * 0.5 + 0.5;
+      if(root.y < 0.28) root.y = mix(root.y, 0.46, 0.70);
+      if(root.y > 0.78) root.y = mix(root.y, 0.52, 0.55);
+      if(root.x < 0.16 || root.x > 0.84) root.x = mix(root.x, 0.50, 0.55);
+      for(int i = 0; i < 12; i++){
+        float sd = 8.4 + float(i) * 9.3;
+        float rad = mix(0.018, 0.145, hash11(sd));
+        float phi = hash11(sd + 2.1) * 6.2831853;
+        vec2 c = root + vec2(cos(phi) * rad * 1.15, sin(phi) * rad * 0.72);
+        if(c.x < 0.06 || c.x > 0.94 || c.y < 0.14 || c.y > 0.88) continue;
+        float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
+        if(sceneZ < 0.38) continue;
+        float ang = (hash11(sd + 5.0) - 0.5) * 2.4;
+        float sz = mix(0.013, 0.022, hash11(sd + 6.2));
+        float body = insectMote(vUv, c, ang, sz);
+        if(body < 0.08) continue;
+        vec3 bug = vec3(0.07, 0.06, 0.035);
+        vec3 fleck = vec3(0.42, 0.36, 0.18) * body;
+        mapped = mix(mapped, mix(bug, fleck, body * 0.55), clamp(body * 0.90, 0.0, 1.0));
+      }
     }
   }
 

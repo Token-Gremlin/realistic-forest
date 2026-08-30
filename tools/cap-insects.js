@@ -1,37 +1,51 @@
-// high sun: a gnat swarm in a sunlit volume, grade-pass motes.
+// high sun: a gnat swarm in a sunlit air volume, grade-pass dashes.
+// A crawl through undergrowth pins motes onto trunks; stand at a
+// clearing edge and look across the volume instead.
 f.weather.setAct(3, true);
 f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
 f.state.exposureAuto = false;
-f.pipeline.settings.exposure = 1.12;
-f.pipeline.settings.aerial = 0.36;
+f.pipeline.settings.exposure = 1.14;
+f.pipeline.settings.aerial = 0.30;
 f.pipeline.settings.motionBlur = 0;
 f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
+const PIN = { x: 136.6, z: 118.4 };
+const pinned = maps.sample(PIN.x, PIN.z, {});
+let x = pinned.inside ? PIN.x : f.camera.position.x;
+let z = pinned.inside ? PIN.z : f.camera.position.z;
+let bestS = pinned.inside
+  ? pinned.skyVis * 2.4 - pinned.canopy * 1.1 - pinned.slope * 0.6
+  : -1e9;
+let best = { x, z, s: pinned.inside ? pinned : maps.sample(x, z, {}) };
+
 const c = f.camera.position;
-let best = null, bestS = -1e9;
-for (let i = 0; i < 150; i++) {
+for (let i = 0; i < 180; i++) {
   const a = i * 2.399963;
-  const r = 12 + (i % 16) * 5.5;
-  const x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
-  const s = maps.sample(x, z, {});
+  const r = 18 + (i % 18) * 7.2;
+  const px = c.x + Math.cos(a) * r, pz = c.z + Math.sin(a) * r;
+  const s = maps.sample(px, pz, {});
   if (!s.inside) continue;
   if (s.waterDepth > 0.03) continue;
-  if (s.canopy < 0.25 || s.canopy > 0.82) continue;
-  const score = s.skyVis * 1.8 + s.moisture * 1.1 + s.canopy * 0.6
-    - s.slope * 0.9 - s.rock * 0.4;
-  if (score > bestS) { bestS = score; best = { x, z, s }; }
+  if (s.skyVis < 0.42) continue;
+  if (s.canopy > 0.62) continue;
+  const score = s.skyVis * 2.6 - s.canopy * 1.35 - s.slope * 0.9 - s.rock * 0.4
+    + s.moisture * 0.25;
+  if (score > bestS) { bestS = score; best = { x: px, z: pz, s }; }
 }
-const x = best?.x ?? c.x, z = best?.z ?? c.z;
+
+x = best.x;
+z = best.z;
 const gh = maps.height(x, z);
-f.camera.position.set(x - 4.2, gh + 2.25, z + 4.4);
-f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.2);
+f.camera.position.set(x - 6.2, gh + 3.85, z + 7.0);
+f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.8);
 const p = f.camera.position;
-p.y = maps.height(p.x, p.z) + 2.15;
-f.camera.lookAt(x + 3.0, gh + 1.85, z - 1.8);
+p.y = maps.height(p.x, p.z) + 3.70;
+// across the volume: air in the middle third, canopy as a backdrop, not a zenith glance
+f.camera.lookAt(x + 9.0, gh + 3.15, z - 4.5);
 f.camera.updateMatrixWorld(true);
 f.camera.updateProjectionMatrix();
 
@@ -56,5 +70,6 @@ return {
   pad: [+x.toFixed(1), +z.toFixed(1)],
   camY: +(p.y - maps.height(p.x, p.z)).toFixed(2),
   insects: f.forest.life?.stats.insects ?? 0,
+  birds: f.forest.life?.stats.birds ?? 0,
   insectW: +(f.pipeline.compositePass?.material?.uniforms?.uInsectHold?.value?.w ?? -1).toFixed(2),
 };
