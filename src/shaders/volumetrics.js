@@ -34,6 +34,7 @@ uniform vec3 uCamPos;
 uniform mat4 uInvViewProj;
 uniform mat4 uPrevViewProj;
 uniform vec4 uFog;        // x base density, y height falloff, z ground mist, w haze
+uniform vec3 uSkyAmbient;
 uniform vec4 uWeather;    // x coverage, y storm, z rain, w wetness
 uniform vec4 uFlash;
 uniform vec3 uFlashColor;
@@ -61,8 +62,10 @@ float mediaDensity(vec3 p, out float mistFrac){
   float wetness = clamp(m.b, 0.0, 1.0);
   float waterDepth = m.g - m.r;
 
-  // --- ground mist: an exponential shell hugging the terrain
-  float mistH = mix(1.9, 5.6, uFog.z);
+  // --- ground mist: an exponential shell hugging the terrain.
+  // A 4 m shell dies under a 6 m bank camera; dawn valley fog has to
+  // reach the lower crowns or the plate is just a dark creek.
+  float mistH = mix(2.6, 10.4, uFog.z);
   float mist = exp(-max(above, 0.0) / mistH) * uFog.z;
   mist *= 1.0 + 1.25 * smoothstep(0.15, 0.85, wetness);
   mist *= 1.0 + 1.9 * smoothstep(-0.2, 0.6, waterDepth);
@@ -124,8 +127,8 @@ void main(){
   float mu = dot(rd, uSunDir);
   float ph = mix(phaseHG(mu, 0.72), phaseHG(mu, -0.24), 0.28);
   float phMoon = phaseHG(dot(rd, uMoonDir), 0.6);
-  vec3 ambTop = skyIrradiance(vec3(0.0, 1.0, 0.0)) * 0.050;
-  vec3 ambSide = skyIrradiance(rd) * 0.030;
+  vec3 ambTop = skyIrradiance(vec3(0.0, 1.0, 0.0)) * mix(0.050, 0.12, clamp(uFog.z, 0.0, 1.0));
+  vec3 ambSide = skyIrradiance(rd) * mix(0.030, 0.075, clamp(uFog.z, 0.0, 1.0));
 
   float prevT = 0.0;
   for(int i = 0; i < 64; i++){
@@ -149,6 +152,9 @@ void main(){
     vec3 S = uSunColor * sh * ph * canopyShade;
     S += uMoonColor * phMoon * sh;
     S += ambTop * (0.55 + 0.45 * clamp(p.y * 0.05, 0.0, 1.0)) + ambSide;
+    // Thick mist with a dark S grades to black smoke. A cool sky-ambient
+    // floor keeps dawn banks luminous when the camera sits under the stand.
+    S += uSkyAmbient * (0.30 + 0.72 * uFog.z);
     if(uFlash.w > 0.001){
       vec3 fv = uFlash.xyz - p;
       float fd2 = dot(fv, fv);
