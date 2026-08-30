@@ -24,15 +24,15 @@ import { Env, U } from '../core/env.js';
 const CELL = 16;          // metres per water cell
 const GRID = 20;          // quads per cell edge — 0.8 m, close cells were a facet
 
-function cellGeometry() {
-  const n = GRID + 1;
+function cellGeometry(grid) {
+  const n = grid + 1;
   const pos = new Float32Array(n * n * 3);
   const idx = [];
   let p = 0;
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-    pos[p++] = i / GRID; pos[p++] = 0; pos[p++] = j / GRID;
+    pos[p++] = i / grid; pos[p++] = 0; pos[p++] = j / grid;
   }
-  for (let j = 0; j < GRID; j++) for (let i = 0; i < GRID; i++) {
+  for (let j = 0; j < grid; j++) for (let i = 0; i < grid; i++) {
     const a = j * n + i, b = a + 1, c = a + n, d = c + 1;
     idx.push(a, c, b, b, c, d);
   }
@@ -112,8 +112,9 @@ export class Water {
     this.forest = forest;
     this.maps = forest.maps;
     this.quality = quality;
-    this.geometry = cellGeometry();
-    this.maxCells = 2400;
+    this.grid = quality.waterGrid ?? GRID;
+    this.geometry = cellGeometry(this.grid);
+    this.maxCells = quality.waterCells ?? 240;
     this.data = new Float32Array(this.maxCells * 4);
     this.buf = new THREE.InstancedInterleavedBuffer(this.data, 4, 1);
     this.buf.setUsage(THREE.DynamicDrawUsage);
@@ -135,7 +136,7 @@ export class Water {
       uSceneColor: { value: null },
       uSceneDepth: { value: null },
       uCellSize: { value: CELL },
-      uGrid: { value: GRID },
+      uGrid: { value: this.grid },
       uWaterWave: { value: new THREE.Vector4(1.0, 0.30, 0.5, 0.0) },
       // tannin: amber transmits, green and blue die in the column.
       // the old coefficients were inverted and the run read as canopy soup.

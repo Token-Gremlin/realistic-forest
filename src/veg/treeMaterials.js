@@ -122,7 +122,7 @@ float barkHeight(vec2 uv, float radius, out float fissure, out float plate){
   float furrow = 0.5 + 0.5 * sin(uv.x * 17.6
     + fbm(vec2(uv.x * 1.4, uv.y * 0.07) + 9.0, 2, 2.1, 0.5) * 2.2);
   furrow = pow(abs(furrow * 2.0 - 1.0), 0.58);
-  h += furrow * 0.52 * uBarkParams.x;
+  h += furrow * 0.64 * uBarkParams.x;
   fissure = max(fissure, smoothstep(0.32, 0.86, furrow));
   // thinner bark on thin branches
   h *= mix(0.35, 1.0, clamp(radius * 6.0, 0.0, 1.0));

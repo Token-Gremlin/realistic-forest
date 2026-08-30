@@ -109,7 +109,7 @@ Ground groundSurface(vec3 wp, vec3 N, vec4 eco, vec4 mapv, vec4 ao, float lodPx)
   vec3 soil  = mix(vec3(0.0405, 0.0288, 0.0172), vec3(0.0760, 0.0540, 0.0318), n2);
   vec3 silt  = mix(vec3(0.0640, 0.0505, 0.0360), vec3(0.1010, 0.0810, 0.0575), n1);
   vec3 rockC = mix(vec3(0.0720, 0.0700, 0.0670), vec3(0.1250, 0.1220, 0.1140), n3);
-  vec3 mossC = mix(vec3(0.0300, 0.0580, 0.0210), vec3(0.0620, 0.1020, 0.0330), n2);
+  vec3 mossC = mix(vec3(0.0260, 0.0680, 0.0180), vec3(0.0780, 0.1480, 0.0360), n2);
 
   vec3 alb = mix(soil, humus, clamp(canopy * 0.85 + litterM * 0.35, 0.0, 1.0));
   float rough = 0.86;
@@ -172,18 +172,18 @@ Ground groundSurface(vec3 wp, vec3 N, vec4 eco, vec4 mapv, vec4 ao, float lodPx)
     occ = mix(occ, 0.65, twig * 0.6);
   }
 
-  // ---- moss: damp, shaded, flat, and on the lee of stones
-  float mossAmt = smoothstep(0.42, 0.86, moisture) * (1.0 - steep * 0.75)
-                * (0.35 + 0.65 * canopy) * (1.0 - smoothstep(0.55, 0.95, waterDepth + 0.5));
-  mossAmt *= smoothstep(0.35, 0.75, fbm(p * 0.55 + 61.0, 4, 2.1, 0.5) * 0.5 + 0.5);
-  mossAmt = clamp(mossAmt * 1.62, 0.0, 1.0);
+  // ---- moss: a velvet carpet under closed canopy, brighter where it catches
+  float mossAmt = smoothstep(0.32, 0.80, moisture) * (1.0 - steep * 0.70)
+                * (0.42 + 0.70 * canopy) * (1.0 - smoothstep(0.55, 0.95, waterDepth + 0.5));
+  mossAmt *= smoothstep(0.22, 0.70, fbm(p * 0.48 + 61.0, 4, 2.1, 0.5) * 0.5 + 0.5);
+  mossAmt = clamp(mossAmt * 2.05, 0.0, 1.0);
   if(mossAmt > 0.01){
     float mb = fbm(p * 6.5 + 5.0, 3, 2.1, 0.5) * 0.5 + 0.5;
-    vec3 mc = mossC * (0.72 + 0.55 * mb);
-    alb = mix(alb, mc, mossAmt * 0.92);
+    vec3 mc = mossC * (0.68 + 0.62 * mb);
+    alb = mix(alb, mc, mossAmt * 0.96);
     vec3 dm = noised(p * 22.0);
-    grad = mix(grad, grad * 0.4 + dm.yz * 1.1 * det1, mossAmt);
-    rough = mix(rough, 0.94, mossAmt);
+    grad = mix(grad, grad * 0.32 + dm.yz * 1.25 * det1, mossAmt);
+    rough = mix(rough, 0.97, mossAmt);
   }
 
   // ---- exposed rock with bedding planes
@@ -387,6 +387,7 @@ void main(){
   selectView(camera) {
     this._mvp.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this._frustum.setFromProjectionMatrix(this._mvp);
+    this._maxView = camera.far * 1.12;
     const cam = camera.position;
     const rootSize = MIN_PATCH * Math.pow(2, MAX_LEVEL);
     const ox = Math.floor(cam.x / rootSize) * rootSize;
@@ -419,6 +420,7 @@ void main(){
     this._count = 0;
     this._shadowMode = true;
     this._minLevel = Math.min(MAX_LEVEL, 1 + cascadeIdx);
+    this._maxView = Math.max(radius * 1.8, 90);
     for (let j = 0; j <= n; j++) {
       for (let i = 0; i <= n; i++) {
         this._select(ox + i * rootSize, oz + j * rootSize, rootSize, MAX_LEVEL - 3, mainCamPos, true, 0);
@@ -448,7 +450,8 @@ void main(){
     const dist = Math.sqrt(dx * dx + dz * dz);
 
     const minLevel = this._minLevel ?? 0;
-    if (level > minLevel && dist < this.ranges[level - 1 + lodBias]) {
+    const maxView = this._maxView ?? 1e6;
+    if (level > minLevel && dist < this.ranges[level - 1 + lodBias] && dist < maxView) {
       const h = size * 0.5;
       this._select(x, z, h, level - 1, cam, cull, lodBias);
       this._select(x + h, z, h, level - 1, cam, cull, lodBias);

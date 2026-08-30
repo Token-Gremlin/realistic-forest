@@ -149,7 +149,7 @@ export class RenderPipeline {
       'uCamPos', 'uInvViewProj', 'uPrevViewProj', 'uResolution', 'uNearFar', 'uWeather',
       'uFlash', 'uFlashColor', 'uFire', 'uFireColor', 'uWind', 'uWindPhase', 'uFog',
       'uShadowMap', 'uShadowMatrices', 'uShadowSplits', 'uShadowTexel',
-      'uSkyProbe', 'uSkyIrradiance',
+      'uSkyProbe', 'uSkyIrradiance', 'uContact',
     );
 
     this.lightPass = new Blit(fsMaterial(lightingFragment(), {

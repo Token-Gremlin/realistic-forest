@@ -64,6 +64,7 @@ uniform vec2 uNearFar;
 uniform float uTime;
 uniform mat4 uViewMatrix;
 uniform mat4 uProjMatrix;
+uniform vec4 uContact;
 
 layout(location = 0) out vec4 oColor;
 in vec2 vUv;
@@ -71,11 +72,11 @@ in vec2 vUv;
 float sampleDepth(vec2 uv){ return texture(uDepthTex, uv).r; }
 
 /** Short screen-space march toward the light: recovers the small-scale contact
- *  darkening that a 2048 cascade cannot resolve (leaf litter, grass bases). */
+ *  darkening that a cascade cannot resolve (leaf litter, grass bases). */
 float contactShadow(vec3 wp, vec3 L, float ndl){
   if(ndl <= 0.0) return 1.0;
-  const int STEPS = 10;
-  float dist = 0.42;
+  const int STEPS = 6;
+  float dist = 0.32;
   vec4 vp = uViewMatrix * vec4(wp, 1.0);
   float startZ = -vp.z;
   float rnd = ign(gl_FragCoord.xy, uTime);
@@ -126,7 +127,7 @@ void main(){
 
   vec2 rnd = vec2(ign(gl_FragCoord.xy, uTime * 1.7), ign(gl_FragCoord.yx + 13.3, uTime * 2.3));
   float shadow = sunShadow(wp, N, ndlSat, viewDist, rnd, 1.0);
-  if(viewDist < 26.0 && ndlSat > 0.0){
+  if(uContact.x > 0.5 && viewDist < uContact.x && ndlSat > 0.0){
     shadow *= contactShadow(wp, L, ndlSat);
   }
 

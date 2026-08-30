@@ -635,7 +635,7 @@ export const ARCHETYPES = [
       - Math.max(0, e.waterDepth + 0.2) * 3,
   },
   {
-    key: 'bush', build: buildBush, variants: 3, density: 0.085, maxDist: 62,
+    key: 'bush', build: buildBush, variants: 3, density: 0.11, maxDist: 48,
     score: (e) => 0.25 + (1 - e.canopy) * 1.5 + e.moisture * 0.6 - e.rock * 0.9 - e.slope * 0.8
       - Math.max(0, e.waterDepth + 0.3) * 3,
   },
@@ -655,7 +655,7 @@ export const ARCHETYPES = [
       - e.rock * 1.1 - e.slope * 0.8 - Math.max(0, e.waterDepth + 0.15) * 4,
   },
   {
-    key: 'mushroom', build: buildMushroom, variants: 3, density: 0.42, maxDist: 16,
+    key: 'mushroom', build: buildMushroom, variants: 3, density: 0.48, maxDist: 18,
     score: (e) => -0.15 + e.litter * 1.9 + e.canopy * 1.2 + e.moisture * 1.1 - e.rock * 1.5
       - Math.max(0, e.waterDepth + 0.2) * 4,
   },
@@ -692,7 +692,7 @@ export const ARCHETYPES = [
       - Math.max(0, e.waterDepth + 0.2) * 3,
   },
   {
-    key: 'log', build: buildLog, variants: 3, density: 0.01, maxDist: 95,
+    key: 'log', build: buildLog, variants: 3, density: 0.018, maxDist: 72,
     score: (e) => 0.05 + e.canopy * 1.2 + e.moisture * 0.4 - e.slope * 0.9
       - Math.max(0, e.waterDepth + 0.3) * 3,
   },

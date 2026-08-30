@@ -295,7 +295,44 @@ export class Clutter {
         });
       }
     }
+    this._plantLogFungi(out, rng);
     return out;
+  }
+
+  /** Clusters of shelf mushrooms sit on fallen logs — the floor reference. */
+  _plantLogFungi(out, rng) {
+    const logIdx = ARCHETYPES.findIndex((a) => a.key === 'log');
+    const mushIdx = ARCHETYPES.findIndex((a) => a.key === 'mushroom');
+    const mushKind = this.kinds[mushIdx];
+    if (logIdx < 0 || !mushKind?.variants.length) return;
+    const logs = out.byKind[logIdx];
+    const mush = out.byKind[mushIdx];
+    const eco = this._eco;
+    for (const log of logs) {
+      const n = 2 + rng.int(3);
+      const along = Math.max(log.radius, 0.9);
+      for (let i = 0; i < n; i++) {
+        const t = (rng.f() - 0.5) * 1.55;
+        const side = (rng.f() - 0.5) * 0.42;
+        const x = log.x + log.cos * t * along - log.sin * side;
+        const z = log.z + log.sin * t * along + log.cos * side;
+        this.maps.sample(x, z, eco);
+        if (!eco.inside || eco.waterDepth > -0.04) continue;
+        const variant = mushKind.variants[rng.int(mushKind.variants.length)];
+        const scale = lerp(0.9, 1.55, rng.f());
+        const yaw = rng.f() * Math.PI * 2;
+        mush.push({
+          x, z, y: eco.height - (variant.sink ?? 0) * scale + 0.03,
+          scale,
+          cos: Math.cos(yaw), sin: Math.sin(yaw),
+          tiltX: 0, tiltZ: 0,
+          phase: rng.f(), tint: 0.12, rnd: rng.f(),
+          variant,
+          height: variant.height * scale,
+          radius: Math.max(variant.radius * scale, 0.05),
+        });
+      }
+    }
   }
 
   onMapsRebaked() {

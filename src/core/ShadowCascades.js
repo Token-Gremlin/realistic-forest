@@ -37,15 +37,18 @@ float shadowLookup(int idx, vec3 wp, vec3 N, float nl, float radiusScale, vec2 r
   float cs = cos(ang), sn = sin(ang);
   mat2 rot = mat2(cs, sn, -sn, cs);
 
-  const int TAPS = 12;
+  // Lighting uses 8 Vogel taps; volumetrics pass a larger radiusScale and
+  // only need 4 — that march already samples the atlas once per step.
+  int taps = radiusScale > 1.55 ? 4 : 8;
   float sum = 0.0;
-  for(int i = 0; i < TAPS; i++){
-    vec2 d = vogel(i, TAPS, 0.0);
+  for(int i = 0; i < 8; i++){
+    if(i >= taps) break;
+    vec2 d = vogel(i, taps, 0.0);
     vec2 o = rot * d * r;
     vec2 uv = shadowAtlasUv(clamp(p.xy + o, vec2(0.0015), vec2(0.9985)), idx);
     sum += texture(uShadowMap, vec3(uv, z));
   }
-  return sum / float(TAPS);
+  return sum / float(taps);
 }
 
 /** Cascade selection with a dithered blend band so transitions are invisible. */

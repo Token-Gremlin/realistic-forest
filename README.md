@@ -11,8 +11,11 @@ npm run dev        # http://localhost:5173
 npm run build      # static, self-contained bundle in dist/
 ```
 
-Optional URL parameters: `?q=low|medium|high|ultra` to force a quality tier and
-`?act=N` to start on a given act of the environmental sequence.
+Optional URL parameters: `?q=tiny|low|play|medium|high|ultra` to force a quality
+tier (`play` is the default — a close grove, dense at your feet, cheap past
+~70 m) and `?act=N` to start on a given act of the environmental sequence. The
+renderer is WebGL2; if the browser also exposes WebGPU that is used only as a
+capability hint when picking a default tier.
 
 ## Controls
 
@@ -93,8 +96,9 @@ water, volumetrics, forward transparents, TAA, bloom, depth of field, grade.
 Most stages run at half resolution with temporal reuse, which is what makes the
 volumetrics and AO affordable at forest densities.
 
-- **Shadows** — four cascades packed into one depth atlas, fitted to frustum
-  slices and snapped to texel increments so edges do not crawl.
+- **Shadows** — three or four cascades packed into one depth atlas, fitted to
+  frustum slices and snapped to texel increments so edges do not crawl. The
+  playable preset keeps three close cascades so far trees stay as cheap cards.
 - **Sky** — single-scattering Rayleigh + Mie + ozone integrated per pixel, so
   sunrise, golden hour, blue hour and night are consequences of the physics.
   Clouds are raymarched against tiling 3D volumes baked at startup.

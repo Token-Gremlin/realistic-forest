@@ -186,6 +186,16 @@ export class Grass {
     }
 
     this.stats = { blades: this.rings.reduce((a, r) => a + r.count * r.count, 0) };
+    this.ringBudget = this.rings.length;
+  }
+
+  /** Hide outer rings when adaptive quality is cutting cost. */
+  setRingBudget(n) {
+    this.ringBudget = Math.max(1, Math.min(n, this.rings.length));
+    for (let i = 0; i < this.rings.length; i++) {
+      const on = i < this.ringBudget;
+      this.rings[i].mesh.visible = on;
+    }
   }
 
   _genFragment() {
@@ -228,8 +238,8 @@ void main(){
   // Grass is a light-limited species: under a closed canopy the floor is leaf
   // litter and shade herbs, not a lawn. Multiplying by the light fraction rather
   // than subtracting is what makes a closed stand read as a closed stand.
-  float light = pow(clamp(1.0 - eco.g * 0.92, 0.0, 1.0), 1.45);
-  float dens = (0.22 + eco.r * 0.55) * (0.16 + 1.30 * light);
+  float light = pow(clamp(1.0 - eco.g * 0.72, 0.0, 1.0), 1.12);
+  float dens = (0.28 + eco.r * 0.52) * (0.28 + 1.15 * light);
   dens -= eco.b * 1.00;
   dens -= smoothstep(0.30, 0.80, slope) * 0.55;
   dens -= smoothstep(0.50, 0.95, eco.a) * 0.32;
@@ -244,8 +254,8 @@ void main(){
   if(r1.z > clamp(dens, 0.0, 1.0)) return;
 
   float lush = clamp(0.32 + eco.r * 0.75 - eco.b * 0.45 + (1.0 - eco.g) * 0.40, 0.0, 1.45);
-  float hgt = mix(0.09, 0.66, pow(r2.x, 1.30)) * mix(0.55, 1.35, lush)
-            * uHeightMul * mix(0.75, 1.55, clumpK);
+  float hgt = mix(0.16, 0.92, pow(r2.x, 1.12)) * mix(0.58, 1.42, lush)
+            * uHeightMul * mix(0.78, 1.55, clumpK);
   // sedges get tall in the wet, grazed swards stay short on thin soil
   hgt *= mix(1.0, 1.45, smoothstep(0.6, 1.0, eco.r) * (1.0 - smoothstep(0.1, 0.5, waterDepth + 0.4)));
   hgt *= mix(1.0, 0.55, eco.b);
@@ -354,9 +364,9 @@ ${GLSL_GBUFFER_OUT}
 in vec3 vWorld; in vec3 vNormal; in vec2 vUv; in vec4 vData; in vec4 vCur; in vec4 vPrev;
 void main(){
   float dry = vData.x, lush = vData.y, sp = vData.z, ao = vData.w;
-  vec3 c1 = vec3(0.034, 0.078, 0.032);
-  vec3 c2 = vec3(0.072, 0.118, 0.038);
-  vec3 c3 = vec3(0.050, 0.074, 0.046);
+  vec3 c1 = vec3(0.038, 0.094, 0.026);
+  vec3 c2 = vec3(0.086, 0.148, 0.036);
+  vec3 c3 = vec3(0.052, 0.088, 0.040);
   vec3 base = sp < 0.42 ? mix(c1, c2, fract(sp * 3.1))
             : sp < 0.78 ? mix(c2, c3, fract(sp * 5.7))
                         : mix(c3, c1, fract(sp * 7.3));
@@ -393,7 +403,14 @@ void main(){
     const renderer = this.renderer;
     const prev = renderer.getRenderTarget();
     const gu = this.genPass.material.uniforms;
-    for (const r of this.rings) {
+    const budget = this.ringBudget ?? this.rings.length;
+    for (let ri = 0; ri < this.rings.length; ri++) {
+      const r = this.rings[ri];
+      if (ri >= budget) {
+        r.mesh.visible = false;
+        continue;
+      }
+      r.mesh.visible = true;
       r.uniforms.uRingOrigin.value.set(cx, cz);
       const ox = Math.floor(cx / r.spacing) * r.spacing;
       const oz = Math.floor(cz / r.spacing) * r.spacing;
@@ -409,8 +426,10 @@ void main(){
   }
 
   beforeShadow(cam, idx) {
-    for (const r of this.rings) {
-      r.shadowMesh.visible = r.shadowMesh.userData.cascades.includes(idx);
+    const budget = this.ringBudget ?? this.rings.length;
+    for (let i = 0; i < this.rings.length; i++) {
+      const r = this.rings[i];
+      r.shadowMesh.visible = i < budget && r.shadowMesh.userData.cascades.includes(idx);
     }
   }
 }

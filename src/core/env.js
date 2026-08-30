@@ -77,6 +77,9 @@ export const Env = {
     uShadowMatrices: { value: [new THREE.Matrix4(), new THREE.Matrix4(), new THREE.Matrix4(), new THREE.Matrix4()] },
     uShadowSplits: { value: new THREE.Vector4(20, 60, 160, 420) },
     uShadowTexel: { value: new THREE.Vector4(1 / 2048, 1 / 2048, 1 / 2048, 1 / 2048) },
+    // x = contact-shadow reach in metres (0 = off). Screen-space march is
+    // only worth it next to the camera; past that the cascades already read.
+    uContact: { value: new THREE.Vector4(16, 0, 0, 0) },
   },
 
   /** Sub-selection helper so materials only declare what they use. */

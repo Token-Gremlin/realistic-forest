@@ -455,7 +455,7 @@ export class Trees {
         const dmg = t.damage ?? 0;
 
         // cull only the far representations; near trees may cast into view
-        if (dist > 70) {
+        if (dist > 38) {
           const fall = dmg > 0.2 ? dmg * 1.55 : 0;
           const off = t.height * Math.sin(fall) * 0.45;
           sphere.center.set(

@@ -64,6 +64,9 @@ async function start() {
   const params = new URLSearchParams(location.search);
   const presetName = params.get('q') ?? guessPreset();
   const quality = { ...(PRESETS[presetName] ?? PRESETS.play) };
+  // Deferred g-buffer + float maps are GLSL/WebGL2. navigator.gpu is only a
+  // capability hint for the quality guess — we do not swap the renderer.
+  U.uContact.value.set(quality.contactDist ?? 16, 0, 0, 0);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality.pixelRatio ?? 1.5));
   renderer.setSize(window.innerWidth, window.innerHeight, false);
 
@@ -257,9 +260,15 @@ async function start() {
         if (slowFrames >= 2) {
           pipeline.setScale(Math.max(0.50, pipeline.scale - 0.10));
           pipeline.settings.volumetricSteps = Math.max(
-            quality.volMin ?? 8,
+            quality.volMin ?? 6,
             (pipeline.settings.volumetricSteps | 0) - 4,
           );
+          pipeline.settings.dof = false;
+          if (pipeline.scale < quality.renderScale * 0.86) {
+            U.uContact.value.x = 0;
+            forest.grass?.setRingBudget?.(Math.max(1, (forest.grass.rings?.length ?? 2) - 1));
+          }
+          if (pipeline.scale <= 0.55) pipeline.settings.ao = false;
           slowFrames = 0;
         } else if (fastFrames >= 4 && pipeline.scale < quality.renderScale) {
           pipeline.setScale(Math.min(quality.renderScale, pipeline.scale + 0.05));
@@ -267,6 +276,12 @@ async function start() {
             quality.volumetricSteps,
             (pipeline.settings.volumetricSteps | 0) + 2,
           );
+          if (pipeline.scale >= quality.renderScale * 0.92) {
+            pipeline.settings.dof = quality.dof;
+            pipeline.settings.ao = quality.ao;
+            U.uContact.value.x = quality.contactDist ?? 16;
+            forest.grass?.setRingBudget?.(forest.grass.rings?.length ?? 2);
+          }
           fastFrames = 0;
         }
       }

@@ -35,9 +35,11 @@ export class Forest {
     this.shadows = new ShadowCascades(renderer, {
       size: quality.shadowSize,
       splits: quality.shadowSplits,
+      count: quality.shadowCount ?? 4,
+      pcfRadius: quality.shadowPcf ?? 1.7,
     });
 
-    this.terrain = new Terrain(this.maps);
+    this.terrain = new Terrain(this.maps, { maxPatches: quality.maxPatches ?? 720 });
 
     this.gscene = new THREE.Scene();
     this.gscene.matrixWorldAutoUpdate = false;

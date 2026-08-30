@@ -152,7 +152,8 @@ void main(){
     // crowns overhead further attenuate the shaft
     float canopyShade = 1.0 - aoSample(p.xz).b * 0.55;
 
-    vec3 S = uSunColor * sh * ph * canopyShade;
+    float shaft = mix(0.88, 1.22, sh * canopyShade);
+    vec3 S = uSunColor * sh * ph * canopyShade * shaft;
     S += uMoonColor * phMoon * sh;
     S += ambTop * (0.55 + 0.45 * clamp(p.y * 0.05, 0.0, 1.0)) + ambSide;
     // Only ground mist gets the cool floor. Lighting all fog with it
