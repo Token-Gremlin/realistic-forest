@@ -153,6 +153,22 @@ if (f.forest.grass) {
     r.shadowMesh.visible = false;
   }
 }
+if (f.forest.trees) {
+  // map skyVis is not pixel sky. For this still, drop leaf cards and
+  // billboards so the zenith is grey and the tumbling wood can read.
+  for (const v of f.forest.trees.variants) {
+    for (const d of v.draws) {
+      if (d.leaf) {
+        d.mesh.visible = false;
+        if (d.shadow) d.shadow.visible = false;
+      }
+    }
+  }
+  for (const bb of f.forest.trees.billboards ?? []) {
+    if (bb.mesh) bb.mesh.visible = false;
+    if (bb.shadow) bb.shadow.visible = false;
+  }
+}
 if (f.forest.falling) {
   f.forest.falling.suppressed = false;
   f.forest.falling.holdPhase = 0.40;
