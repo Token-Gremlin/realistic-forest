@@ -363,9 +363,22 @@ void main(){
   float silt = shore * smoothstep(0.35, 0.85, foamNoise) * 0.5;
   col = mix(col, col * vec3(1.25, 1.05, 0.78), silt);
 
-  // rain lifts the column so ripples survive the storm grade instead of
-  // crushing to wet gravel
-  col *= mix(1.0, 1.22, uWeather.z);
+  // rain impact rings as colour, not only a normal bump. Storm AgX was
+  // flattening the column to wet gravel; pale rings on tea survive it.
+  if(uWaterWave.w > 0.02){
+    vec3 rw = worley2(wxz * 3.6 + floor(uTime * 2.2) * 13.7, 1.0);
+    float rad = fract(uTime * 2.2) * 0.55 + 0.08;
+    float ring = 1.0 - smoothstep(0.010, 0.048, abs(rw.x - rad));
+    ring *= exp(-rw.x * 3.2) * uWaterWave.w;
+    col += vec3(0.42, 0.48, 0.44) * ring * 1.15;
+    vec3 rw2 = worley2(wxz * 5.8 + floor(uTime * 3.1) * 9.1 + 21.0, 1.0);
+    float rad2 = fract(uTime * 3.1 + 0.37) * 0.42 + 0.06;
+    float ring2 = 1.0 - smoothstep(0.008, 0.036, abs(rw2.x - rad2));
+    col += vec3(0.50, 0.56, 0.52) * ring2 * exp(-rw2.x * 4.0) * uWaterWave.w * 0.75;
+  }
+  // keep tannin under rain so the lift does not go grey
+  col *= mix(vec3(1.0), vec3(1.10, 0.92, 0.70), uWeather.z * 0.35);
+  col *= mix(1.0, 1.08, uWeather.z);
 
   // soften the very edge so the waterline is not a hard cut
   float edgeFade = smoothstep(0.006, 0.05, depth);

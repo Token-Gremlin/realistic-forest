@@ -276,9 +276,9 @@ void main(){
   }
 
   float grow = 1.0 - exp(-age * 7.0);
-  float rad = mix(0.10, 0.42, h.y) * mix(0.8, 1.45, rain) * mix(0.45, 1.4, grow);
+  float rad = mix(0.12, 0.50, h.y) * mix(0.85, 1.50, rain) * mix(0.45, 1.4, grow);
   if(kind > 1.5) rad *= 0.50;
-  if(kind > 0.5 && kind < 1.5) rad *= 1.55;
+  if(kind > 0.5 && kind < 1.5) rad *= 2.35;
 
   vec3 world = vec3(xz.x, y, xz.y);
   // mostly a horizontal disc; a little camera-facing lift so rings read at grazing angles
@@ -326,10 +326,11 @@ void main(){
   float r = length(vUv);
   float mask = 0.0;
   if(vKind > 0.5 && vKind < 1.5){
-    // water: expanding ring
-    float ring = abs(r - mix(0.15, 0.92, vAge / 0.55));
-    mask = 1.0 - smoothstep(0.04, 0.16, ring);
+    // water: expanding ring, fat enough to survive AgX
+    float ring = abs(r - mix(0.12, 0.88, vAge / 0.55));
+    mask = 1.0 - smoothstep(0.025, 0.11, ring);
     mask *= 1.0 - smoothstep(0.95, 1.05, r);
+    mask = max(mask, exp(-r * r * 7.0) * (1.0 - vAge / 0.55) * 0.55);
   } else {
     // ground / canopy: soft crown that thins as it grows
     float inner = smoothstep(0.0, 0.18, r);
@@ -339,9 +340,10 @@ void main(){
   }
   if(mask < 0.02) discard;
 
-  vec3 col = vec3(0.88, 0.92, 0.98) * 0.85 + uSkyAmbient * 0.55 + uSunColor * 0.10;
+  vec3 col = vec3(0.92, 0.96, 1.0) * mix(0.95, 1.35, step(0.5, vKind) * (1.0 - step(1.5, vKind)));
+  col += uSkyAmbient * 0.45 + uSunColor * 0.08;
   col += uFlashColor * uFlash.w * 0.55;
-  float a = mask * vAlpha * 1.15;
+  float a = mask * vAlpha * mix(1.15, 1.85, step(0.5, vKind) * (1.0 - step(1.5, vKind)));
   oColor = vec4(col * a, a);
 }
 `;

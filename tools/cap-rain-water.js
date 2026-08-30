@@ -8,8 +8,8 @@ f.weather.state.rain = 0.95;
 f.weather.target.rain = 0.95;
 f.weather.state.wetness = 0.9;
 f.weather.update(0, f.camera.position);
-f.pipeline.settings.exposure = 1.05;
-f.pipeline.settings.aerial = 0.50;
+f.pipeline.settings.exposure = 1.14;
+f.pipeline.settings.aerial = 0.36;
 f.pipeline.settings.motionBlur = 0;
 f.pipeline.settings.chroma = 0;
 f.pipeline.settings.sharpen = 0.10;
@@ -133,8 +133,8 @@ for (let i = 0; i < 90; i++) {
 origins.sort((a, b) => b.rank - a.rank);
 
 let best = null, bestS = -1e9;
-const pulls = [7.6, 9.4, 6.4];
-const rises = [6.2, 7.2];
+const pulls = [8.2, 10.0, 7.0];
+const rises = [4.8, 5.6];
 for (const origin of origins.slice(0, 16)) {
   const run = walkStream(origin.x, origin.z);
   if (run.length < 4) continue;
