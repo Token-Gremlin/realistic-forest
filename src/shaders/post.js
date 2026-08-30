@@ -526,14 +526,14 @@ void main(){
         vec2 c = root + vec2(cos(phi) * rad * 1.15, sin(phi) * rad * 0.72);
         if(c.x < 0.06 || c.x > 0.94 || c.y < 0.14 || c.y > 0.88) continue;
         float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
-        if(sceneZ < 0.38) continue;
+        // only over sky or distant haze — near leaves turn dashes into sparks
+        if(sceneZ < 0.62) continue;
         float ang = (hash11(sd + 5.0) - 0.5) * 2.4;
-        float sz = mix(0.013, 0.022, hash11(sd + 6.2));
+        float sz = mix(0.015, 0.026, hash11(sd + 6.2));
         float body = insectMote(vUv, c, ang, sz);
         if(body < 0.08) continue;
-        vec3 bug = vec3(0.07, 0.06, 0.035);
-        vec3 fleck = vec3(0.42, 0.36, 0.18) * body;
-        mapped = mix(mapped, mix(bug, fleck, body * 0.55), clamp(body * 0.90, 0.0, 1.0));
+        vec3 bug = vec3(0.055, 0.048, 0.032);
+        mapped = mix(mapped, bug, clamp(body * 0.86, 0.0, 1.0));
       }
     }
   }

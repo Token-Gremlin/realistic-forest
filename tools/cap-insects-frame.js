@@ -70,7 +70,7 @@ function clearLookCone(f) {
           const dx = data[o] - p.x, dz = data[o + 2] - p.z;
           const dist = Math.hypot(dx, dz);
           const facing = (dx * fwd.x + dz * fwd.z) / (dist || 1);
-          if (dist < 11 && facing > 0.12) { leaves++; continue; }
+          if (dist < 14 && facing > 0.05) { leaves++; continue; }
           if (w !== i) data.copyWithin(w * 12, o, o + 12);
           w++;
         }
