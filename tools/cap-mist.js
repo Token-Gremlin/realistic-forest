@@ -5,8 +5,8 @@ f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
 f.state.exposureAuto = false;
-f.pipeline.settings.exposure = 1.42;
-f.pipeline.settings.aerial = 0.50;
+f.pipeline.settings.exposure = 1.20;
+f.pipeline.settings.aerial = 0.34;
 f.pipeline.settings.motionBlur = 0;
 f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
@@ -88,7 +88,7 @@ function place(bank, look, pull, rise) {
   const lookH = maps.height(look.x, look.z);
   // aim above the run so water sits in the lower third and mist occupies
   // the middle. lookAt the water itself parks it on the horizon.
-  f.camera.lookAt(look.x, lookH + 3.4, look.z);
+  f.camera.lookAt(look.x, lookH + 4.6, look.z);
   f.camera.updateMatrixWorld(true);
   f.camera.updateProjectionMatrix();
 }
@@ -129,8 +129,8 @@ const SEEDS = [
   { x: 80, z: 40 },
 ];
 
-const pulls = [8.8, 10.6, 7.4];
-const rises = [5.6, 6.6];
+const pulls = [9.6, 11.4, 8.2];
+const rises = [5.2, 6.0];
 
 let best = null, bestS = -1e9;
 for (const seed of SEEDS) {
