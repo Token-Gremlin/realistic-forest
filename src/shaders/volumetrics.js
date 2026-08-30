@@ -63,8 +63,8 @@ float mediaDensity(vec3 p, out float mistFrac){
   float waterDepth = m.g - m.r;
 
   // --- ground mist: an exponential shell hugging the terrain.
-  // A 4 m shell dies under a 6 m bank camera; dawn valley fog has to
-  // reach the lower crowns or the plate is just a dark creek.
+  // Tall enough to sit in a bank camera, short enough that a look
+  // across the run still sees the far stand through pockets.
   float mistH = mix(2.4, 6.8, uFog.z);
   float mist = exp(-max(above, 0.0) / mistH) * uFog.z;
   mist *= 1.0 + 1.25 * smoothstep(0.15, 0.85, wetness);
@@ -154,7 +154,7 @@ void main(){
     S += ambTop * (0.55 + 0.45 * clamp(p.y * 0.05, 0.0, 1.0)) + ambSide;
     // Only ground mist gets the cool floor. Lighting all fog with it
     // painted mist4 as a flat grey filter.
-    S += uSkyAmbient * (0.14 + 0.36 * uFog.z) * smoothstep(0.04, 0.55, mistFrac);
+    S += uSkyAmbient * (0.22 + 0.50 * uFog.z) * smoothstep(0.04, 0.48, mistFrac);
     if(uFlash.w > 0.001){
       vec3 fv = uFlash.xyz - p;
       float fd2 = dot(fv, fv);

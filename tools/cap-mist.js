@@ -75,14 +75,15 @@ function findBank(wx, wz) {
   return { x, z, s };
 }
 
-function place(bank, look, pull, rise) {
+function place(bank, look, pull, rise, side = 0) {
   const vx = look.x - bank.x, vz = look.z - bank.z;
   const vl = Math.hypot(vx, vz) || 1;
+  const rx = -vz / vl, rz = vx / vl;
   const gh = maps.height(bank.x, bank.z);
-  const camX = bank.x - (vx / vl) * pull;
-  const camZ = bank.z - (vz / vl) * pull;
+  const camX = bank.x - (vx / vl) * pull + rx * side;
+  const camZ = bank.z - (vz / vl) * pull + rz * side;
   f.camera.position.set(camX, Math.max(gh + rise, maps.height(camX, camZ) + rise * 0.88), camZ);
-  f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.8);
+  f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 2.1);
   const p = f.camera.position;
   p.y = Math.max(p.y, maps.height(p.x, p.z) + rise * 0.86);
   const lookH = maps.height(look.x, look.z);
@@ -117,8 +118,11 @@ function scoreShot(run, look, mid) {
     n++;
   }
   const avgY = waterY / inFrame;
-  return inFrame * 9 - Math.abs(avgY + 0.30) * 8 - (canopy / n) * 12
-    + maps.skyVis(p.x, p.z) * 2.4
+  const fx = look.x - p.x, fz = look.z - p.z;
+  const fl = Math.hypot(fx, fz) || 1;
+  const nearCanopy = maps.canopy(p.x + fx / fl * 3.2, p.z + fz / fl * 3.2);
+  return inFrame * 9 - Math.abs(avgY + 0.32) * 8 - (canopy / n) * 12
+    + maps.skyVis(p.x, p.z) * 2.4 - maps.canopy(p.x, p.z) * 5 - nearCanopy * 9
     + Math.min(lookW, 0.55) * 18 + Math.min(midW, 0.55) * 12;
 }
 
@@ -129,8 +133,9 @@ const SEEDS = [
   { x: 80, z: 40 },
 ];
 
-const pulls = [9.6, 11.4, 8.2];
+const pulls = [9.6, 11.4];
 const rises = [5.2, 6.0];
+const sides = [0, 3.2, -3.2];
 
 let best = null, bestS = -1e9;
 for (const seed of SEEDS) {
@@ -160,11 +165,13 @@ for (const seed of SEEDS) {
     if (bank.s.waterDepth > 0.02) continue;
     for (const pull of pulls) {
       for (const rise of rises) {
-        place(bank, look, pull, rise);
-        const sc = scoreShot(run, look, mid);
-        if (sc > bestS) {
-          bestS = sc;
-          best = { bank, look, mid, run, pull, rise };
+        for (const side of sides) {
+          place(bank, look, pull, rise, side);
+          const sc = scoreShot(run, look, mid);
+          if (sc > bestS) {
+            bestS = sc;
+            best = { bank, look, mid, run, pull, rise, side };
+          }
         }
       }
     }
@@ -176,10 +183,10 @@ if (!best) {
   f.camera.position.set(fb.x, 48, fb.z);
   f.forest.ensureMaps(f.camera);
   const look = { x: fb.x - 7, z: fb.z + 0.3, s: snap(maps.sample(fb.x - 7, fb.z + 0.3, {})) };
-  best = { bank: { x: fb.x, z: fb.z, s: snap(maps.sample(fb.x, fb.z, {})) }, look, mid: look, run: [], pull: 8.8, rise: 5.8 };
+  best = { bank: { x: fb.x, z: fb.z, s: snap(maps.sample(fb.x, fb.z, {})) }, look, mid: look, run: [], pull: 9.6, rise: 5.4, side: 0 };
 }
 
-place(best.bank, best.look, best.pull, best.rise);
+place(best.bank, best.look, best.pull, best.rise, best.side ?? 0);
 f.forest.ensureMaps(f.camera);
 
 if (f.forest.falling) {
@@ -213,6 +220,7 @@ return {
   look: [+best.look.x.toFixed(1), +best.look.z.toFixed(1)],
   pull: best.pull,
   rise: best.rise,
+  side: best.side ?? 0,
   run: best.run.length,
   inFrame,
   waterY: inFrame ? +(waterY / inFrame).toFixed(2) : null,
