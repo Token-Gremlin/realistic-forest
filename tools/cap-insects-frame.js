@@ -63,6 +63,9 @@ const plants = clearNearPlants(f);
 if (f.forest.life) {
   f.forest.life.holdInsects = 1;
   f.forest.life.update(0.016, f.camera);
+  f.forest.life.birds.mesh.visible = false;
+  f.forest.life.birds.geo.instanceCount = 0;
+  f.forest.life.stats.birds = 0;
 }
 
 return {

@@ -89,7 +89,11 @@ catchUp(f);
 const cut = clearNear(f);
 if (f.forest.life) {
   f.forest.life.holdBirds = 1;
+  f.forest.life.holdInsects = -1;
   f.forest.life.update(0.016, f.camera);
+  f.forest.life.insects.mesh.visible = false;
+  f.forest.life.insects.geo.instanceCount = 0;
+  f.forest.life.stats.insects = 0;
 }
 
 return {

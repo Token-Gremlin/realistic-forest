@@ -312,10 +312,12 @@ float birdV(vec2 uv, vec2 c, float ang, float sz, float flap){
   vec2 d = (uv - c) * aspect;
   float ca = cos(ang), sa = sin(ang);
   vec2 q = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y) / max(sz, 1.0e-4);
-  float body = 1.0 - smoothstep(0.07, 0.22, abs(q.x) * 1.7 + abs(q.y) * 0.48);
-  float wing = 1.0 - smoothstep(0.10, 0.74, abs(q.x) - (0.06 - q.y * 0.38 * flap));
-  wing *= smoothstep(-0.92, -0.04, q.y);
-  return clamp(max(body, wing * 0.92), 0.0, 1.0);
+  float body = exp(-q.x * q.x * 34.0 - pow(q.y + 0.12, 2.0) * 14.0);
+  float t = abs(q.x);
+  float wingY = q.y + t * mix(0.42, 0.70, flap);
+  float wing = (1.0 - smoothstep(0.06, 0.62, t)) * exp(-wingY * wingY * 48.0);
+  wing *= step(0.05, t);
+  return clamp(max(body, wing), 0.0, 1.0);
 }
 
 float rainStreak(vec2 uv, vec2 a, vec2 b, float halfW){
@@ -540,30 +542,25 @@ void main(){
   }
 
   if(uBirdHold.w > 0.05){
-    vec3 origin = uBirdHold.xyz;
-    vec3 look = normalize(origin - uCamPos + vec3(1.0e-5, 0.0, 0.0));
-    vec3 rt = cross(look, vec3(0.0, 1.0, 0.0));
-    if(length(rt) < 0.08) rt = cross(look, vec3(1.0, 0.0, 0.0));
-    rt = normalize(rt);
-    vec3 upv = normalize(cross(rt, look));
-    for(int i = 0; i < 5; i++){
-      float idb = float(i);
-      float side = (i == 0) ? 0.0 : (mod(idb, 2.0) < 0.5 ? -1.0 : 1.0);
-      float rank = (i == 0) ? 0.0 : ceil(idb * 0.5);
-      vec3 p = origin + rt * side * rank * 5.4 + look * rank * 3.2 + upv * (hash11(12.0 + idb) - 0.5) * 1.6;
-      vec4 c4 = uViewProj * vec4(p, 1.0);
-      if(c4.w < 0.20) continue;
-      vec2 c = c4.xy / c4.w * 0.5 + 0.5;
-      if(c.x < -0.02 || c.x > 1.02 || c.y < 0.08 || c.y > 0.98) continue;
-      float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
-      // distant flock lives on sky; skip only when a near limb covers the UV
-      if(sceneZ < 0.80) continue;
-      float ang = -0.18 + side * 0.12;
-      float sz = mix(0.038, 0.058, hash11(20.0 + idb));
-      float flap = mix(0.55, 1.0, hash11(24.0 + idb));
-      float body = birdV(vUv, c, ang, sz, flap);
-      if(body < 0.06) continue;
-      mapped = mix(mapped, vec3(0.05, 0.055, 0.06), body * 0.90);
+    vec4 c0 = uViewProj * vec4(uBirdHold.xyz, 1.0);
+    if(c0.w > 0.20){
+      vec2 root = c0.xy / c0.w * 0.5 + 0.5;
+      if(root.y < 0.42) root.y = mix(root.y, 0.72, 0.65);
+      for(int i = 0; i < 5; i++){
+        float idb = float(i);
+        float side = (i == 0) ? 0.0 : (mod(idb, 2.0) < 0.5 ? -1.0 : 1.0);
+        float rank = (i == 0) ? 0.0 : ceil(idb * 0.5);
+        vec2 c = root + vec2(side * rank * 0.058, -rank * 0.042);
+        if(c.x < 0.04 || c.x > 0.96 || c.y < 0.18 || c.y > 0.94) continue;
+        float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
+        if(sceneZ < 0.80) continue;
+        float ang = -0.12 + side * 0.16;
+        float sz = mix(0.034, 0.050, hash11(20.0 + idb));
+        float flap = mix(0.45, 0.95, hash11(24.0 + idb));
+        float body = birdV(vUv, c, ang, sz, flap);
+        if(body < 0.05) continue;
+        mapped = mix(mapped, vec3(0.04, 0.045, 0.05), body * 0.92);
+      }
     }
   }
 

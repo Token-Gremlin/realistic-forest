@@ -11,21 +11,11 @@ f.pipeline.settings.chroma = 0;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
-const c = f.camera.position;
-let best = null, bestS = -1e9;
-for (let i = 0; i < 150; i++) {
-  const a = i * 2.399963;
-  const r = 14 + (i % 16) * 6.0;
-  const x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
-  const s = maps.sample(x, z, {});
-  if (!s.inside) continue;
-  if (s.waterDepth > 0.02) continue;
-  if (s.skyVis < 0.40) continue;
-  if (s.canopy < 0.15 || s.canopy > 0.72) continue;
-  const score = s.skyVis * 3.0 + (1 - Math.abs(s.canopy - 0.4)) * 1.2 - s.slope * 0.5;
-  if (score > bestS) { bestS = score; best = { x, z, s }; }
-}
-const x = best?.x ?? c.x, z = best?.z ?? c.z;
+const PIN = { x: 136.6, z: 118.4 };
+const pinned = maps.sample(PIN.x, PIN.z, {});
+const x = pinned.inside ? PIN.x : f.camera.position.x;
+const z = pinned.inside ? PIN.z : f.camera.position.z;
+const best = { x, z, s: pinned.inside ? pinned : maps.sample(x, z, {}) };
 const gh = maps.height(x, z);
 f.camera.position.set(x - 4.4, gh + 4.2, z + 4.8);
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.8);
