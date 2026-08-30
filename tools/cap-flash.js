@@ -33,6 +33,7 @@ p.y = Math.max(p.y, maps.height(p.x, p.z) + 40);
 // cloud end leaves the frame. Look slightly up so the channel crosses sky.
 f.camera.lookAt(p.x + 70, p.y + 16, p.z + 21);
 f.camera.updateMatrixWorld(true);
+f.forest.camPos = p;
 
 const cx = p.x + 72, cz = p.z + 22;
 const cloudY = maps.height(cx, cz) + 78;
@@ -85,6 +86,8 @@ return {
   camY: +p.y.toFixed(1),
   groundY: +gh.toFixed(1),
   segs: bolt?.stats?.segs ?? 0,
+  verts: bolt?.stats?.verts ?? 0,
+  amp: +(bolt?.uniforms?.uAmp?.value ?? 0).toFixed(2),
   bolt: !!bolt?.mesh?.visible,
   cloudNdc: bolt ? ndc(bolt.cloud.x, bolt.cloud.y, bolt.cloud.z) : null,
   midNdc: bolt ? ndc(mid.x, mid.y, mid.z) : null,

@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { GLSL_COMMON } from '../shaders/lib.js';
 import { Env, U } from '../core/env.js';
 
 /**
@@ -16,63 +15,30 @@ const MAX_SEGS = 720;
 const VERT = /* glsl */ `
 precision highp float;
 precision highp int;
-${GLSL_COMMON}
 
 uniform mat4 uViewProj;
-uniform vec3 uCamPos;
-uniform vec4 uFlash;
-uniform float uProjScaleY;
 
-in vec3 iA;
-in vec3 iB;
-in vec2 iCorner;   // x side -1..1, y t along segment 0..1
-in vec2 iMeta;     // x width metres, y brightness
+in vec3 position;
+in vec2 iMeta;   // x side -1..1, y signed brightness
 
 out float vSide;
 out float vBright;
 out float vGlow;
 
 void main(){
-  if(uFlash.w < 0.0008){
-    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-    vSide = 0.0; vBright = 0.0; vGlow = 0.0;
-    return;
-  }
-  vec3 a = iA, b = iB;
-  vec3 dir = b - a;
-  float len = length(dir);
-  dir = len > 1e-4 ? dir / len : vec3(0.0, -1.0, 0.0);
-  vec3 p = mix(a, b, iCorner.y);
-  vec3 view = p - uCamPos;
-  float dist = length(view);
-  vec3 viewN = view / max(dist, 1e-4);
-  vec3 side = cross(dir, viewN);
-  float sl = length(side);
-  if(sl < 0.02) side = cross(dir, vec3(0.0, 1.0, 0.0));
-  side = normalize(side);
-
-  float w = iMeta.x;
-  // survive 528-wide software frames: a 1.6 px ribbon is fog
-  float minW = (iMeta.y < 0.0 ? 18.0 : 8.0) / max(uProjScaleY / max(dist, 1.0), 1.0);
-  w = max(w, minW);
-  // flicker the width a touch so the channel is not a plastic tube
-  w *= 0.82 + 0.28 * hash13(p * 0.15 + uFlash.w * 40.0);
-
-  vec3 world = p + side * iCorner.x * w;
-  vSide = iCorner.x;
+  vSide = iMeta.x;
   vBright = abs(iMeta.y);
   vGlow = 1.0 - step(0.0, iMeta.y);
-  gl_Position = uViewProj * vec4(world, 1.0);
+  gl_Position = uViewProj * vec4(position, 1.0);
 }
 `;
 
 const FRAG = /* glsl */ `
 precision highp float;
 precision highp int;
-precision highp sampler2D;
 
 uniform vec3 uFlashColor;
-uniform vec4 uFlash;
+uniform float uAmp;
 
 in float vSide;
 in float vBright;
@@ -80,19 +46,16 @@ in float vGlow;
 layout(location = 0) out vec4 oColor;
 
 void main(){
-  if(uFlash.w < 0.0008 || vBright < 0.001) discard;
+  if(uAmp < 0.0008 || vBright < 0.001) discard;
 
   float ax = abs(vSide);
-  float core = exp(-ax * ax * 10.0);
-  float halo = exp(-ax * ax * 1.55);
-  float mask = vGlow > 0.5 ? halo * 0.72 : (core * 1.55 + halo * 0.35);
-  if(mask < 0.015) discard;
+  float core = exp(-ax * ax * 8.0);
+  float halo = exp(-ax * ax * 1.25);
+  float mask = vGlow > 0.5 ? halo * 0.85 : (core * 1.7 + halo * 0.40);
+  if(mask < 0.012) discard;
 
-  vec3 col = uFlashColor * (1.2 + vGlow * 0.2);
-  float amp = uFlash.w * vBright * mask;
-  col = mix(vec3(1.55, 1.58, 1.72), col, 0.10 + vGlow * 0.50);
-  // true additive: alpha 0 so dest fog stays and the bolt adds on top
-  oColor = vec4(col * amp * 36.0, 0.0);
+  vec3 col = mix(vec3(1.65, 1.70, 1.90), uFlashColor, 0.18 + vGlow * 0.45);
+  oColor = vec4(col * uAmp * vBright * mask * 48.0, 0.0);
 }
 `;
 
@@ -123,36 +86,36 @@ export class Lightning {
     this.ground = new THREE.Vector3();
     this.stats = { segs: 0 };
 
-    // Expanded triangles, not instances: SwiftShader was drawing the mesh
-    // (instanceCount > 0, visible) while the ribbon never reached the
-    // framebuffer. Per-vertex copies of A/B/meta are cheap at 720 segments.
-    const maxV = MAX_SEGS * 6;
-    this._A = new Float32Array(maxV * 3);
-    this._B = new Float32Array(maxV * 3);
+    // World-space triangles. Expanding on the CPU (instead of instanced
+    // A/B endpoints) is the only path that actually rasterised on SwiftShader.
+    const maxV = MAX_SEGS * 12;
+    this._pos = new Float32Array(maxV * 3);
     this._meta = new Float32Array(maxV * 2);
-    this._corner = new Float32Array(maxV * 2);
-    const corners = [-1, 0, 1, 0, -1, 1, -1, 1, 1, 0, 1, 1];
-    for (let i = 0; i < MAX_SEGS; i++) {
-      this._corner.set(corners, i * 12);
-    }
-    this.bufA = new THREE.BufferAttribute(this._A, 3);
-    this.bufB = new THREE.BufferAttribute(this._B, 3);
+    this.bufPos = new THREE.BufferAttribute(this._pos, 3);
     this.bufMeta = new THREE.BufferAttribute(this._meta, 2);
-    this.bufA.setUsage(THREE.DynamicDrawUsage);
-    this.bufB.setUsage(THREE.DynamicDrawUsage);
+    this.bufPos.setUsage(THREE.DynamicDrawUsage);
     this.bufMeta.setUsage(THREE.DynamicDrawUsage);
 
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', this.bufA);
-    g.setAttribute('iA', this.bufA);
-    g.setAttribute('iB', this.bufB);
+    g.setAttribute('position', this.bufPos);
     g.setAttribute('iMeta', this.bufMeta);
-    g.setAttribute('iCorner', new THREE.BufferAttribute(this._corner, 2));
     g.setDrawRange(0, 0);
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
     this.geometry = g;
 
-    this.uniforms = Env.pick('uViewProj', 'uCamPos', 'uFlash', 'uFlashColor', 'uProjScaleY');
+    this.uniforms = {
+      ...Env.pick('uViewProj', 'uFlashColor'),
+      uAmp: { value: 0 },
+    };
+    this._segs = [];
+    this._dir = new THREE.Vector3();
+    this._view = new THREE.Vector3();
+    this._side = new THREE.Vector3();
+    this._p0 = new THREE.Vector3();
+    this._p1 = new THREE.Vector3();
+    this._p2 = new THREE.Vector3();
+    this._p3 = new THREE.Vector3();
+    this._up = new THREE.Vector3(0, 1, 0);
 
     this.material = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
@@ -303,40 +266,65 @@ export class Lightning {
       this.lightPos.lerpVectors(cloud, ground, close ? 0.58 : 0.42);
     }
 
-    // emit each segment twice: hot core then wide glow, 6 verts per ribbon
-    let n = 0;
-    const A = this._A, B = this._B, M = this._meta;
-    const pushRibbon = (a, b, width, bright) => {
-      if (n + 6 > MAX_SEGS * 6) return;
-      for (let v = 0; v < 6; v++) {
-        const o = n * 3, m = n * 2;
-        A[o] = a.x; A[o + 1] = a.y; A[o + 2] = a.z;
-        B[o] = b.x; B[o + 1] = b.y; B[o + 2] = b.z;
-        M[m] = width; M[m + 1] = bright;
-        n++;
-      }
-    };
-    for (const s of segs) {
-      pushRibbon(s.a, s.b, Math.max(s.width * 0.42, 0.18), s.bright);
-      pushRibbon(s.a, s.b, Math.max(s.width * 3.6, 1.4), -(s.bright * 0.42));
-    }
-    this.geometry.setDrawRange(0, n);
-    this.bufA.needsUpdate = true;
-    this.bufB.needsUpdate = true;
-    this.bufMeta.needsUpdate = true;
-    this.stats.segs = n / 6;
-    this.active = n > 0;
+    this._segs = segs;
+    this.active = segs.length > 0;
     this.sawFlash = false;
     this.mesh.visible = this.active;
+    this.uniforms.uAmp.value = Math.max(U.uFlash.value.w, 1.25);
+    this._rebuild(cam);
+  }
+
+  _rebuild(cam) {
+    const c = cam ?? this.forest.camPos ?? U.uCamPos.value;
+    const P = this._pos, M = this._meta;
+    const dir = this._dir, view = this._view, side = this._side;
+    const p0 = this._p0, p1 = this._p1, p2 = this._p2, p3 = this._p3;
+    let n = 0;
+    const write = (p, sx, bright) => {
+      const o = n * 3, m = n * 2;
+      P[o] = p.x; P[o + 1] = p.y; P[o + 2] = p.z;
+      M[m] = sx; M[m + 1] = bright;
+      n++;
+    };
+    const ribbon = (a, b, width, bright) => {
+      if (n + 6 > P.length / 3) return;
+      dir.subVectors(b, a);
+      const len = dir.length();
+      if (len < 1e-3) return;
+      dir.multiplyScalar(1 / len);
+      view.subVectors(a, c);
+      side.crossVectors(dir, view);
+      if (side.lengthSq() < 1e-6) side.crossVectors(dir, this._up);
+      side.normalize();
+      p0.copy(a).addScaledVector(side, -width);
+      p1.copy(a).addScaledVector(side, width);
+      p2.copy(b).addScaledVector(side, -width);
+      p3.copy(b).addScaledVector(side, width);
+      write(p0, -1, bright); write(p1, 1, bright); write(p2, -1, bright);
+      write(p2, -1, bright); write(p1, 1, bright); write(p3, 1, bright);
+    };
+    for (const s of this._segs) {
+      ribbon(s.a, s.b, Math.max(s.width * 0.55, 2.8), s.bright);
+      ribbon(s.a, s.b, Math.max(s.width * 4.4, 9.0), -(s.bright * 0.5));
+    }
+    this.geometry.setDrawRange(0, n);
+    this.bufPos.needsUpdate = true;
+    this.bufMeta.needsUpdate = true;
+    this.stats.segs = this._segs.length;
+    this.stats.verts = n;
   }
 
   update() {
     if (!this.active) {
       this.mesh.visible = false;
+      this.uniforms.uAmp.value = 0;
       return;
     }
     const live = U.uFlash.value.w > 0.0008;
     this.mesh.visible = live || !this.sawFlash;
+    // hold the channel at a readable amp even if the shared flash uniform
+    // was overwritten between the capture scripts and drawOnce
+    this.uniforms.uAmp.value = live ? Math.max(U.uFlash.value.w, 0.85) : (this.mesh.visible ? 1.2 : 0);
     if (live) {
       U.uFlash.value.x = this.lightPos.x;
       U.uFlash.value.y = this.lightPos.y;
@@ -345,7 +333,9 @@ export class Lightning {
     } else if (this.sawFlash) {
       this.active = false;
       this.mesh.visible = false;
+      this.uniforms.uAmp.value = 0;
     }
+    if (this.mesh.visible) this._rebuild(this.forest.camPos ?? U.uCamPos.value);
   }
 
 }
