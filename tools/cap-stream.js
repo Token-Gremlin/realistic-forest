@@ -1,10 +1,12 @@
-f.weather.setAct(2, true);
+// high sun: caustics and the bed can read. Morning shafts blow the plate
+// out to fog when the camera sits in a valley.
+f.weather.setAct(3, true);
 f.weather.timelineEnabled = false;
 f.director.enabled = false;
 f.state.autoQuality = false;
 f.state.exposureAuto = false;
-f.pipeline.settings.exposure = 0.96;
-f.pipeline.settings.aerial = 0.72;
+f.pipeline.settings.exposure = 1.02;
+f.pipeline.settings.aerial = 0.52;
 f.pipeline.dof.enabled = false;
 
 const maps = f.forest.maps;
@@ -88,9 +90,7 @@ f.camera.position.set(
 f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 0.9);
 const p = f.camera.position;
 p.y = Math.max(p.y, maps.height(p.x, p.z) + 3.8);
-// look at the water surface, then pitch down so the plate is water not sky
-f.camera.lookAt(look.x, lookH + lookW * 0.12, look.z);
-f.camera.rotateX(-0.22);
+f.camera.lookAt(look.x, lookH + lookW * 0.10, look.z);
 f.camera.updateMatrixWorld(true);
 
 if (f.forest.falling) {
