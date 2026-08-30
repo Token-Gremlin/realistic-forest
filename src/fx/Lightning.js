@@ -19,16 +19,16 @@ precision highp int;
 uniform mat4 uViewProj;
 
 in vec3 position;
-in vec2 iMeta;   // x side -1..1, y signed brightness
+in vec2 uv;   // x side -1..1, y signed brightness
 
 out float vSide;
 out float vBright;
 out float vGlow;
 
 void main(){
-  vSide = iMeta.x;
-  vBright = abs(iMeta.y);
-  vGlow = 1.0 - step(0.0, iMeta.y);
+  vSide = uv.x;
+  vBright = max(abs(uv.y), 0.2);
+  vGlow = 1.0 - step(0.0, uv.y);
   gl_Position = uViewProj * vec4(position, 1.0);
 }
 `;
@@ -98,7 +98,7 @@ export class Lightning {
 
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', this.bufPos);
-    g.setAttribute('iMeta', this.bufMeta);
+    g.setAttribute('uv', this.bufMeta);
     g.setDrawRange(0, 0);
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
     this.geometry = g;
