@@ -304,8 +304,10 @@ float insectMote(vec2 uv, vec2 c, float ang, float sz){
   vec2 d = (uv - c) * aspect;
   float ca = cos(ang), sa = sin(ang);
   vec2 q = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y) / max(sz, 1.0e-4);
-  // thin body dash; circular glints read as trunk sparks at tiny
-  return exp(-q.x * q.x * 16.0 - q.y * q.y * 1.55);
+  // hard dash: a soft gaussian dies into sky grain at 528 px
+  float ax = abs(q.x);
+  float ay = abs(q.y);
+  return (1.0 - smoothstep(0.11, 0.30, ax)) * (1.0 - smoothstep(0.70, 1.05, ay));
 }
 
 float birdV(vec2 uv, vec2 c, float ang, float sz, float flap){
@@ -522,12 +524,12 @@ void main(){
       if(c.x < 0.12 || c.x > 0.88 || c.y < 0.20 || c.y > 0.82) continue;
       float sceneZ = texture(uDepthTex, clamp(c, 0.0, 1.0)).r;
       if(sceneZ < 0.22) continue;
-      float ang = (hash11(sd + 5.0) - 0.5) * 2.2;
-      float sz = mix(0.020, 0.034, hash11(sd + 6.2));
+      float ang = (hash11(sd + 5.0) - 0.5) * 2.6;
+      float sz = mix(0.028, 0.046, hash11(sd + 6.2));
       float body = insectMote(vUv, c, ang, sz);
-      if(body < 0.08) continue;
-      // relative darken so dashes read on both pale sky and grey haze
-      mapped *= mix(1.0, 0.16, clamp(body, 0.0, 1.0));
+      if(body < 0.12) continue;
+      vec3 bug = vec3(0.035, 0.030, 0.022);
+      mapped = mix(mapped, bug, clamp(body * 0.92, 0.0, 1.0));
     }
   }
 
