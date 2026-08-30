@@ -52,8 +52,9 @@ function findLipRock(f) {
         const dist = Math.hypot(x - lookX, z - lookZ);
         if (dist > 14) continue;
         const wd = maps.sample(x, z, {}).waterDepth;
-        if (wd < -0.90 || wd > 0.32) continue;
-        const score = s * 5.5 - dist * 0.28 - Math.abs(wd + 0.04) * 3;
+        // on the wet bank, not a pancake in the run
+        if (wd < -0.72 || wd > 0.01) continue;
+        const score = s * 6.2 - dist * 0.30 - Math.abs(wd + 0.28) * 2.4;
         if (score > bestS) {
           bestS = score;
           best = { x, y, z, s, wd, dist, score };
@@ -70,15 +71,15 @@ function placeOnRock(f, rock) {
   const vx = rock.x - bank.x, vz = rock.z - bank.z;
   const vl = Math.hypot(vx, vz) || 1;
   const rx = -vz / vl, rz = vx / vl;
-  const pull = 4.4, rise = 2.15, side = 1.7;
+  const pull = 3.6, rise = 1.55, side = 2.15;
   const camX = bank.x - (vx / vl) * pull + rx * side;
   const camZ = bank.z - (vz / vl) * pull + rz * side;
   const gh = maps.height(camX, camZ);
-  f.camera.position.set(camX, Math.max(gh + rise, rock.y + 1.35), camZ);
+  f.camera.position.set(camX, Math.max(gh + rise, rock.y + 0.95), camZ);
   f.forest.trees?.pushOutOfTrunks?.(f.camera.position, 1.6);
   const p = f.camera.position;
   p.y = Math.max(p.y, maps.height(p.x, p.z) + rise * 0.86);
-  f.camera.lookAt(rock.x, rock.y + rock.s * 0.22 + 0.28, rock.z);
+  f.camera.lookAt(rock.x, rock.y + 0.22, rock.z);
   f.camera.updateMatrixWorld(true);
   f.camera.updateProjectionMatrix();
 }

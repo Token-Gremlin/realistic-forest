@@ -509,14 +509,14 @@ void main(){
     matId = ${MAT_FOLIAGE.toFixed(1)};
   }
 
-  alb *= mix(1.0, 0.52, wet);
+  alb *= mix(1.0, 0.62, wet);
   if(part == ${PART.STONE}){
-    alb *= mix(1.0, 0.42, soak);
-    alb = mix(alb, vec3(0.048, 0.042, 0.032), soak * 0.40);
-    // wet stone, not chrome: keep a grit floor
-    rough = mix(rough, 0.20, soak * 0.80);
+    // keep lithic colour; a soaked hem is darker grit, not mud
+    alb *= mix(1.0, 0.78, soak);
+    alb = mix(alb, alb * vec3(0.72, 0.70, 0.64), soak * 0.50);
+    rough = mix(rough, 0.22, soak * 0.70);
   }
-  rough = clamp(rough - wet * 0.28, 0.14, 1.0);
+  rough = clamp(rough - wet * 0.22, 0.16, 1.0);
   writeGBuffer(clamp(alb, vec3(0.003), vec3(0.85)), occ, N, rough, trans, vCur, vPrev, matId, 0.5);
 }
 `,
