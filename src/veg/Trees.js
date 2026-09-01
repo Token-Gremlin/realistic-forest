@@ -68,6 +68,9 @@ export class Trees {
     this.maxLod1 = 110;
     this.pxCard = 24;
     this.maxTrees = 720;
+    // Cards fill the stream disk. maxTrees used to truncate the whole pack
+    // and the far hills stayed empty until you walked into them.
+    this.maxCards = 2400;
     this._pack = [];
     // stems per square metre before the ecology filter thins it; a temperate
     // mixed forest including saplings and shrubs sits around 0.10–0.25
@@ -100,7 +103,7 @@ export class Trees {
    * View policy: how far trees stream, when meshes give way to cards, and
    * how many full / mid meshes we keep. Does not hide the horizon.
    */
-  setPolicy({ radius, farMode, gfx, pxFull, pxMid, pxCard, maxLod0, maxLod1, maxTrees } = {}) {
+  setPolicy({ radius, farMode, gfx, pxFull, pxMid, pxCard, maxLod0, maxLod1, maxTrees, maxCards } = {}) {
     let dirty = false;
     if (radius != null) {
       const r = clamp(radius, 40, 420);
@@ -114,6 +117,7 @@ export class Trees {
     if (maxLod0 != null) this.maxLod0 = maxLod0;
     if (maxLod1 != null) this.maxLod1 = maxLod1;
     if (maxTrees != null) this.maxTrees = maxTrees;
+    if (maxCards != null) this.maxCards = maxCards;
     if (dirty) {
       this.pending.length = 0;
       this._lastRebuild.set(1e9, 1e9, 1e9);
@@ -364,8 +368,9 @@ export class Trees {
     const trees = [];
     const cellSize = 1 / Math.sqrt(Math.max(this.density, 1e-5));
     const chunksEst = Math.pow((2 * this.radius) / CHUNK + 2, 2);
-    const per = Math.max(6, (this.maxTrees ?? 720) * 1.45 / Math.max(chunksEst, 1));
-    const nCap = Math.max(2, Math.min(16, Math.round(Math.sqrt(per * 2.4))));
+    const drawBudget = Math.max(this.maxTrees ?? 980, (this.maxCards ?? 2400) * 0.85);
+    const per = Math.max(12, drawBudget * 1.55 / Math.max(chunksEst, 1));
+    const nCap = Math.max(8, Math.min(16, Math.round(Math.sqrt(per * 5.2))));
     const n = Math.max(1, Math.min(nCap, Math.round(CHUNK / cellSize)));
     const step = CHUNK / n;
     const baseX = cx * CHUNK, baseZ = cz * CHUNK;
@@ -381,10 +386,12 @@ export class Trees {
         if (eco.waterDepth > -0.05) continue;
         if (eco.slope > 0.72) continue;
 
-        // stand density from canopy closure, thinned on rock and in the wet
-        let p = 0.20 + eco.canopy * 1.25;
-        p *= 1 - smoothstep(0.55, 0.95, eco.rock) * 0.7;
-        p *= 1 - smoothstep(0.5, 0.95, eco.slope) * 0.6;
+        // Closed canopy is dense; open hills still get a silhouette stand so
+        // the far field is a forest, not a bare limbo that fills when you walk.
+        let p = 0.42 + eco.canopy * 0.95;
+        p = Math.max(p, 0.34 * (1 - eco.rock * 0.85));
+        p *= 1 - smoothstep(0.62, 0.96, eco.rock) * 0.55;
+        p *= 1 - smoothstep(0.58, 0.96, eco.slope) * 0.45;
         p *= 1 - smoothstep(0.0, 0.6, eco.waterDepth + 0.6) * 0.85;
         if (roll > p) continue;
 
@@ -574,7 +581,7 @@ export class Trees {
     const thCard = (this.pxCard ?? 24) * blurK * (1 + stress * 0.4);
     const max0 = this.maxLod0 | 0;
     const max1 = this.maxLod1 | 0;
-    const maxTrees = this.maxTrees | 0;
+    const maxCards = (this.maxCards | 0) || Math.round((this.maxTrees || 980) * 2.6);
 
     const pack = this._pack;
     pack.length = 0;
@@ -605,9 +612,13 @@ export class Trees {
       }
     }
     pack.sort((a, b) => a._dist - b._dist);
-    if (maxTrees > 0 && pack.length > maxTrees) pack.length = maxTrees;
+    // Keep the whole stream disk. Truncating to maxTrees dropped the far
+    // hills and they only appeared after you walked into that ring.
+    const farStart = rMax * 0.50;
+    const nearCardCap = Math.max(80, Math.round(maxCards * 0.60));
+    const farCardCap = Math.max(80, maxCards - nearCardCap);
 
-    let used0 = 0, used1 = 0;
+    let used0 = 0, used1 = 0, cardsNear = 0, cardsFar = 0;
     for (const t of pack) {
       const variant = this.variants[t.variant];
       const dmg = t._dmg;
@@ -628,7 +639,7 @@ export class Trees {
       }
       vals[8] = t.phase; vals[9] = t.tint; vals[10] = t.rnd;
 
-      const vis = (1 - smoothstep(rMax * 0.86, rMax, dist)) * (t._appear ?? 1);
+      const vis = (1 - smoothstep(rMax * 0.95, rMax, dist)) * (t._appear ?? 1);
       const emit = (lod, fade) => {
         vals[11] = fade * vis;
         if (lod < 3) variant.buckets[lod].push(vals);
@@ -660,10 +671,19 @@ export class Trees {
           emit(1, 1 - f);
           emit(3, f);
           used1++;
+          if (dist > farStart) cardsFar++; else cardsNear++;
         } else {
           emit(1, 1); used1++;
         }
       } else {
+        const far = dist > farStart;
+        if (far) {
+          if (cardsFar >= farCardCap) continue;
+          cardsFar++;
+        } else {
+          if (cardsNear >= nearCardCap) continue;
+          cardsNear++;
+        }
         emit(3, 1);
       }
       total++;

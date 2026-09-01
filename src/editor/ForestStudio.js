@@ -160,7 +160,7 @@ export class ForestStudio {
       needSettle = true;
     }
     if (all || 'waterRadius' in partial || 'waterTint' in partial || 'foam' in partial || 'waves' in partial) {
-      const cover = (forest.maps?.span ?? 560) * 0.42;
+      const cover = (forest.maps?.span ?? 560) * 0.46;
       forest.water?.setLook?.({
         radius: Math.min(v.waterRadius, cover),
         tint: v.waterTint,
@@ -240,6 +240,8 @@ export class ForestStudio {
       forest.ensureMaps(camera, true);
     }
     const cover = maps.span * 0.455;
+    // Trees must reach the visible far plane. A shorter stream left a ring of
+    // bare hills (the "limbo") that filled in only when you walked there.
     const r = Math.min(wantR, cover);
     forest.trees?.setLook?.(v.trees, r);
     forest.trees?.setPolicy?.({
@@ -252,11 +254,11 @@ export class ForestStudio {
       maxLod0: g.maxLod0,
       maxLod1: g.maxLod1,
       maxTrees: g.maxTrees,
+      maxCards: g.maxCards,
     });
-    const far = Math.min(
-      Math.max(r * 1.22 + 64, 280),
-      maps.span * 0.49,
-    );
+    // Clip inside the tree disk. A longer far plane painted bare hills
+    // past the last stem — the "limbo" in the opening Grove shot.
+    const far = Math.min(r * 0.94, maps.span * 0.49);
     camera.far = far;
     camera.updateProjectionMatrix();
   }

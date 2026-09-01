@@ -165,7 +165,7 @@ export class Water {
 
   /** Live radius, tint (0 crystal .. 1 tea), foam and chop from the editor. */
   setLook({ radius, tint, foam, waves } = {}) {
-    if (radius != null) this.radius = Math.max(16, Math.min(radius, 160));
+    if (radius != null) this.radius = Math.max(16, Math.min(radius, 260));
     if (foam != null) this.look.foam = foam;
     if (waves != null) this.look.waves = waves;
     if (tint != null) this._applyTint(tint);
@@ -216,7 +216,7 @@ void main(){
   vec2 flow = uWind.xy;
   float fl = length(flow);
   flow = fl > 1e-4 ? flow / fl : vec2(0.0, 1.0);
-  float fade = 1.0 - smoothstep(22.0, 64.0, length(vec3(wp.x, surf, wp.y) - uCamPos));
+  float fade = 1.0 - smoothstep(48.0, 168.0, length(vec3(wp.x, surf, wp.y) - uCamPos));
   float chop = rippleHeight(wp, flow, clamp(m.a, 0.0, 1.0), depth) * fade;
   // Dry verts stay on the bank. Sinking them 0.35 m made black wedges
   // along the waterline on the close still.
@@ -371,7 +371,16 @@ void main(){
   float still = 1.0 - smoothstep(0.06, 0.40, flowMag);
   fres = min(fres, mix(0.36, 0.26, 1.0 - still));
 
+  // body is the deep-column mask. It must exist before the lake floor
+  // lift — a later declaration left the shader uncompiled and the pond black.
+  float body = smoothstep(0.12, 0.85, depth);
+  // A dark wet bed used to read as a black hole. Keep a lake-blue floor
+  // so the column is water even when the terrain under it is crushed.
+  vec3 lake = vec3(0.045, 0.11, 0.165) * (0.70 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 1.6);
+  lake += uSunColor * max(uSunDir.y, 0.0) * vec3(0.04, 0.08, 0.12);
+  bedLit = max(bedLit, lake * mix(0.55, 1.15, body));
   vec3 col = mix(bedLit + inScatter, refl, fres);
+  col = max(col, lake * 0.72);
 
   // ---- specular sun glint
   vec3 H = normalize(uSunDir + V);
@@ -409,7 +418,6 @@ void main(){
   foam *= mix(0.06, 1.0, lace);
   foam = clamp(foam * uFoam, 0.0, 1.0);
   // a cool body tint so deep water reads as lake, not stained tea
-  float body = smoothstep(0.12, 0.85, depth);
   col *= mix(vec3(1.0), vec3(0.80, 0.93, 1.08), body * 0.38);
   col += vec3(0.32, 0.58, 0.92) * causAmt * 0.42;
   vec3 foamCol = vec3(0.58, 0.57, 0.50) * (0.90 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 0.32)
@@ -446,9 +454,11 @@ void main(){
   col += uSkyAmbient * mix(0.22, 0.08, sunUp);
   col += vec3(0.012, 0.028, 0.052) * mix(0.40, 0.06, sunUp);
 
-  // soften the very edge so the waterline is not a hard cut
+  // soften the very edge so the waterline is not a hard cut.
+  // Mix toward the lake floor, not the raw bed — a crushed bed made a
+  // black rim around every pond.
   float edgeFade = smoothstep(0.006, 0.05, depth);
-  col = mix(bed, col, edgeFade);
+  col = mix(max(bed, lake * 0.88), col, edgeFade);
 
   oColor = vec4(clamp(col, vec3(0.0), vec3(2.2)), 1.0);
 }
@@ -501,10 +511,13 @@ void main(){
     frustum.setFromProjectionMatrix(m);
     const box = this._box ?? (this._box = new THREE.Box3());
 
-    for (const c of this.cells) {
-      if (n >= this.maxCells) break;
+    const ranked = this.cells.map((c) => {
       const dx = c.x + CELL * 0.5 - cam.x, dz = c.z + CELL * 0.5 - cam.z;
-      if (Math.hypot(dx, dz) > r) continue;
+      return { c, d2: dx * dx + dz * dz };
+    }).filter((e) => e.d2 <= r * r).sort((a, b) => a.d2 - b.d2);
+    for (const e of ranked) {
+      if (n >= this.maxCells) break;
+      const c = e.c;
       box.min.set(c.x, -400, c.z);
       box.max.set(c.x + CELL, 400, c.z + CELL);
       if (!frustum.intersectsBox(box)) continue;

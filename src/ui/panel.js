@@ -120,7 +120,7 @@ function fillPanel(root, ctx, refreshers) {
   refreshers.push(slider(water, t('waterAmount'), () => ed().water, (v) => studio.patch({ water: v }), 0.05, 2.1).refresh);
   refreshers.push(slider(water, t('ponds'), () => ed().ponds, (v) => studio.patch({ ponds: v }), 0, 2.2).refresh);
   refreshers.push(slider(water, t('valleys'), () => ed().valley, (v) => studio.patch({ valley: v }), 7, 22, 0.1, (v) => v.toFixed(1)).refresh);
-  refreshers.push(slider(water, t('waterReach'), () => ed().waterRadius, (v) => studio.patch({ waterRadius: v }), 16, 140, 1, (v) => `${v.toFixed(0)} m`).refresh);
+  refreshers.push(slider(water, t('waterReach'), () => ed().waterRadius, (v) => studio.patch({ waterRadius: v }), 16, 240, 1, (v) => `${v.toFixed(0)} m`).refresh);
   refreshers.push(slider(water, t('waterTint'), () => ed().waterTint, (v) => studio.patch({ waterTint: v }), 0, 1, 0.01, (v) => {
     if (v < 0.28) return t('tintCrystal');
     if (v < 0.62) return t('tintBlue');
