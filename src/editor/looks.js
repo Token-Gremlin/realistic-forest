@@ -105,13 +105,13 @@ export const GFX_PRESETS = {
     label: 'Fluid 60',
     scale: 0.76, vol: 8, ao: false,
     pxFull: 130, pxMid: 42, pxCard: 32,
-    maxLod0: 22, maxLod1: 72, maxTrees: 640, maxCards: 1800, maxClutter: 1400,
+    maxLod0: 22, maxLod1: 88, maxTrees: 640, maxCards: 1800, maxClutter: 1400,
   },
   balanced: {
     label: 'Balanced',
     scale: 0.86, vol: 10, ao: true,
     pxFull: 96, pxMid: 30, pxCard: 24,
-    maxLod0: 36, maxLod1: 140, maxTrees: 980, maxCards: 2800, maxClutter: 2200,
+    maxLod0: 36, maxLod1: 168, maxTrees: 980, maxCards: 2800, maxClutter: 2200,
   },
   pretty: {
     label: 'Beautiful',

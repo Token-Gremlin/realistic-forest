@@ -264,11 +264,13 @@ vec3 sceneAt(vec2 uv){ return texture(uSceneColor, uv).rgb; }
 
 /** Screen-space reflection with a sky-probe fallback. */
 vec3 reflection(vec3 p, vec3 R, vec3 skyFallback, float rough){
-  float stepLen = 0.35;
-  vec3 q = p + R * 0.12;
-  for(int i = 0; i < 18; i++){
+  float stepLen = 0.22;
+  vec3 q = p + R * 0.08;
+  vec3 hit = skyFallback;
+  float hitW = 0.0;
+  for(int i = 0; i < 24; i++){
     q += R * stepLen;
-    stepLen *= 1.32;
+    stepLen *= 1.26;
     vec4 c = uViewProj * vec4(q, 1.0);
     if(c.w <= 0.0) break;
     vec2 uv = (c.xy / c.w) * 0.5 + 0.5;
@@ -278,14 +280,29 @@ vec3 reflection(vec3 p, vec3 R, vec3 skyFallback, float rough){
     vec3 sp = worldFromDepth(uv, d, uInvViewProj);
     float along = dot(sp - p, R);
     float behind = length(sp - p) - length(q - p);
-    if(behind < -0.05 && behind > -3.5 && along > 0.0){
-      // fade near the screen edge so reflections do not pop
+    if(behind < -0.04 && behind > -4.2 && along > 0.0){
       vec2 e = min(uv, 1.0 - uv);
-      float edge = smoothstep(0.0, 0.10, min(e.x, e.y));
-      return mix(skyFallback, sceneAt(uv), edge * 0.92);
+      float edge = smoothstep(0.0, 0.08, min(e.x, e.y));
+      return mix(skyFallback, sceneAt(uv), edge * 0.94);
     }
   }
-  return skyFallback;
+  // Planar hint toward the opposite bank when the march misses. Without
+  // this a still pond is only sky + a painted column.
+  vec3 Rp = normalize(vec3(R.x, abs(R.y) + 0.12, R.z));
+  vec4 pc = uViewProj * vec4(p + Rp * 7.5, 1.0);
+  if(pc.w > 0.0){
+    vec2 uv = (pc.xy / pc.w) * 0.5 + 0.5;
+    if(all(greaterThan(uv, vec2(0.02))) && all(lessThan(uv, vec2(0.98)))){
+      float d = texture(uSceneDepth, uv).r;
+      if(d < 0.9995){
+        vec2 e = min(uv, 1.0 - uv);
+        float edge = smoothstep(0.0, 0.10, min(e.x, e.y));
+        hit = mix(skyFallback, sceneAt(uv), edge * 0.48);
+        hitW = 1.0;
+      }
+    }
+  }
+  return mix(skyFallback, hit, hitW);
 }
 
 void main(){

@@ -648,12 +648,14 @@ export class Trees {
       };
 
       // Never show the coarse (lego) mesh. Mid mesh while the tree is still
-      // large on screen and budget remains; cards fill the rest. The card
-      // shader has to read as a canopy at 80–150 px — skipping here opened
-      // holes in the stand.
+      // large on screen and budget remains; cards fill the rest. Reserve
+      // some mid slots for 80–150 px stems — those cards read as blocks.
+      const midReserve = Math.min(52, Math.max(16, (max1 * 0.30) | 0));
+      const midNear = Math.max(8, max1 - midReserve);
       let want = 3;
       if (px > thFull && used0 < max0) want = 0;
-      else if ((px > thMid || px > thCard) && used1 < max1) want = 1;
+      else if (px > 58 && used1 < max1) want = 1;
+      else if ((px > thMid || px > thCard) && used1 < midNear) want = 1;
 
       if (want === 0) {
         const edge = thFull * 1.16;

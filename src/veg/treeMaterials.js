@@ -762,11 +762,12 @@ float crownMask(vec2 uv, float seed, out float depth, out float clump){
       }
     }
   } else {
-    // wide body so a 100 px card is a canopy mass, not a pill
+    // wide body so a 100 px card is a canopy mass, not a pill or a box
     float body = smoothstep(0.18, 0.34, y) * smoothstep(1.02, 0.68, y);
-    float wob = 0.16 * sin(y * 14.0 + seed * 9.0) + 0.09 * sin(y * 27.0 - seed * 4.0);
-    body *= smoothstep(1.28, 0.48, abs(x) + wob);
-    m = max(m, body * 0.92);
+    float wob = 0.18 * sin(y * 13.0 + seed * 9.0) + 0.11 * sin(y * 25.0 - seed * 4.0)
+              + 0.07 * sin(x * 9.0 + seed * 6.0);
+    body *= smoothstep(1.32, 0.44, abs(x) + wob);
+    m = max(m, body * 0.72);
     depth = body * 0.35;
     const int LOBES = 8;
     for(int i = 0; i < LOBES; i++){
@@ -803,6 +804,15 @@ float crownMask(vec2 uv, float seed, out float depth, out float clump){
   if(conifer > 0.5){
     float envelope = smoothstep(1.45, 0.62, abs(x) / max(prof, 1e-3));
     m *= mix(0.20, 1.0, envelope);
+  }
+  // Leaf-scale bite when the card is large on screen. A filled capsule
+  // at 80–150 px reads as a green block; holes keep it a canopy.
+  float uvPx = 1.0 / max(length(dFdx(uv)) + length(dFdy(uv)), 1e-4);
+  float close = smoothstep(36.0, 88.0, uvPx);
+  if(close > 0.04 && conifer < 0.5){
+    float leaf = fbm(uv * 16.0 + seed * 8.0, 3, 2.12, 0.52) * 0.5 + 0.5;
+    float bite = smoothstep(0.16, 0.58, leaf);
+    m *= mix(1.0, 0.42 + 0.58 * bite, close * 0.72);
   }
   return m;
 }
