@@ -40,7 +40,7 @@ export function buildPanel(root, ctx) {
 
   const brand = document.createElement('div');
   brand.className = 'brand';
-  brand.innerHTML = `<b>Sylva</b><span>editor de floresta</span>`;
+  brand.innerHTML = `<b>Sylva</b> <span>editor de floresta</span>`;
   root.append(brand);
 
   const looks = document.createElement('div');
