@@ -1,17 +1,40 @@
 # Sylva
 
-[English](#sylva) · [Português](README.pt-BR.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-7fa055.svg)](LICENSE)
+[![Three.js](https://img.shields.io/badge/three.js-0.185-049ef4.svg)](https://threejs.org/)
+[![WebGL2](https://img.shields.io/badge/renderer-WebGL2-b7d48a.svg)](#)
+[![Live demo](https://img.shields.io/badge/demo-live-3d5a2a.svg)](https://token-gremlin.github.io/realistic-forest/)
 
-A real-time cinematic forest in the browser. **Nothing is loaded.** There are no
-textures, meshes, HDRIs or authored materials in the repo. Terrain, trees, grass,
-water, sky, clouds and weather are generated from mathematics at runtime.
+**A cinematic forest that exists only as mathematics.** No textures, meshes,
+HDRIs or downloaded assets. Terrain, trees, grass, water, sky, clouds and
+weather are generated in the browser, live.
 
-Built with [Three.js](https://threejs.org/) and **WebGL2**. The default session
-is a live forest editor in **English**, with a one-click EN / PT-BR switch,
-named looks, shareable URLs and a walkable camera.
+[**Open the live demo →**](https://token-gremlin.github.io/realistic-forest/)
 
-> The GitHub repository is still **private**. This tree is ready to go public
-> when you flip the switch.
+The default session is a walkable **forest editor** in English (one-click
+EN / PT-BR), with named looks, shareable URLs and fair high sun. Storms stay
+off until you ask for them.
+
+[Português](README.pt-BR.md) · [How it works](docs/architecture.md) · [Contributing](CONTRIBUTING.md)
+
+![Sylva](docs/hero.svg)
+
+## Features
+
+- **Fully procedural** — the repository has no binary art. Everything is GLSL
+  and a few kilobytes of growth rules.
+- **Walkable editor** — WASD + mouse, named looks (Grove, Meadow, Wetland,
+  Woodland…), sliders that write a shareable URL.
+- **Settled first frame** — the opening stand is packed before the boot overlay
+  hides, so trees do not teleport in.
+- **Horizon that stays a forest** — mid-mesh up close, irregular canopy cards
+  in the distance, under a hard instance cap.
+- **Lake and stream water** — refraction, screen-space reflection, caustics,
+  foam and wind-driven chop. No painted slabs, no black holes.
+- **Weather as a timeline** — dawn mist through storm and night, opt-in.
+  Fireflies, birds, rain, lightning, falling limbs.
+- **WebGL2** — runs in a current desktop browser. Three.js is the only
+  runtime dependency.
 
 ## Quick start
 
@@ -22,117 +45,57 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-Requires a browser with WebGL2 and `EXT_color_buffer_float`.
+Needs a browser with WebGL2 and `EXT_color_buffer_float`. A discrete GPU is
+happier than a software rasteriser.
 
 ```bash
-npm run build      # static bundle in dist/
+npm run build      # static files in dist/
 npm run preview    # serve the bundle
 ```
 
 ## Controls
 
-| key | action |
+| Key | Action |
 | --- | --- |
-| `H` | show / hide the forest editor |
-| `C` | cinematic camera |
-| `N` / `B` | next / previous weather (off until you press them) |
-| `G` | walk mode (camera follows the ground) |
-| `F` | depth of field |
-| `P` | pause |
-| mouse / WASD / shift / wheel | free camera (click to capture the pointer) |
+| `H` | Show / hide the forest editor |
+| `C` | Cinematic camera |
+| `N` / `B` | Next / previous weather (off until you press them) |
+| `G` | Walk mode (camera follows the ground) |
+| `F` | Depth of field |
+| `P` | Pause |
+| Mouse / WASD / Shift / wheel | Free camera (click to capture the pointer) |
 
 ## URL parameters
 
-| param | values |
+| Param | Values |
 | --- | --- |
-| `?q=` | `tiny` `low` `play` `medium` `high` `ultra` — quality tier (`play` is the default) |
+| `?q=` | `tiny` `low` `play` `medium` `high` `ultra` — quality (`play` is default) |
 | `?look=` | `bosque` `prado` `brejo` `mata` `clareira` `cinema` `rochoso` |
 | `?gfx=` | `fluid` `balanced` `pretty` `max` |
-| `?far=` | `full` (sharp horizon) or `blur` (depth of field) |
-| `?act=` | weather act `0`–`11` |
-| `?timeline=1` | enable the weather timeline |
-| `?cine=1` | start in cinematic camera |
-| `?panel=0` | hide the editor |
-| `?lang=` | `en` (default) or `pt-BR` — in-app language |
-| `?trees=` `?grass=` `?water=` `?hi=1` | slider overrides |
+| `?far=` | `full` (sharp horizon) or `blur` |
+| `?act=` | Weather act `0`–`11` |
+| `?timeline=1` | Enable the weather timeline |
+| `?cine=1` | Start in cinematic camera |
+| `?panel=0` | Hide the editor |
+| `?lang=` | `en` (default) or `pt-BR` |
 
-The session boots in **high sun** with the weather timeline off. Rain and storms
-only start if you turn them on. The opening view is **settled before the overlay
-hides** — trees, undergrowth, grass and water are already packed, then a few
-silent frames warm TAA so the stand does not teleport in.
+The session boots in **high sun** with the weather timeline off. View distance
+never outruns the baked ground window — that was the old black hole on the
+horizon.
 
-The renderer stays WebGL2. If the browser also exposes WebGPU, that is used only
-as a capability hint when guessing a default quality tier.
+## Project layout
 
-## How it is put together
+```
+src/world/     terrain, maps, water, sky, the Forest orchestrator
+src/veg/       trees, grass, undergrowth
+src/core/      WebGL2 pipeline, shadows, quality tiers
+src/director/  weather acts, cinematic camera
+src/fx/        rain, lightning, fire, birds, debris
+src/editor/    live forest studio
+src/ui/        English / PT-BR strings and the editor panel
+```
 
-### Terrain is a function, not a heightmap
-
-`src/world/terrainShader.js` defines the ground as a pure analytic function of
-world XZ, so the world is seamless, unbounded, and any shader can ask for the
-ground height anywhere. Three ideas stack up to make it read as eroded rather
-than as noise:
-
-- **derivative-feedback fbm** — octave amplitude is damped where the terrain is
-  already steep. This is what produces sharp ridges above flat valley floors,
-  the signature of fluvial erosion.
-- **a warped dendritic channel network** carved on top, widening and deepening
-  downstream, with a narrow incised bed for the water.
-- **worley basins** whose water level is taken from the cell *site*, so ponds are
-  exactly horizontal.
-
-Water levels ride on the *smooth* surface while the ground gets fine relief on
-top, so gravel bars, braided shallows and ragged shorelines fall out for free.
-
-`src/world/WorldMaps.js` bakes a window of that function around the camera into
-lookup textures — height, water surface, wetness, flow, moisture, canopy
-closure, rock, litter, sky visibility — and re-bakes when the camera leaves the
-middle of it. Everything that needs the ground millions of times a frame reads
-those instead of re-evaluating twenty noise octaves.
-
-View distance never outruns that bake window. Past the maps the ground falls
-back to dry analytic shading instead of stretching a lake across the horizon.
-
-### Terrain rendering
-
-Continuous LOD (`src/world/Terrain.js`): one instanced patch mesh drawn per node
-of a camera-centred quadtree. The morph factor is computed **per vertex**, not
-per patch, so patches of different levels agree exactly along a shared edge —
-no cracks, no skirts, no popping. If the patch budget would drop a child, the
-parent stays so the ground never opens a hole.
-
-### Trees
-
-`src/veg/TreeGenerator.js` grows a skeleton once per seed: direction perturbed
-by gnarl noise, pulled up by phototropism, drooping where a branch is long and
-thin, child radii following the pipe model so forks conserve cross-section, plus
-root flare and surface roots so trees meet the ground. Every LOD is meshed from
-that same skeleton, so the levels are the same tree.
-
-Live assignment is by **on-screen height in pixels**, not metres. The coarse
-(lego) mesh is skipped for colour; mid-mesh gives way to a procedural canopy
-card only when the tree is small. Instance counts are hard-capped so a long
-view distance cannot spawn thousands of giant cards.
-
-Eight species (`src/veg/TreeSpecies.js`) are distributed by ecology: beech under
-closed canopy, pine on rock and slope, birch and hazel in gaps, saplings in
-clearings, standing dead snags scattered through.
-
-### Grass, water, pipeline
-
-`src/veg/Grass.js` places blades on the GPU. `src/world/Water.js` is a forward
-pass over the lit scene: refraction, SSR, caustics, foam. The deferred pipeline
-in `src/core/RenderPipeline.js` runs shadow cascades, g-buffer, sky, AO,
-lighting, water, volumetrics, TAA, bloom, depth of field and an AgX grade.
-
-### Weather and camera
-
-`src/director/Weather.js` can run a timeline of acts from dawn mist through
-storm and night. Quantities are coupled and eased. The default is fair high sun.
-
-Rain, lightning, storm debris, falling limbs, fireflies, birds and a local fire
-live under `src/fx/`. `src/director/CameraDirector.js` scouts locations against
-the world maps, then flies the shot.
+Deeper notes live in [docs/architecture.md](docs/architecture.md).
 
 ## Testing
 
@@ -140,11 +103,11 @@ the world maps, then flies the shot.
 npm run capture -- --q=tiny --w=960 --h=540 --out=shots/try
 ```
 
-Headless Chrome (SwiftShader) collects shader errors, measures frame cost and
-writes stills. Pins live in `tools/cap-*.js`.
+Headless Chrome (SwiftShader) collects shader errors and writes stills. Pins
+live in `tools/cap-*.js`. Treat those frames as logic checks, not beauty proofs.
 
 ## License
 
-[MIT](LICENSE) — © 2026 Davi Dias.
+[MIT](LICENSE) — © 2026 [Davi Dias](https://github.com/Token-Gremlin).
 
-Three.js is © the [three.js authors](https://github.com/mrdoob/three.js), MIT.
+Three.js is © the [three.js authors](https://github.com/mrdoob/three.js), also MIT.

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-label="Sylva  a procedural forest">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a2830"/>
+      <stop offset="55%" stop-color="#243830"/>
+      <stop offset="100%" stop-color="#0c1410"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a3a42"/>
+      <stop offset="100%" stop-color="#0a1c22"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a3d28"/>
+      <stop offset="100%" stop-color="#141c14"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="420" fill="url(#sky)"/>
+  <ellipse cx="860" cy="78" rx="90" ry="90" fill="#c8d4b0" opacity="0.14"/>
+  <path fill="url(#hill)" d="M0 250 C 120 210 220 230 340 200 C 480 164 560 210 700 188 C 860 162 960 210 1200 176 L 1200 420 L 0 420 Z"/>
+  <path fill="#1a2a1c" d="M0 292 C 180 268 320 300 500 274 C 680 248 820 290 1200 260 L 1200 420 L 0 420 Z"/>
+  <path fill="url(#water)" d="M220 318 C 380 300 560 330 760 312 C 920 296 1040 324 1200 308 L 1200 420 L 140 420 Z"/>
+  <g fill="#0d1610">
+    <path d="M92 318 L118 168 L144 318 Z"/>
+    <path d="M108 250 L128 190 L148 250 Z"/>
+    <rect x="116" y="300" width="8" height="28"/>
+    <path d="M210 322 L248 128 L286 322 Z"/>
+    <path d="M230 240 L248 160 L266 240 Z"/>
+    <rect x="243" y="300" width="10" height="36"/>
+    <path d="M340 320 L368 150 L396 320 Z"/>
+    <rect x="363" y="304" width="9" height="30"/>
+    <path d="M470 318 L512 110 L554 318 Z"/>
+    <path d="M492 220 L512 140 L532 220 Z"/>
+    <rect x="506" y="298" width="11" height="38"/>
+    <path d="M620 322 L648 178 L676 322 Z"/>
+    <rect x="643" y="306" width="8" height="26"/>
+    <path d="M790 316 L836 96 L882 316 Z"/>
+    <path d="M816 210 L836 130 L856 210 Z"/>
+    <rect x="829" y="294" width="12" height="42"/>
+    <path d="M960 320 L990 164 L1020 320 Z"/>
+    <rect x="985" y="304" width="9" height="28"/>
+    <path d="M1088 318 L1114 188 L1140 318 Z"/>
+    <rect x="1111" y="302" width="7" height="24"/>
+  </g>
+  <text x="56" y="72" fill="#b7d48a" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22" letter-spacing="10">SYLVA</text>
+  <text x="56" y="104" fill="#9b968c" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14">procedural forest · WebGL2 · MIT</text>
+</svg>

@@ -1,7 +1,6 @@
 # Contributing
 
-Sylva is a single-page WebGL2 forest. Issues and pull requests are welcome once
-the repository is public.
+Sylva is a single-page WebGL2 forest. Issues and pull requests are welcome.
 
 ## Setup
 
@@ -45,3 +44,4 @@ not beauty proofs.
   then `localStorage` (`sylva.locale`).
 - Code comments, commit messages and the primary README stay English.
 - `README.pt-BR.md` is the Portuguese landing page.
+- The live demo is GitHub Pages: `https://token-gremlin.github.io/realistic-forest/`.

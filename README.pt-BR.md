@@ -10,8 +10,8 @@ Feito com [Three.js](https://threejs.org/) e **WebGL2**. A sessão padrão é um
 **editor de floresta em inglês**, com um botão EN / PT-BR, looks nomeados, URL
 partilhável e câmara andável.
 
-> O repositório no GitHub ainda é **privado**. Esta árvore já está pronta para
-> ficar pública quando você quiser.
+Demo ao vivo: [token-gremlin.github.io/realistic-forest](https://token-gremlin.github.io/realistic-forest/).
+A documentação principal está em [inglês](README.md).
 
 ## Começar
 

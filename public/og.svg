@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0a100c"/>
+  <ellipse cx="900" cy="140" rx="120" ry="120" fill="#c8d4b0" opacity="0.10"/>
+  <path fill="#1e2e20" d="M0 360 C 200 300 420 340 640 290 C 860 240 1000 320 1200 280 L 1200 630 L 0 630 Z"/>
+  <path fill="#122018" d="M0 430 C 260 390 520 450 780 400 C 980 364 1100 420 1200 400 L 1200 630 L 0 630 Z"/>
+  <g fill="#0b140e">
+    <path d="M140 470 L190 220 L240 470 Z"/><rect x="184" y="450" width="12" height="50"/>
+    <path d="M360 480 L430 160 L500 480 Z"/><rect x="421" y="450" width="16" height="60"/>
+    <path d="M620 475 L680 190 L740 475 Z"/><rect x="671" y="450" width="14" height="52"/>
+    <path d="M880 478 L930 240 L980 478 Z"/><rect x="923" y="456" width="12" height="44"/>
+  </g>
+  <text x="64" y="120" fill="#b7d48a" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="36" letter-spacing="14">SYLVA</text>
+  <text x="64" y="164" fill="#9b968c" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="20">A cinematic forest generated in the browser</text>
+</svg>
