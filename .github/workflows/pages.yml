@@ -1,5 +1,8 @@
-# Build the Vite bundle and publish it to GitHub Pages.
+# Build the Vite bundle and publish it to the gh-pages branch.
 # Demo: https://token-gremlin.github.io/realistic-forest/
+#
+# After the first green run, turn Pages on once:
+# Settings → Pages → Deploy from a branch → gh-pages / (root).
 
 name: Live demo
 
@@ -9,16 +12,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,16 +31,10 @@ jobs:
       - run: npm run build
       - name: Add Pages marker
         run: touch dist/.nojekyll
-      - uses: actions/upload-pages-artifact@v3
+      - uses: peaceiris/actions-gh-pages@v4
         with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - id: deploy
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          force_orphan: true
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
