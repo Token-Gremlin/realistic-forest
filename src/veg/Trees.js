@@ -22,7 +22,7 @@ import { U } from '../core/env.js';
  */
 
 const CHUNK = 48;
-const APPEAR_RATE = 2.8;
+const APPEAR_RATE = 3.4;
 const VARIANTS_PER_SPECIES = 2;
 // Geometry LOD switch distances, scaled per tree by its height. Chosen against
 // a triangle budget: full meshes run 6k–31k triangles, so the near band has to
@@ -131,7 +131,7 @@ export class Trees {
   }
 
   /** Generate a ring past the draw radius so walking finds ready trees. */
-  _streamRadius() { return this.radius + CHUNK * 1.35; }
+  _streamRadius() { return this.radius + CHUNK * 1.7; }
 
   _chunkCenter(cx, cz) { return { x: (cx + 0.5) * CHUNK, z: (cz + 0.5) * CHUNK }; }
 
@@ -452,7 +452,7 @@ export class Trees {
 
     if (this.pending.length === 0) this._enqueueMissing(cam);
 
-    const budget = this.chunks.size === 0 ? 48 : (this.pending.length > 16 ? 10 : 4);
+    const budget = this.chunks.size === 0 ? 48 : (this.pending.length > 16 ? 14 : 6);
     let built = 0;
     while (this.pending.length && built < budget) {
       const c = this.pending.shift();

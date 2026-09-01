@@ -22,7 +22,7 @@ import { Env, U } from '../core/env.js';
  */
 
 const CELL = 16;          // metres per water cell
-const GRID = 20;          // quads per cell edge — 0.8 m, close cells were a facet
+const GRID = 24;          // quads per cell edge — ~0.67 m, close cells were a facet
 
 function cellGeometry(grid) {
   const n = grid + 1;
@@ -217,8 +217,10 @@ void main(){
   vec2 flow = uWind.xy;
   float fl = length(flow);
   flow = fl > 1e-4 ? flow / fl : vec2(0.0, 1.0);
-  float fade = 1.0 - smoothstep(72.0, 210.0, length(vec3(wp.x, surf, wp.y) - uCamPos));
-  float chop = rippleHeight(wp, flow, clamp(m.a, 0.0, 1.0), depth) * fade;
+  float dist = length(vec3(wp.x, surf, wp.y) - uCamPos);
+  float fade = 1.0 - smoothstep(72.0, 210.0, dist);
+  float near = 1.0 - smoothstep(4.0, 18.0, dist);
+  float chop = rippleHeight(wp, flow, clamp(m.a, 0.0, 1.0), depth) * (fade + near * 0.62);
   // Dry verts stay on the bank. Sinking them 0.35 m made black wedges
   // along the waterline on the close still.
   float y = depth > 0.0 ? max(surf + chop, ground + 0.01) : ground + 0.02;
@@ -337,6 +339,17 @@ void main(){
   if(dot(N, V) < 0.0) N = reflect(N, V);
 
   float viewDist = length(uCamPos - vWorld);
+  // Close bank: a finer wind ripple so the plate is not a 16 m facet.
+  float nearW = 1.0 - smoothstep(5.0, 22.0, viewDist);
+  if(nearW > 0.01){
+    vec3 nClose = noised(wxz * 18.0 - flow * uTime * 1.6 + 3.1);
+    vec3 nFine  = noised(wxz * 34.0 + flow.yx * uTime * 0.85 + 9.0);
+    N = normalize(N + vec3(
+      -(nClose.y * 0.55 + nFine.y * 0.32),
+      0.0,
+      -(nClose.z * 0.55 + nFine.z * 0.32)
+    ) * nearW * 0.30);
+  }
   vec2 uv = uvScreen;
 
   // ---- refraction: offset the lookup by the surface slope, scaled by depth
