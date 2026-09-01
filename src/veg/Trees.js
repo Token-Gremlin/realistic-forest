@@ -10,8 +10,9 @@ import { U } from '../core/env.js';
  *
  * Placement happens per 48 m chunk from a hashed jittered grid, scored against
  * the ecology maps, so where a beech grows instead of a pine — or nothing grows
- * at all — is a property of the ground rather than of a random number. Chunks
- * stream in a few per frame.
+ * at all — is a property of the ground rather than of a random number. Boot
+ * fills the whole disk before the overlay hides; walking streams a prefetch
+ * ring a few chunks per frame, and new stems fade in instead of popping.
  *
  * Four representations exist: full geometry, a reduced mid mesh, a coarse mesh
  * (kept for shadows / fallback) and crossed procedural cards. Live assignment
@@ -21,6 +22,7 @@ import { U } from '../core/env.js';
  */
 
 const CHUNK = 48;
+const APPEAR_RATE = 2.8;
 const VARIANTS_PER_SPECIES = 2;
 // Geometry LOD switch distances, scaled per tree by its height. Chosen against
 // a triangle budget: full meshes run 6k–31k triangles, so the near band has to
@@ -122,6 +124,91 @@ export class Trees {
     this.chunks.clear();
     this.pending.length = 0;
     this._lastRebuild.set(1e9, 1e9, 1e9);
+  }
+
+  /** Generate a ring past the draw radius so walking finds ready trees. */
+  _streamRadius() { return this.radius + CHUNK * 1.35; }
+
+  _chunkCenter(cx, cz) { return { x: (cx + 0.5) * CHUNK, z: (cz + 0.5) * CHUNK }; }
+
+  _pruneFar(cam) {
+    const keep = this._streamRadius() + CHUNK * 2.2;
+    for (const key of this.chunks.keys()) {
+      const [cx, cz] = key.split(',').map(Number);
+      const c = this._chunkCenter(cx, cz);
+      if (Math.hypot(c.x - cam.x, c.z - cam.z) > keep) this.chunks.delete(key);
+    }
+  }
+
+  _pruneOutsideMaps() {
+    const maps = this.maps;
+    if (!maps?.covers) return;
+    for (const key of this.chunks.keys()) {
+      const [cx, cz] = key.split(',').map(Number);
+      const c = this._chunkCenter(cx, cz);
+      if (!maps.covers(c.x, c.z)) this.chunks.delete(key);
+    }
+  }
+
+  _enqueueMissing(cam) {
+    const r = this._streamRadius();
+    const c0 = Math.floor((cam.x - r) / CHUNK), c1 = Math.floor((cam.x + r) / CHUNK);
+    const d0 = Math.floor((cam.z - r) / CHUNK), d1 = Math.floor((cam.z + r) / CHUNK);
+    const want = [];
+    for (let cz = d0; cz <= d1; cz++) {
+      for (let cx = c0; cx <= c1; cx++) {
+        const key = this._chunkKey(cx, cz);
+        if (this.chunks.has(key)) continue;
+        const c = this._chunkCenter(cx, cz);
+        const dist = Math.hypot(c.x - cam.x, c.z - cam.z);
+        if (dist > r + CHUNK * 0.25) continue;
+        want.push({ cx, cz, key, dist });
+      }
+    }
+    want.sort((a, b) => a.dist - b.dist);
+    this.pending = want;
+  }
+
+  _ageAppear(dt) {
+    if (dt <= 0) return false;
+    const k = dt * APPEAR_RATE;
+    let fading = false;
+    for (const list of this.chunks.values()) {
+      for (const t of list) {
+        const a = t._appear ?? 0;
+        if (a < 1) {
+          t._appear = Math.min(1, a + k);
+          fading = true;
+        }
+      }
+    }
+    return fading;
+  }
+
+  /**
+   * Build every missing chunk in the stream disk now and pack instances.
+   * `settle` marks them fully visible — used at boot and after a map rebake.
+   */
+  fillAround(camera, { settle = false } = {}) {
+    const cam = camera.position;
+    this._pruneFar(cam);
+    this._pruneOutsideMaps();
+    this.pending.length = 0;
+    this._enqueueMissing(cam);
+    while (this.pending.length) {
+      const c = this.pending.shift();
+      if (this.chunks.has(c.key)) continue;
+      const list = this._generateChunk(c.cx, c.cz);
+      if (settle) for (const t of list) t._appear = 1;
+      this.chunks.set(c.key, list);
+    }
+    if (settle) {
+      for (const list of this.chunks.values()) {
+        for (const t of list) t._appear = 1;
+      }
+    }
+    this._lastRebuild.copy(cam);
+    this._rebuildBuckets(camera);
   }
 
   /* ------------------------------------------------------------- geometry */
@@ -330,6 +417,7 @@ export class Trees {
           variant: vi,
           height: variant.height * scale,
           crown: variant.crownRadius * scale,
+          _appear: 0,
         };
         const wound = this._wounds.get(`${x.toFixed(2)},${z.toFixed(2)}`);
         if (wound) {
@@ -344,7 +432,7 @@ export class Trees {
   }
 
   onMapsRebaked() {
-    this.chunks.clear();
+    this._pruneOutsideMaps();
     this.pending.length = 0;
     this._lastRebuild.set(1e9, 1e9, 1e9);
   }
@@ -352,35 +440,12 @@ export class Trees {
   update(dt, camera, forest) {
     this._frame++;
     const cam = camera.position;
-    const r = this.radius;
-    const c0 = Math.floor((cam.x - r) / CHUNK), c1 = Math.floor((cam.x + r) / CHUNK);
-    const d0 = Math.floor((cam.z - r) / CHUNK), d1 = Math.floor((cam.z + r) / CHUNK);
 
-    // drop far chunks
-    for (const key of this.chunks.keys()) {
-      const [cx, cz] = key.split(',').map(Number);
-      const dx = (cx + 0.5) * CHUNK - cam.x, dz = (cz + 0.5) * CHUNK - cam.z;
-      if (Math.hypot(dx, dz) > r + CHUNK * 2.5) this.chunks.delete(key);
-    }
+    this._pruneFar(cam);
 
-    // queue near chunks, nearest first
-    if (this.pending.length === 0) {
-      const want = [];
-      for (let cz = d0; cz <= d1; cz++) {
-        for (let cx = c0; cx <= c1; cx++) {
-          const key = this._chunkKey(cx, cz);
-          if (this.chunks.has(key)) continue;
-          const dx = (cx + 0.5) * CHUNK - cam.x, dz = (cz + 0.5) * CHUNK - cam.z;
-          const dist = Math.hypot(dx, dz);
-          if (dist > r + CHUNK) continue;
-          want.push({ cx, cz, key, dist });
-        }
-      }
-      want.sort((a, b) => a.dist - b.dist);
-      this.pending = want;
-    }
+    if (this.pending.length === 0) this._enqueueMissing(cam);
 
-    const budget = this.chunks.size === 0 ? 20 : (this.pending.length > 24 ? 8 : 4);
+    const budget = this.chunks.size === 0 ? 48 : (this.pending.length > 16 ? 10 : 4);
     let built = 0;
     while (this.pending.length && built < budget) {
       const c = this.pending.shift();
@@ -391,9 +456,10 @@ export class Trees {
     }
 
     this._tickDamage(dt, cam);
+    const fading = this._ageAppear(dt);
 
     const moved = this._lastRebuild.distanceTo(cam);
-    if (built > 0 || moved > 6.0 || this._damageDirty || (this._frame % 50) === 0) {
+    if (built > 0 || fading || moved > 6.0 || this._damageDirty || (this._frame % 50) === 0) {
       this._lastRebuild.copy(cam);
       this._damageDirty = false;
       this._rebuildBuckets(camera);
@@ -562,8 +628,9 @@ export class Trees {
       }
       vals[8] = t.phase; vals[9] = t.tint; vals[10] = t.rnd;
 
+      const vis = (1 - smoothstep(rMax * 0.86, rMax, dist)) * (t._appear ?? 1);
       const emit = (lod, fade) => {
-        vals[11] = fade;
+        vals[11] = fade * vis;
         if (lod < 3) variant.buckets[lod].push(vals);
         else variant.billboard.bucket.push(vals);
         lodCounts[lod]++;
@@ -597,8 +664,7 @@ export class Trees {
           emit(1, 1); used1++;
         }
       } else {
-        const fadeOut = 1 - smoothstep(rMax * 0.94, rMax, dist);
-        emit(3, fadeOut);
+        emit(3, 1);
       }
       total++;
     }

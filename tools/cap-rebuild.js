@@ -1,15 +1,19 @@
 function catchUp(f) {
-  f.forest.ensureMaps(f.camera);
-  f.forest.terrain.selectView(f.camera);
-  if (f.forest.trees) {
-    f.forest.trees.pending.length = 0;
-    for (let i = 0; i < 28; i++) f.forest.trees.update(0.016, f.camera, f.forest);
+  if (f.forest.settleView) {
+    f.forest.settleView(f.camera);
+  } else {
+    f.forest.ensureMaps(f.camera);
+    f.forest.terrain.selectView(f.camera);
+    if (f.forest.trees) {
+      f.forest.trees.pending.length = 0;
+      for (let i = 0; i < 28; i++) f.forest.trees.update(0.016, f.camera, f.forest);
+    }
+    if (f.forest.clutter) {
+      f.forest.clutter.pending.length = 0;
+      for (let i = 0; i < 28; i++) f.forest.clutter.update(0.016, f.camera);
+    }
+    if (f.forest.water) f.forest.water.update(0.016, f.camera);
   }
-  if (f.forest.clutter) {
-    f.forest.clutter.pending.length = 0;
-    for (let i = 0; i < 28; i++) f.forest.clutter.update(0.016, f.camera);
-  }
-  if (f.forest.water) f.forest.water.update(0.016, f.camera);
   if (f.forest.debris) f.forest.debris.update(0.016);
   if (f.forest.falling) {
     if (f.forest.falling.suppressed) f.forest.falling.holdPhase = -1;

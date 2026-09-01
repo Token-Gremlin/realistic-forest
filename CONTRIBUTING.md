@@ -17,6 +17,8 @@ Open `http://localhost:5173`. The editor is on the right (`H` to hide).
 - Keep the renderer on **WebGL2 + GLSL**. Do not swap in a WebGPURenderer.
 - Boot stays **fair weather**: high sun, walkable, blue water, no rain on the
   lens. Storms are opt-in.
+- Hide the boot overlay only after `forest.settleView(camera)` has packed the
+  opening stand. Do not trickle-stream the first view after reveal.
 - Do not grow kilometres of full-mesh trees. Horizon fill is cards or mid-mesh
   under a hard instance cap.
 - View distance must stay inside the baked map window. Stretching the map rim

@@ -131,11 +131,14 @@ export class ForestStudio {
     const { forest, weather, pipeline, camera, renderer, quality, state, director, controls } = this.ctx;
     const all = !!opts.all;
 
+    let needSettle = false;
     if (all || 'trees' in partial || 'treeRadius' in partial || 'gfx' in partial || 'farMode' in partial) {
       this._applyView(v);
+      needSettle = true;
     }
     if (all || 'grass' in partial || 'grassHeight' in partial) {
       forest.grass?.setLook?.(Math.min(v.grass, 1.55), Math.min(v.grassHeight, 1.45));
+      needSettle = true;
     }
     if (all || 'clutter' in partial || 'ferns' in partial || 'flowers' in partial
       || 'mushrooms' in partial || 'sedges' in partial || 'lilies' in partial
@@ -154,6 +157,7 @@ export class ForestStudio {
           herb: 0.55 + 0.45 * Math.min(v.flowers, 1.7),
         },
       });
+      needSettle = true;
     }
     if (all || 'waterRadius' in partial || 'waterTint' in partial || 'foam' in partial || 'waves' in partial) {
       const cover = (forest.maps?.span ?? 560) * 0.42;
@@ -215,6 +219,8 @@ export class ForestStudio {
       uT.w = v.valley;
       if (changed) this._scheduleRebake();
     }
+
+    if (needSettle) forest.settleView?.(camera);
 
     if (opts.persist !== false && !this.silent) this._persist();
     for (const fn of this._listeners) fn(v, partial);

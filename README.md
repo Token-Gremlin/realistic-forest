@@ -57,7 +57,9 @@ npm run preview    # serve the bundle
 | `?trees=` `?grass=` `?water=` `?hi=1` | slider overrides |
 
 The session boots in **high sun** with the weather timeline off. Rain and storms
-only start if you turn them on.
+only start if you turn them on. The opening view is **settled before the overlay
+hides** — trees, undergrowth, grass and water are already packed, then a few
+silent frames warm TAA so the stand does not teleport in.
 
 The renderer stays WebGL2. If the browser also exposes WebGPU, that is used only
 as a capability hint when guessing a default quality tier.

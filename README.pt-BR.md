@@ -57,7 +57,8 @@ npm run preview    # servir o bundle
 | `?trees=` `?grass=` `?water=` `?hi=1` | overrides dos sliders |
 
 O boot é **sol alto**, linha do tempo desligada. Chuva e tempestade só entram
-se você ligar.
+se você ligar. A vista de abertura **assenta antes do overlay sumir** — árvores,
+chão, grama e água já estão no sítio, sem teleportar do horizonte.
 
 O renderer é WebGL2. Se o browser também expõe WebGPU, isso só entra como
 pista na escolha da qualidade.

@@ -19,6 +19,7 @@ import { makePlantMaterial, makeSolidMaterial } from './clutterMaterials.js';
 
 const CHUNK = 24;
 const STRIDE = 12;
+const APPEAR_RATE = 2.8;
 
 class Bucket {
   constructor() { this.data = new Float32Array(STRIDE * 64); this.count = 0; }
@@ -141,6 +142,86 @@ export class Clutter {
     this.chunks.clear();
     this.pending.length = 0;
     this._last.set(1e9, 1e9, 1e9);
+  }
+
+  _streamRadius() { return this.radius + CHUNK * 1.5; }
+
+  _chunkCenter(cx, cz) { return { x: (cx + 0.5) * CHUNK, z: (cz + 0.5) * CHUNK }; }
+
+  _forItems(fn) {
+    for (const chunk of this.chunks.values()) {
+      for (const list of chunk.byKind) {
+        for (const it of list) fn(it);
+      }
+    }
+  }
+
+  _pruneFar(cam) {
+    const keep = this._streamRadius() + CHUNK * 2.4;
+    for (const key of this.chunks.keys()) {
+      const [cx, cz] = key.split(',').map(Number);
+      const c = this._chunkCenter(cx, cz);
+      if (Math.hypot(c.x - cam.x, c.z - cam.z) > keep) this.chunks.delete(key);
+    }
+  }
+
+  _pruneOutsideMaps() {
+    const maps = this.maps;
+    if (!maps?.covers) return;
+    for (const key of this.chunks.keys()) {
+      const [cx, cz] = key.split(',').map(Number);
+      const c = this._chunkCenter(cx, cz);
+      if (!maps.covers(c.x, c.z)) this.chunks.delete(key);
+    }
+  }
+
+  _enqueueMissing(cam) {
+    const r = this._streamRadius();
+    const c0 = Math.floor((cam.x - r) / CHUNK), c1 = Math.floor((cam.x + r) / CHUNK);
+    const d0 = Math.floor((cam.z - r) / CHUNK), d1 = Math.floor((cam.z + r) / CHUNK);
+    const want = [];
+    for (let cz = d0; cz <= d1; cz++) {
+      for (let cx = c0; cx <= c1; cx++) {
+        const key = `${cx},${cz}`;
+        if (this.chunks.has(key)) continue;
+        const c = this._chunkCenter(cx, cz);
+        const dist = Math.hypot(c.x - cam.x, c.z - cam.z);
+        if (dist > r + CHUNK * 0.25) continue;
+        want.push({ cx, cz, key, dist });
+      }
+    }
+    want.sort((a, b) => a.dist - b.dist);
+    this.pending = want;
+  }
+
+  _ageAppear(dt) {
+    if (dt <= 0) return false;
+    const k = dt * APPEAR_RATE;
+    let fading = false;
+    this._forItems((it) => {
+      const a = it._appear ?? 0;
+      if (a < 1) {
+        it._appear = Math.min(1, a + k);
+        fading = true;
+      }
+    });
+    return fading;
+  }
+
+  fillAround(camera, { settle = false } = {}) {
+    const cam = camera.position;
+    this._pruneFar(cam);
+    this._pruneOutsideMaps();
+    this.pending.length = 0;
+    this._enqueueMissing(cam);
+    while (this.pending.length) {
+      const c = this.pending.shift();
+      if (this.chunks.has(c.key)) continue;
+      this.chunks.set(c.key, this._generateChunk(c.cx, c.cz));
+    }
+    if (settle) this._forItems((it) => { it._appear = 1; });
+    this._last.copy(cam);
+    this._rebuild(camera);
   }
 
   _materialConfig(key, built) {
@@ -274,6 +355,7 @@ export class Clutter {
           variant,
           height: variant.height * scale,
           radius: Math.max(variant.radius * scale, 0.1),
+          _appear: 0,
         });
       }
     }
@@ -330,6 +412,7 @@ export class Clutter {
           variant,
           height: variant.height * scale,
           radius: Math.max(variant.radius * scale, 0.1),
+          _appear: 0,
         });
       }
     }
@@ -368,13 +451,14 @@ export class Clutter {
           variant,
           height: variant.height * scale,
           radius: Math.max(variant.radius * scale, 0.05),
+          _appear: 0,
         });
       }
     }
   }
 
   onMapsRebaked() {
-    this.chunks.clear();
+    this._pruneOutsideMaps();
     this.pending.length = 0;
     this._last.set(1e9, 1e9, 1e9);
   }
@@ -382,33 +466,11 @@ export class Clutter {
   update(dt, camera) {
     this._frame++;
     const cam = camera.position;
-    const r = this.radius;
-    const c0 = Math.floor((cam.x - r) / CHUNK), c1 = Math.floor((cam.x + r) / CHUNK);
-    const d0 = Math.floor((cam.z - r) / CHUNK), d1 = Math.floor((cam.z + r) / CHUNK);
 
-    for (const key of this.chunks.keys()) {
-      const [cx, cz] = key.split(',').map(Number);
-      const dx = (cx + 0.5) * CHUNK - cam.x, dz = (cz + 0.5) * CHUNK - cam.z;
-      if (Math.hypot(dx, dz) > r + CHUNK * 2) this.chunks.delete(key);
-    }
+    this._pruneFar(cam);
+    if (this.pending.length === 0) this._enqueueMissing(cam);
 
-    if (this.pending.length === 0) {
-      const want = [];
-      for (let cz = d0; cz <= d1; cz++) {
-        for (let cx = c0; cx <= c1; cx++) {
-          const key = `${cx},${cz}`;
-          if (this.chunks.has(key)) continue;
-          const dx = (cx + 0.5) * CHUNK - cam.x, dz = (cz + 0.5) * CHUNK - cam.z;
-          const dist = Math.hypot(dx, dz);
-          if (dist > r + CHUNK) continue;
-          want.push({ cx, cz, key, dist });
-        }
-      }
-      want.sort((a, b) => a.dist - b.dist);
-      this.pending = want;
-    }
-
-    const budget = this.chunks.size === 0 ? 16 : 5;
+    const budget = this.chunks.size === 0 ? 36 : (this.pending.length > 12 ? 10 : 5);
     let built = 0;
     while (this.pending.length && built < budget) {
       const c = this.pending.shift();
@@ -418,7 +480,8 @@ export class Clutter {
       }
     }
 
-    if (built > 0 || this._last.distanceTo(cam) > 3.0 || (this._frame % 40) === 0) {
+    const fading = this._ageAppear(dt);
+    if (built > 0 || fading || this._last.distanceTo(cam) > 3.0 || (this._frame % 40) === 0) {
       this._last.copy(cam);
       this._rebuild(camera);
     }
@@ -467,8 +530,8 @@ export class Clutter {
           vals[0] = it.x; vals[1] = it.y; vals[2] = it.z; vals[3] = it.scale;
           vals[4] = it.cos; vals[5] = it.sin; vals[6] = it.tiltX; vals[7] = it.tiltZ;
           vals[8] = it.phase; vals[9] = it.tint; vals[10] = it.rnd;
-          // fade out over the last fifth of the range instead of popping
-          vals[11] = 1 - smoothstep(maxD * 0.80, maxD, dist);
+          // fade out over the last fifth of the range, and fade in new plants
+          vals[11] = (1 - smoothstep(maxD * 0.80, maxD, dist)) * (it._appear ?? 1);
           it.variant.bucket.push(vals);
           total++;
         }

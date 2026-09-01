@@ -169,6 +169,8 @@ async function start() {
     hiRes: false,
   };
   studio.ctx.state = state;
+  boot(0.92, t('bootSettle'));
+  await nextFrame();
   studio.load();
 
   window.addEventListener('resize', () => {
@@ -232,13 +234,43 @@ async function start() {
 
   buildPanel(panelEl, { pipeline, weather, director, forest, quality, state, renderer, camera, studio });
 
+  boot(0.94, t('bootSettle'));
+  await nextFrame();
+  forest.settleView(camera);
+
+  boot(0.97, t('bootPrime'));
+  await nextFrame();
+  const prevViewProj = new THREE.Matrix4();
+  const primeFrame = (first) => {
+    U.uDelta.value = 0.016;
+    weather.update(0, camera.position);
+    U.uCamPrevPos.value.copy(U.uCamPos.value);
+    U.uCamPos.value.copy(camera.position);
+    camera.updateMatrixWorld(true);
+    camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+    camera.updateProjectionMatrix();
+    forest.sky.updateProbe(weather.nightAmount);
+    if (first) pipeline.resetTemporal();
+    prevViewProj.copy(U.uViewProj.value);
+    pipeline.applyJitter(camera);
+    U.uViewProj.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    U.uInvViewProj.value.copy(U.uViewProj.value).invert();
+    U.uPrevViewProj.value.copy(first ? U.uViewProj.value : prevViewProj);
+    U.uNearFar.value.set(camera.near, camera.far);
+    U.uProjScaleY.value = camera.projectionMatrix.elements[5] * pipeline.height * 0.5;
+    renderer.info.reset();
+    pipeline.render(camera, { nightAmount: weather.nightAmount });
+  };
+  primeFrame(true);
+  primeFrame(false);
+  primeFrame(false);
+
   /* --------------------------------------------------------------- main loop */
   const clock = new THREE.Clock();
-  let frames = 0;
+  let frames = 3;
   let fpsAccum = 0, fpsTime = 0, fps = 0;
   let slowFrames = 0, fastFrames = 0;
   let exposure = 1.35;
-  const prevViewProj = new THREE.Matrix4();
   let hudTimer = 0;
 
   bootEl.classList.add('gone');

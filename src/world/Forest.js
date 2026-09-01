@@ -79,12 +79,32 @@ export class Forest {
     return false;
   }
 
-  groundHeight(x, z) { return this.maps.height(x, z); }
-
-  update(dt, camera) {
+  /**
+   * Fill every tree / clutter chunk in the current view, generate grass rings
+   * and water cells, and mark instances as already present. Boot and map
+   * rebakes call this so the player never watches the stand teleport in.
+   */
+  settleView(camera) {
     this.ensureMaps(camera);
     this.camPos = camera.position;
     this.stats.patches = this.terrain.selectView(camera);
+    this.trees?.fillAround?.(camera, { settle: true });
+    this.clutter?.fillAround?.(camera, { settle: true });
+    this.grass?.update?.(0, camera);
+    this.water?.update?.(0, camera);
+    this.settled = true;
+  }
+
+  groundHeight(x, z) { return this.maps.height(x, z); }
+
+  update(dt, camera) {
+    const rebaked = this.ensureMaps(camera);
+    this.camPos = camera.position;
+    this.stats.patches = this.terrain.selectView(camera);
+    if (rebaked) {
+      this.trees?.fillAround?.(camera, { settle: true });
+      this.clutter?.fillAround?.(camera, { settle: true });
+    }
     if (this.trees && this._season !== U.uSeason.value) {
       this._season = U.uSeason.value;
       this.trees.setSeason(this._season);

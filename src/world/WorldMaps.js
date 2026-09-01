@@ -285,6 +285,12 @@ export class WorldMaps {
     return [(x - this.center.x) / this.span + 0.5, (z - this.center.y) / this.span + 0.5];
   }
 
+  /** True when (x, z) sits inside the baked window, not on the stretched rim. */
+  covers(x, z, pad = 0.03) {
+    const [u, v] = this._uv(x, z);
+    return u > pad && u < 1 - pad && v > pad && v < 1 - pad;
+  }
+
   height(x, z) { const [u, v] = this._uv(x, z); return this._bilinear(this.cpuA, u, v, 0); }
   waterDepth(x, z) { const [u, v] = this._uv(x, z); return this._bilinear(this.cpuA, u, v, 1); }
   moisture(x, z) { const [u, v] = this._uv(x, z); return this._bilinear(this.cpuA, u, v, 2); }

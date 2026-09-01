@@ -153,6 +153,8 @@ const DICT = {
     bootTerrain: 'carving terrain and ecology',
     bootVeg: 'growing vegetation',
     bootShaders: 'compiling shaders',
+    bootSettle: 'settling the grove',
+    bootPrime: 'warming the first frames',
   },
   'pt-BR': {
     title: 'Sylva — Editor de floresta',
@@ -300,6 +302,8 @@ const DICT = {
     bootTerrain: 'a esculpir o terreno',
     bootVeg: 'a crescer vegetação',
     bootShaders: 'a compilar shaders',
+    bootSettle: 'a assentar o bosque',
+    bootPrime: 'a aquecer os primeiros fotogramas',
   },
 };
 
