@@ -2,6 +2,8 @@
 
 [English](README.md) · [Português](#sylva)
 
+Por [Token Gremlin](https://x.com/TokenGremlin).
+
 Uma floresta cinematográfica em tempo real no navegador. **Nada é carregado.**
 Não há texturas, malhas, HDRIs nem materiais prontos no repositório. Terreno,
 árvores, grama, água, céu, nuvens e clima saem da matemática em runtime.
@@ -93,4 +95,4 @@ estão em `tools/cap-*.js`.
 
 ## Licença
 
-[MIT](LICENSE) — © 2026 Davi Dias.
+[MIT](LICENSE) — © 2026 [Token Gremlin](https://x.com/TokenGremlin).

@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",
-  "author": "Davi Dias",
+  "author": {
+    "name": "Token Gremlin",
+    "url": "https://x.com/TokenGremlin"
+  },
   "description": "Fully procedural cinematic forest in the browser. Three.js + WebGL2. No external assets.",
   "repository": {
     "type": "git",

@@ -45,3 +45,8 @@ not beauty proofs.
 - Code comments, commit messages and the primary README stay English.
 - `README.pt-BR.md` is the Portuguese landing page.
 - The live demo is GitHub Pages: `https://token-gremlin.github.io/realistic-forest/`.
+
+## License
+
+Contributions are accepted under the [MIT License](LICENSE).
+The copyright holder is [Token Gremlin](https://x.com/TokenGremlin).

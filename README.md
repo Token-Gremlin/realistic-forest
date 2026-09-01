@@ -15,7 +15,7 @@ The default session is a walkable **forest editor** in English (one-click
 EN / PT-BR), with named looks, shareable URLs and fair high sun. Storms stay
 off until you ask for them.
 
-[Português](README.pt-BR.md) · [How it works](docs/architecture.md) · [Contributing](CONTRIBUTING.md)
+By [Token Gremlin](https://x.com/TokenGremlin) · [Português](README.pt-BR.md) · [How it works](docs/architecture.md) · [Contributing](CONTRIBUTING.md)
 
 ![Sylva](docs/hero.svg)
 
@@ -108,6 +108,6 @@ live in `tools/cap-*.js`. Treat those frames as logic checks, not beauty proofs.
 
 ## License
 
-[MIT](LICENSE) — © 2026 [Davi Dias](https://github.com/Token-Gremlin).
+[MIT](LICENSE) — © 2026 [Token Gremlin](https://x.com/TokenGremlin).
 
 Three.js is © the [three.js authors](https://github.com/mrdoob/three.js), also MIT.

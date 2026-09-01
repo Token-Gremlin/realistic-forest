@@ -75,3 +75,7 @@ the world maps, then flies the shot.
 
 The renderer stays **WebGL2 + GLSL**. If the browser also exposes WebGPU, that
 is used only as a capability hint when guessing a default quality tier.
+
+## License
+
+[MIT](../LICENSE) — © 2026 [Token Gremlin](https://x.com/TokenGremlin).

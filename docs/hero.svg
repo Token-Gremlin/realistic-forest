@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-label="Sylva  a procedural forest">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-label="Sylva — a procedural forest by Token Gremlin">
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#1a2830"/>
@@ -42,5 +42,5 @@
     <rect x="1111" y="302" width="7" height="24"/>
   </g>
   <text x="56" y="72" fill="#b7d48a" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22" letter-spacing="10">SYLVA</text>
-  <text x="56" y="104" fill="#9b968c" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14">procedural forest · WebGL2 · MIT</text>
+  <text x="56" y="104" fill="#9b968c" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14">procedural forest · WebGL2 · MIT · Token Gremlin</text>
 </svg>
