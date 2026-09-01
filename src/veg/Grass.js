@@ -49,6 +49,7 @@ uniform sampler2D uBladeB;   // angle, width, bend, phase
 uniform sampler2D uBladeC;   // dryness, lush, species, ao
 uniform vec4 uRing;          // x inner, y outer, z spacing, w blade width scale
 uniform vec2 uRingOrigin;
+uniform vec2 uDataOrigin;    // snapped gen origin; we slide by the remainder
 uniform float uCount;
 
 struct Blade {
@@ -72,6 +73,10 @@ Blade fetchBlade(float id){
   b.phase = B.w;
   b.dryness = C.x; b.lush = C.y; b.species = C.z; b.ao = C.w;
   b.valid = step(0.004, b.height);
+  // Slide the baked lattice with the camera so a cell crossing does not
+  // teleport the whole ring. Ecology stays snapped; the jump is at most
+  // one spacing in the sample, not in the blades.
+  b.base.xz += uRingOrigin - uDataOrigin;
   // annulus test lives here so the data pass can stay lattice-anchored
   vec2 d = abs(b.base.xz - uRingOrigin);
   float cheb = max(d.x, d.y);
@@ -171,6 +176,7 @@ export class Grass {
         uBladeC: { value: r.dataRT.textures[2] },
         uRing: { value: new THREE.Vector4(r.inner, r.outer, r.spacing, r.widthScale) },
         uRingOrigin: { value: new THREE.Vector2() },
+        uDataOrigin: { value: new THREE.Vector2() },
         uCount: { value: r.count },
       };
 
@@ -434,6 +440,7 @@ void main(){
       const oz = Math.floor(cz / r.spacing) * r.spacing;
       if (Math.abs(ox - r.origin.x) < 1e-4 && Math.abs(oz - r.origin.y) < 1e-4) continue;
       r.origin.set(ox, oz);
+      r.uniforms.uDataOrigin.value.set(ox, oz);
       gu.uOrigin.value.set(ox, oz);
       gu.uRingSpacing.value = r.spacing;
       gu.uCount.value = r.count;

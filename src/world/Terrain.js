@@ -234,6 +234,13 @@ Ground groundSurface(vec3 wp, vec3 N, vec4 eco, vec4 mapv, vec4 ao, float lodPx)
     grad *= mix(1.0, 0.18, puddle);
   }
 
+  // Far open hills used to go sandy between distant cards — the ground
+  // half of the "limbo". A meadow wash keeps the disk reading as floor.
+  float farMeadow = smoothstep(0.10, 0.48, lodPx) * (1.0 - canopy) * (1.0 - rockM)
+                  * (1.0 - steep) * (1.0 - smoothstep(-0.15, 0.28, waterDepth));
+  vec3 meadow = mix(vec3(0.042, 0.074, 0.026), vec3(0.070, 0.108, 0.036), n2);
+  alb = mix(alb, meadow, farMeadow * 0.46);
+
   // ---- rain wetting the whole surface
   float rainWet = uWeather.w;
   alb *= mix(1.0, 0.62, rainWet);
