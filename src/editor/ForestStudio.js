@@ -1,4 +1,4 @@
-import { LOOKS } from './looks.js';
+import { LOOKS, GFX_PRESETS } from './looks.js';
 
 const STORE_KEY = 'sylva.editor.v1';
 const HYDRO_KEYS = new Set(['water', 'ponds', 'valley']);
@@ -41,6 +41,11 @@ export class ForestStudio {
     // a weather override — fair sun stays the default unless look= / act= say so.
     const look = params.get('look') || 'bosque';
     this.values = cloneLook(LOOKS[look] ? look : 'bosque');
+    if (this.silent || params.get('q') === 'tiny') {
+      this.values.treeRadius = this.ctx.quality.treeRadius;
+      this.values.gfx = 'fluid';
+      this.values.farMode = 'full';
+    }
     for (const k of NUM_KEYS) {
       if (params.has(k)) {
         const n = parseFloat(params.get(k));
@@ -49,6 +54,8 @@ export class ForestStudio {
     }
     if (params.has('hi')) this.values.hiRes = params.get('hi') !== '0';
     if (params.has('cine')) this.values.cine = params.get('cine') === '1';
+    if (params.has('gfx') && GFX_PRESETS[params.get('gfx')]) this.values.gfx = params.get('gfx');
+    if (params.get('far') === 'blur' || params.get('far') === 'full') this.values.farMode = params.get('far');
     if (params.has('act') && !params.has('look')) {
       const act = parseInt(params.get('act'), 10);
       if (Number.isFinite(act)) this.values.act = act;
@@ -89,8 +96,9 @@ export class ForestStudio {
     const { forest, weather, pipeline, camera, renderer, quality, state, director, controls } = this.ctx;
     const all = !!opts.all;
 
-    if (all || 'trees' in partial || 'treeRadius' in partial) {
+    if (all || 'trees' in partial || 'treeRadius' in partial || 'gfx' in partial || 'farMode' in partial) {
       forest.trees?.setLook?.(v.trees, v.treeRadius);
+      this._applyView(v);
     }
     if (all || 'grass' in partial || 'grassHeight' in partial) {
       forest.grass?.setLook?.(v.grass, v.grassHeight);
@@ -136,9 +144,11 @@ export class ForestStudio {
       camera.fov = v.fov;
       camera.updateProjectionMatrix();
     }
-    if (all || 'dof' in partial) {
-      pipeline.settings.dof = !!v.dof;
-      quality.dof = !!v.dof;
+    if (all || 'dof' in partial || 'farMode' in partial) {
+      const blur = v.farMode === 'blur';
+      pipeline.settings.dof = blur || !!v.dof;
+      quality.dof = pipeline.settings.dof;
+      if (blur) state.autoFocus = true;
     }
     if (all || 'cine' in partial) {
       director.enabled = !!v.cine;
@@ -150,6 +160,7 @@ export class ForestStudio {
     }
     if (all || 'sat' in partial) pipeline.settings.saturation = v.sat;
     if (all || 'hiRes' in partial) this._applyResolution(!!v.hiRes);
+    if ((all || 'gfx' in partial) && !this.silent && this.params.get('q') !== 'tiny') this._applyGfx(v.gfx);
 
     const hydro = all || [...HYDRO_KEYS].some((k) => k in partial);
     if (hydro) {
@@ -168,6 +179,35 @@ export class ForestStudio {
 
     if (opts.persist !== false && !this.silent) this._persist();
     for (const fn of this._listeners) fn(v, partial);
+  }
+
+  _applyView(v) {
+    const { forest, camera, quality } = this.ctx;
+    const g = GFX_PRESETS[v.gfx] ?? GFX_PRESETS.balanced;
+    forest.trees?.setPolicy?.({
+      radius: v.treeRadius,
+      farMode: v.farMode || 'full',
+      gfx: v.gfx || 'balanced',
+      pxFull: g.pxFull,
+      pxMid: g.pxMid,
+      maxLod0: g.maxLod0,
+      maxLod1: g.maxLod1,
+    });
+    camera.far = Math.max(quality.camFar ?? 520, (v.treeRadius ?? 200) * 2.4 + 120);
+    camera.updateProjectionMatrix();
+  }
+
+  _applyGfx(name) {
+    const g = GFX_PRESETS[name] ?? GFX_PRESETS.balanced;
+    const { pipeline, quality, state } = this.ctx;
+    quality.renderScale = g.scale;
+    this._baseScale = g.scale;
+    pipeline.setScale(g.scale);
+    pipeline.settings.volumetricSteps = g.vol;
+    quality.volumetricSteps = g.vol;
+    pipeline.settings.ao = g.ao;
+    quality.ao = g.ao;
+    if (state) state.fpsTarget = name === 'fluid' ? 60 : state.fpsTarget;
   }
 
   _applyResolution(hi) {
@@ -208,6 +248,8 @@ export class ForestStudio {
     }
     if (this.values.hiRes) q.set('hi', '1');
     if (this.values.cine) q.set('cine', '1');
+    if (this.values.gfx && this.values.gfx !== 'balanced') q.set('gfx', this.values.gfx);
+    if (this.values.farMode && this.values.farMode !== 'full') q.set('far', this.values.farMode);
     return q;
   }
 

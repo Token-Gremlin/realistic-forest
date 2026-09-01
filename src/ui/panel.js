@@ -1,5 +1,5 @@
 import { ACTS } from '../director/Weather.js';
-import { LOOKS, LOOK_ORDER, ACT_LABELS } from '../editor/looks.js';
+import { LOOKS, LOOK_ORDER, ACT_LABELS, GFX_PRESETS, GFX_ORDER } from '../editor/looks.js';
 
 function slider(parent, label, get, set, min, max, step = 0.01, fmt = (v) => v.toFixed(2)) {
   const l = document.createElement('label');
@@ -69,10 +69,44 @@ export function buildPanel(root, ctx) {
   /* -------------------------------------------------------------- floresta */
   const flora = section(root, 'floresta', true);
   refreshers.push(slider(flora, 'árvores', () => ed().trees, (v) => studio.patch({ trees: v }), 0.05, 2.2).refresh);
-  refreshers.push(slider(flora, 'alcance das árvores', () => ed().treeRadius, (v) => studio.patch({ treeRadius: v }), 28, 160, 1, (v) => `${v.toFixed(0)} m`).refresh);
+  refreshers.push(slider(flora, 'distância de visão', () => ed().treeRadius, (v) => studio.patch({ treeRadius: v }), 80, 420, 1, (v) => `${v.toFixed(0)} m`).refresh);
   refreshers.push(slider(flora, 'grama', () => ed().grass, (v) => studio.patch({ grass: v }), 0.05, 2.2).refresh);
   refreshers.push(slider(flora, 'altura da grama', () => ed().grassHeight, (v) => studio.patch({ grassHeight: v }), 0.35, 2.0).refresh);
   refreshers.push(slider(flora, 'sub-bosque', () => ed().clutter, (v) => studio.patch({ clutter: v }), 0.05, 2.2).refresh);
+
+  const vision = section(root, 'visão e qualidade', true);
+  {
+    const l = document.createElement('label');
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = 'objetos ao longe';
+    const sel = document.createElement('select');
+    [['full', 'tudo nítido'], ['blur', 'desfocar o fundo']].forEach(([val, lab]) => {
+      const o = document.createElement('option');
+      o.value = val; o.textContent = lab;
+      sel.append(o);
+    });
+    sel.value = ed().farMode || 'full';
+    sel.addEventListener('change', () => studio.patch({ farMode: sel.value, dof: sel.value === 'blur' }));
+    l.append(n, sel); vision.append(l);
+    refreshers.push(() => { if (document.activeElement !== sel) sel.value = ed().farMode || 'full'; });
+  }
+  {
+    const l = document.createElement('label');
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = 'qualidade gráfica';
+    const sel = document.createElement('select');
+    GFX_ORDER.forEach((key) => {
+      const o = document.createElement('option');
+      o.value = key; o.textContent = GFX_PRESETS[key].label;
+      sel.append(o);
+    });
+    sel.value = ed().gfx || 'balanced';
+    sel.addEventListener('change', () => studio.patch({ gfx: sel.value }));
+    l.append(n, sel); vision.append(l);
+    refreshers.push(() => { if (document.activeElement !== sel) sel.value = ed().gfx || 'balanced'; });
+  }
+  const gfxHint = document.createElement('div');
+  gfxHint.className = 'hint';
+  gfxHint.textContent = 'Fluido 60 prioriza fotogramas. Belo e Máximo mantêm malhas mais longe e podem baixar os fps. Árvores no horizonte nunca desaparecem — só perdem detalhe quando são pequenas no ecrã.';
+  vision.append(gfxHint);
 
   const detail = section(root, 'chão e detalhes', true);
   refreshers.push(slider(detail, 'samambaias', () => ed().ferns, (v) => studio.patch({ ferns: v }), 0, 2.4).refresh);

@@ -161,7 +161,7 @@ async function start() {
     freeCam: false,
     showPanel: params.get('q') !== 'tiny' && params.get('panel') !== '0',
     autoQuality: true,
-    fpsTarget: 50,
+    fpsTarget: 60,
     exposureAuto: true,
     autoFocus: true,
     hiRes: false,
@@ -301,27 +301,36 @@ async function start() {
         else if (fps > state.fpsTarget * 1.15) { fastFrames++; slowFrames = 0; }
         else { slowFrames = 0; fastFrames = 0; }
         if (slowFrames >= 2) {
-          pipeline.setScale(Math.max(0.50, pipeline.scale - 0.10));
-          pipeline.settings.volumetricSteps = Math.max(
-            quality.volMin ?? 6,
-            (pipeline.settings.volumetricSteps | 0) - 4,
-          );
-          pipeline.settings.dof = false;
-          if (pipeline.scale < quality.renderScale * 0.86) {
+          const trees = forest.trees;
+          const volMin = quality.volMin ?? 6;
+          if ((pipeline.settings.volumetricSteps | 0) > volMin) {
+            pipeline.settings.volumetricSteps = Math.max(volMin, (pipeline.settings.volumetricSteps | 0) - 4);
+          } else if (trees && trees.lodStress < 0.85) {
+            trees.lodStress = Math.min(1, (trees.lodStress ?? 0) + 0.22);
+            trees._lastRebuild?.set?.(1e9, 1e9, 1e9);
+          } else if (pipeline.scale > 0.76) {
+            pipeline.setScale(Math.max(0.76, pipeline.scale - 0.06));
+          } else {
             U.uContact.value.x = 0;
             forest.grass?.setRingBudget?.(Math.max(1, (forest.grass.rings?.length ?? 2) - 1));
+            if (studio.values?.farMode !== 'blur') pipeline.settings.dof = false;
+            if (pipeline.scale <= 0.76) pipeline.settings.ao = false;
           }
-          if (pipeline.scale <= 0.55) pipeline.settings.ao = false;
           slowFrames = 0;
-        } else if (fastFrames >= 4 && pipeline.scale < quality.renderScale) {
-          pipeline.setScale(Math.min(quality.renderScale, pipeline.scale + 0.05));
-          pipeline.settings.volumetricSteps = Math.min(
-            quality.volumetricSteps,
-            (pipeline.settings.volumetricSteps | 0) + 2,
-          );
-          if (pipeline.scale >= quality.renderScale * 0.92) {
-            pipeline.settings.dof = quality.dof;
+        } else if (fastFrames >= 4) {
+          const trees = forest.trees;
+          if (trees && (trees.lodStress ?? 0) > 0.05) {
+            trees.lodStress = Math.max(0, trees.lodStress - 0.18);
+            trees._lastRebuild?.set?.(1e9, 1e9, 1e9);
+          } else if (pipeline.scale < quality.renderScale) {
+            pipeline.setScale(Math.min(quality.renderScale, pipeline.scale + 0.04));
+          } else {
+            pipeline.settings.volumetricSteps = Math.min(
+              quality.volumetricSteps,
+              (pipeline.settings.volumetricSteps | 0) + 2,
+            );
             pipeline.settings.ao = quality.ao;
+            pipeline.settings.dof = quality.dof;
             U.uContact.value.x = quality.contactDist ?? 16;
             forest.grass?.setRingBudget?.(forest.grass.rings?.length ?? 2);
           }
@@ -345,7 +354,8 @@ async function start() {
       <span class="k">wind</span> ${weather.state.wind.toFixed(1)} <span class="k">rain</span> ${weather.state.rain.toFixed(2)} <span class="k">storm</span> ${weather.state.storm.toFixed(2)} <span class="k">drops</span> ${forest.rain?.stats.drops ?? 0} <span class="k">debris</span> ${forest.debris?.stats.debris ?? 0} <span class="k">fall</span> ${forest.falling?.stats.falling ?? 0} <span class="k">down</span> ${forest.trees?.stats.fallen ?? 0}<br/>
       <span class="k">life</span> i${forest.life?.stats.insects ?? 0} f${forest.life?.stats.fireflies ?? 0} b${forest.life?.stats.birds ?? 0} l${forest.life?.stats.leaves ?? 0} <span class="k">fire</span> ${((forest.fire?.stats.strength ?? 0) * 100) | 0}% e${forest.fire?.stats.embers ?? 0}<br/>
       <span class="k">draws</span> ${info.calls} <span class="k">tris</span> ${(info.triangles / 1e6).toFixed(2)}M <span class="k">patches</span> ${forest.stats.patches} <span class="k">·</span> webgl2${navigator.gpu ? '+webgpu' : ''}<br/>
-      <span class="k">árvores</span> ${forest.trees?.stats.trees ?? 0} <span class="k">chão</span> ${forest.clutter?.stats.instances ?? 0} <span class="k">água</span> ${forest.water?.stats.cells ?? 0}<br/>
+      <span class="k">árvores</span> ${forest.trees?.stats.trees ?? 0} <span class="k">lod</span> ${(forest.trees?.stats.lod ?? []).join('/')} <span class="k">visão</span> ${Math.round(forest.trees?.radius ?? 0)}m <span class="k">${studio.values?.farMode === 'blur' ? 'fundo desfocado' : 'tudo nítido'}</span><br/>
+      <span class="k">chão</span> ${forest.clutter?.stats.instances ?? 0} <span class="k">água</span> ${forest.water?.stats.cells ?? 0}<br/>
       <span class="k">${director.enabled ? `shot: ${director.shot}` : 'walk (WASD, mouse) · editor à direita'}</span><br/>
       <span class="k">H editor · C cine · N/B clima · G walk · F dof · P pause</span>
     `;

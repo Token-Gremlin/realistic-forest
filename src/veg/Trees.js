@@ -13,10 +13,11 @@ import { U } from '../core/env.js';
  * at all — is a property of the ground rather than of a random number. Chunks
  * stream in a few per frame.
  *
- * Four representations: full geometry, a reduced mid mesh, a coarse mesh, and a
- * pair of crossed procedural cards. Instances cross-fade between them with a
- * dithered alpha over a distance band, which after temporal accumulation hides
- * the transition completely.
+ * Four representations exist: full geometry, a reduced mid mesh, a coarse mesh
+ * (kept for shadows / fallback) and crossed procedural cards. Live assignment
+ * is by *on-screen height in pixels*, not metres — a 20 m beech at 60 m is still
+ * hundreds of pixels tall and must stay a mesh. The coarse (lego) LOD is skipped
+ * for colour; we go mid-mesh to billboard only when the tree is small.
  */
 
 const CHUNK = 48;
@@ -57,6 +58,14 @@ export class Trees {
     // hold mesh LODs a little farther when the preset paid for them
     this.lodScale = 1 + Math.min(this.detail, 2) * 0.16;
     this.lodBounds = quality.lodBounds ?? LOD_BOUNDS;
+    this.farMode = 'full';
+    this.gfx = 'balanced';
+    this.lodStress = 0;
+    this.pxFull = 88;
+    this.pxMid = 22;
+    this.maxLod0 = 40;
+    this.maxLod1 = 110;
+    this._pack = [];
     // stems per square metre before the ecology filter thins it; a temperate
     // mixed forest including saplings and shrubs sits around 0.10–0.25
     this.density = 0.105 * quality.treeDensity;
@@ -77,11 +86,33 @@ export class Trees {
   /** Live density / streaming radius from the forest editor. */
   setLook(densityMul, radius) {
     const next = 0.105 * clamp(densityMul, 0.02, 2.4);
-    const r = clamp(radius ?? this.radius, 24, 200);
+    const r = clamp(radius ?? this.radius, 40, 480);
     if (Math.abs(next - this.density) < 1e-4 && Math.abs(r - this.radius) < 0.25) return;
     this.density = next;
     this.radius = r;
     this.invalidate();
+  }
+
+  /**
+   * View policy: how far trees stream, when meshes give way to cards, and
+   * how many full / mid meshes we keep. Does not hide the horizon.
+   */
+  setPolicy({ radius, farMode, gfx, pxFull, pxMid, maxLod0, maxLod1 } = {}) {
+    let dirty = false;
+    if (radius != null) {
+      const r = clamp(radius, 40, 480);
+      if (Math.abs(r - this.radius) > 0.25) { this.radius = r; dirty = true; }
+    }
+    if (farMode != null && farMode !== this.farMode) { this.farMode = farMode; dirty = true; }
+    if (gfx != null && gfx !== this.gfx) { this.gfx = gfx; dirty = true; }
+    if (pxFull != null) this.pxFull = pxFull;
+    if (pxMid != null) this.pxMid = pxMid;
+    if (maxLod0 != null) this.maxLod0 = maxLod0;
+    if (maxLod1 != null) this.maxLod1 = maxLod1;
+    if (dirty) {
+      this.pending.length = 0;
+      this._lastRebuild.set(1e9, 1e9, 1e9);
+    }
   }
 
   invalidate() {
@@ -199,7 +230,8 @@ export class Trees {
     const pos = [];
     const uv = [];
     const idx = [];
-    for (let card = 0; card < 2; card++) {
+    // three cards at 120 degrees: two crossed plates read as a flat plus
+    for (let card = 0; card < 3; card++) {
       const b = card * 4;
       pos.push(-0.5, 0, card, 0.5, 0, card, 0.5, 1, card, -0.5, 1, card);
       uv.push(0, 0, 1, 0, 1, 1, 0, 1);
@@ -342,7 +374,7 @@ export class Trees {
       this.pending = want;
     }
 
-    const budget = this.chunks.size === 0 ? 512 : 6;
+    const budget = this.chunks.size === 0 ? 512 : (this.pending.length > 24 ? 16 : 8);
     let built = 0;
     while (this.pending.length && built < budget) {
       const c = this.pending.shift();
@@ -355,7 +387,7 @@ export class Trees {
     this._tickDamage(dt, cam);
 
     const moved = this._lastRebuild.distanceTo(cam);
-    if (built > 0 || moved > 4.5 || this._damageDirty || (this._frame % 45) === 0) {
+    if (built > 0 || moved > 6.0 || this._damageDirty || (this._frame % 50) === 0) {
       this._lastRebuild.copy(cam);
       this._damageDirty = false;
       this._rebuildBuckets(camera);
@@ -456,12 +488,22 @@ export class Trees {
     let total = 0;
     const lodCounts = [0, 0, 0, 0];
 
-    // frustum with a generous margin: instances are also shadow casters
     const frustum = this._frustum ?? (this._frustum = new THREE.Frustum());
     const m = this._mvp ?? (this._mvp = new THREE.Matrix4());
     m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     frustum.setFromProjectionMatrix(m);
     const sphere = this._sphere ?? (this._sphere = new THREE.Sphere());
+
+    const projY = Math.max(U.uProjScaleY.value || 500, 80);
+    const stress = this.lodStress ?? 0;
+    const blurK = this.farMode === 'blur' ? 1.18 : 1;
+    const thFull = this.pxFull * blurK * (1 + stress * 0.7);
+    const thMid = this.pxMid * blurK * (1 + stress * 0.55);
+    const max0 = this.maxLod0 | 0;
+    const max1 = this.maxLod1 | 0;
+
+    const pack = this._pack;
+    pack.length = 0;
 
     for (const list of this.chunks.values()) {
       for (const t of list) {
@@ -470,8 +512,7 @@ export class Trees {
         if (dist > rMax) continue;
         const dmg = t.damage ?? 0;
 
-        // cull only the far representations; near trees may cast into view
-        if (dist > 38) {
+        if (dist > 48) {
           const fall = dmg > 0.2 ? dmg * 1.55 : 0;
           const off = t.height * Math.sin(fall) * 0.45;
           sphere.center.set(
@@ -483,53 +524,72 @@ export class Trees {
           if (!frustum.intersectsSphere(sphere)) continue;
         }
 
-        const variant = this.variants[t.variant];
-        vals[0] = t.x; vals[1] = t.y; vals[2] = t.z; vals[3] = t.scale;
-        vals[4] = t.cos; vals[5] = t.sin;
-        if (dmg > 0.001) {
-          // ease: slow lean, then the last third drops the stem to the ground
-          const k = dmg * dmg * (3 - 2 * dmg);
-          const ang = Math.hypot(t.tiltX, t.tiltZ) + k * 1.56;
-          vals[6] = (t.fallDirX ?? 1) * ang;
-          vals[7] = (t.fallDirZ ?? 0) * ang;
-          this._wounds.set(`${t.x.toFixed(2)},${t.z.toFixed(2)}`, {
-            damage: dmg, fallDirX: t.fallDirX, fallDirZ: t.fallDirZ,
-          });
-        } else {
-          vals[6] = t.tiltX; vals[7] = t.tiltZ;
-        }
-        vals[8] = t.phase; vals[9] = t.tint; vals[10] = t.rnd;
-
-        // scale the LOD distances with the tree size: a 30 m beech deserves
-        // real geometry further out than a 2 m sapling
-        const sizeK = clamp(t.height / 18, 0.42, 1.7) * this.lodScale;
-        const b0 = this.lodBounds[0] * sizeK, b1 = this.lodBounds[1] * sizeK, b2 = this.lodBounds[2] * sizeK;
-
-        const emit = (lod, fade) => {
-          vals[11] = fade;
-          if (lod < 3) variant.buckets[lod].push(vals);
-          else variant.billboard.bucket.push(vals);
-          lodCounts[lod]++;
-        };
-
-        if (dist < b0 * (1 - BAND)) emit(0, 1);
-        else if (dist < b0 * (1 + BAND)) {
-          const f = (dist - b0 * (1 - BAND)) / (b0 * 2 * BAND);
-          emit(0, 1 - f); emit(1, f);
-        } else if (dist < b1 * (1 - BAND)) emit(1, 1);
-        else if (dist < b1 * (1 + BAND)) {
-          const f = (dist - b1 * (1 - BAND)) / (b1 * 2 * BAND);
-          emit(1, 1 - f); emit(2, f);
-        } else if (dist < b2 * (1 - BAND)) emit(2, 1);
-        else if (dist < b2 * (1 + BAND)) {
-          const f = (dist - b2 * (1 - BAND)) / (b2 * 2 * BAND);
-          emit(2, 1 - f); emit(3, f);
-        } else {
-          const fadeOut = 1 - smoothstep(rMax * 0.82, rMax, dist);
-          emit(3, fadeOut);
-        }
-        total++;
+        t._dist = dist;
+        t._px = t.height * projY / Math.max(dist, 0.35);
+        t._dmg = dmg;
+        pack.push(t);
       }
+    }
+    pack.sort((a, b) => a._dist - b._dist);
+
+    let used0 = 0, used1 = 0;
+    for (const t of pack) {
+      const variant = this.variants[t.variant];
+      const dmg = t._dmg;
+      const dist = t._dist;
+      const px = t._px;
+      vals[0] = t.x; vals[1] = t.y; vals[2] = t.z; vals[3] = t.scale;
+      vals[4] = t.cos; vals[5] = t.sin;
+      if (dmg > 0.001) {
+        const k = dmg * dmg * (3 - 2 * dmg);
+        const ang = Math.hypot(t.tiltX, t.tiltZ) + k * 1.56;
+        vals[6] = (t.fallDirX ?? 1) * ang;
+        vals[7] = (t.fallDirZ ?? 0) * ang;
+        this._wounds.set(`${t.x.toFixed(2)},${t.z.toFixed(2)}`, {
+          damage: dmg, fallDirX: t.fallDirX, fallDirZ: t.fallDirZ,
+        });
+      } else {
+        vals[6] = t.tiltX; vals[7] = t.tiltZ;
+      }
+      vals[8] = t.phase; vals[9] = t.tint; vals[10] = t.rnd;
+
+      const emit = (lod, fade) => {
+        vals[11] = fade;
+        if (lod < 3) variant.buckets[lod].push(vals);
+        else variant.billboard.bucket.push(vals);
+        lodCounts[lod]++;
+      };
+
+      // Never show the coarse (lego) mesh. Mid mesh until the tree is small
+      // on screen, then a card. Fade only in a thin pixel band.
+      let want = 3;
+      if (px > thFull && used0 < max0) want = 0;
+      else if (px > thMid && used1 < max1) want = 1;
+
+      if (want === 0) {
+        const edge = thFull * 1.16;
+        if (px < edge && used1 < max1) {
+          const f = clamp((edge - px) / Math.max(thFull * 0.16, 1e-3), 0, 1);
+          emit(0, 1 - f); emit(1, f);
+          used0++; used1++;
+        } else {
+          emit(0, 1); used0++;
+        }
+      } else if (want === 1) {
+        const edge = thMid * 1.22;
+        if (px < edge) {
+          const f = clamp((edge - px) / Math.max(thMid * 0.22, 1e-3), 0, 1);
+          emit(1, 1 - f);
+          emit(3, f);
+          used1++;
+        } else {
+          emit(1, 1); used1++;
+        }
+      } else {
+        const fadeOut = 1 - smoothstep(rMax * 0.94, rMax, dist);
+        emit(3, fadeOut);
+      }
+      total++;
     }
 
     // upload

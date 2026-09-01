@@ -417,7 +417,7 @@ in vec3 vWorld; in vec3 vNormal; in vec2 vUv; in vec4 vExtra;
 in vec4 vCur; in vec4 vPrev; in float vFade; in float vFallen;
 void main(){
   if(vFade < 0.999){
-    float d = ign(gl_FragCoord.xy, uTime * 0.31);
+    float d = ign(gl_FragCoord.xy, 1.7);
     if(d > vFade) discard;
   }
   vec3 dp1 = dFdx(vWorld), dp2 = dFdy(vWorld);
@@ -554,7 +554,7 @@ in vec3 vWorld; in vec3 vNormal; in vec2 vUv; in vec4 vExtra;
 in vec4 vCur; in vec4 vPrev; in float vFade; in float vFallen;
 void main(){
   if(vFade < 0.999){
-    float d = ign(gl_FragCoord.xy, uTime * 0.31 + 3.1);
+    float d = ign(gl_FragCoord.xy, 3.1);
     if(d > vFade) discard;
   }
   // a stem on the ground keeps some crown, but not a standing leaf wall
@@ -576,7 +576,7 @@ void main(){
   // stochastic coverage: after temporal accumulation this resolves to a smooth
   // edge without needing sorted transparency
   float thr = mix(0.006, 0.05, clamp(lodPx * 8.0, 0.0, 1.0));
-  if(cov < thr * (0.35 + 0.9 * ign(gl_FragCoord.xy, uTime * 0.7))) discard;
+  if(cov < thr * (0.35 + 0.9 * ign(gl_FragCoord.xy, 2.3))) discard;
 
   vec4 mapv = mapSample(vWorld.xz);
   float wet = clamp(uWeather.w * 0.9, 0.0, 1.0);
@@ -649,13 +649,12 @@ vec3 place(float t){
   vec3 base = vec3(iPosScale.x, gy, iPosScale.z);
   float h = uTreeHeight * iPosScale.w;
   float w = h * uCrown.x * 0.62;
-  // face the camera about the vertical axis, so a single card always reads
   vec3 toCam = uCamPos - base; toCam.y = 0.0;
   float l = length(toCam);
   vec3 f = l > 1e-4 ? toCam / l : vec3(0.0, 0.0, 1.0);
-  vec3 r = normalize(vec3(-f.z, 0.0, f.x));
-  // the second card is rotated 90 degrees so the crown has depth
-  if(position.z > 0.5) r = f;
+  vec3 r0 = normalize(vec3(-f.z, 0.0, f.x));
+  float ang = position.z * 2.0943951;
+  vec3 r = normalize(r0 * cos(ang) + f * sin(ang));
   float amt = length(vec2(iRot.z, iRot.w));
   vec3 up = vec3(0.0, 1.0, 0.0);
   if(amt > 0.001){
@@ -681,9 +680,10 @@ void main(){
   vec3 toCam = uCamPos - base; toCam.y = 0.0;
   float l = length(toCam);
   vec3 f = l > 1e-4 ? toCam / l : vec3(0.0, 0.0, 1.0);
-  vRight = normalize(vec3(-f.z, 0.0, f.x));
-  vCardN = position.z > 0.5 ? vRight : f;
-  if(position.z > 0.5) vRight = f;
+  vec3 r0v = normalize(vec3(-f.z, 0.0, f.x));
+  float angV = position.z * 2.0943951;
+  vRight = normalize(r0v * cos(angV) + f * sin(angV));
+  vCardN = normalize(cross(vec3(0.0, 1.0, 0.0), vRight));
   vCur = uViewProj * vec4(world, 1.0);
   vPrev = uPrevViewProj * vec4(prev, 1.0);
   gl_Position = ${opts.shadow ? 'projectionMatrix * (viewMatrix * vec4(world, 1.0))' : 'vCur'};
@@ -764,7 +764,7 @@ float crownMask(vec2 uv, float seed, out float depth, out float clump){
   } else {
     // four large irregular clumps. rr stays big so a 30 px tree still
     // shows a scalloped outline instead of a pill.
-    const int LOBES = 4;
+    const int LOBES = 6;
     for(int i = 0; i < LOBES; i++){
       float fi = float(i);
       vec3 h = hash33(vec3(seed * 37.1, fi * 1.7, 3.13));
@@ -850,7 +850,7 @@ in vec3 vWorld; in vec2 vUv; in vec4 vCur; in vec4 vPrev;
 in float vFade; in float vSeed; in vec3 vCardN; in vec3 vRight; in float vTreeH;
 void main(){
   if(vFade < 0.999){
-    float d = ign(gl_FragCoord.xy, uTime * 0.29 + 7.7);
+    float d = ign(gl_FragCoord.xy, 7.7);
     if(d > vFade) discard;
   }
   float depth, clump;
@@ -859,7 +859,7 @@ void main(){
   float trunk = 1.0 - smoothstep(trunkW, trunkW * 2.6, abs(vUv.x - 0.5));
   trunk *= 1.0 - smoothstep(0.28, 0.50, vUv.y);
   float cov = max(m, trunk * 0.92);
-  if(cov < 0.30 + 0.10 * ign(gl_FragCoord.xy, uTime)) discard;
+  if(cov < 0.18) discard;
 
   vec3 up = vec3(0.0, 1.0, 0.0);
   // spherical crown normal so the billboard shades like a volume

@@ -16,8 +16,11 @@ npm run build      # static, self-contained bundle in dist/
 ```
 
 Optional URL parameters: `?q=tiny|low|play|medium|high|ultra` to force a quality
-tier (`play` is the default — a close grove, dense at your feet, cheap past
-~70 m). `?look=prado|brejo|mata|clareira|cinema|rochoso` picks a named forest.
+tier (`play` is the default). Trees stay visible to the horizon: mesh LOD is
+chosen by on-screen size so distant stems are cards, not holes or lego cones.
+`?look=prado|brejo|mata|clareira|cinema|rochoso` picks a named forest.
+`?gfx=fluid|balanced|pretty|max` and `?far=full|blur` set the graphics tier
+and whether the background is sharp or depth-of-field.
 `?trees=`, `?grass=`, `?water=`, `?hi=1` override individual sliders. The game
 boots in **high sun** with the weather timeline off — rain and storms only start
 if you pick them (`N`/`B`, the editor, `?act=N`, or `?timeline=1`). `?cine=1`
