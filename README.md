@@ -1,9 +1,13 @@
-# Sylva — a fully procedural cinematic forest in the browser
+# Sylva — editor de floresta cinematográfica
 
 A real-time forest built with Three.js and WebGL2 in which **nothing is loaded**.
 There are no textures, meshes, HDRIs, videos or authored materials anywhere in the
 project. Every surface, every tree, every blade of grass, the sky, the clouds and
 the weather are generated from mathematics at runtime.
+
+The default session is a **forest editor**: sliders for trees, grass, water,
+undergrowth, light and the grade, plus named looks (bosque, prado, brejo, mata,
+clareira, cinema, rochoso). Share a look with the URL the editor writes.
 
 ```bash
 npm install
@@ -13,9 +17,11 @@ npm run build      # static, self-contained bundle in dist/
 
 Optional URL parameters: `?q=tiny|low|play|medium|high|ultra` to force a quality
 tier (`play` is the default — a close grove, dense at your feet, cheap past
-~70 m). The game boots in **high sun** with the weather timeline off — rain and
-storms only start if you pick them (`N`/`B`, the panel, `?act=N`, or
-`?timeline=1`). `?cine=1` turns the cinematic camera back on. The renderer is
+~70 m). `?look=prado|brejo|mata|clareira|cinema|rochoso` picks a named forest.
+`?trees=`, `?grass=`, `?water=`, `?hi=1` override individual sliders. The game
+boots in **high sun** with the weather timeline off — rain and storms only start
+if you pick them (`N`/`B`, the editor, `?act=N`, or `?timeline=1`). `?cine=1`
+turns the cinematic camera on. `?panel=0` hides the editor. The renderer is
 WebGL2; if the browser also exposes WebGPU that is used only as a capability
 hint when picking a default tier.
 
@@ -23,7 +29,7 @@ hint when picking a default tier.
 
 | key | action |
 | --- | --- |
-| `H` | quality / atmosphere / grade panel |
+| `H` | show / hide the forest editor |
 | `C` | toggle the cinematic camera |
 | `N` / `B` | next / previous weather (off until you press them) |
 | `G` | walk mode (camera follows the ground) |

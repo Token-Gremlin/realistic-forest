@@ -7,6 +7,7 @@ import { Controls } from './core/Controls.js';
 import { Weather, ACTS } from './director/Weather.js';
 import { CameraDirector } from './director/CameraDirector.js';
 import { buildPanel } from './ui/panel.js';
+import { ForestStudio } from './editor/ForestStudio.js';
 
 const bootEl = document.getElementById('boot');
 const bootBar = document.getElementById('boot-bar');
@@ -151,15 +152,22 @@ async function start() {
     for (const s of forest.systems) s.onLightning?.(pos, power, close, dist);
   });
 
+  const studio = new ForestStudio({
+    pipeline, weather, director, forest, quality, state: null, renderer, camera, controls,
+  }, params);
+  // state is created next; patched in below so apply() can read hiRes / autoFocus
   const state = {
     running: true,
     freeCam: false,
-    showPanel: false,
+    showPanel: params.get('q') !== 'tiny' && params.get('panel') !== '0',
     autoQuality: true,
     fpsTarget: 50,
     exposureAuto: true,
     autoFocus: true,
+    hiRes: false,
   };
+  studio.ctx.state = state;
+  studio.load();
 
   window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight, false);
@@ -168,10 +176,26 @@ async function start() {
     pipeline.setSize(window.innerWidth, window.innerHeight, renderer.getPixelRatio());
   });
 
+  const panelEl = document.getElementById('panel');
+  const toggleEl = document.getElementById('editor-toggle');
+  const syncPanel = () => {
+    panelEl.classList.toggle('hidden', !state.showPanel);
+    toggleEl.classList.toggle('open', state.showPanel);
+    toggleEl.textContent = state.showPanel ? 'Fechar' : 'Editor';
+  };
+  if (params.get('q') === 'tiny' || params.get('panel') === '0') {
+    toggleEl.style.display = 'none';
+  }
+  syncPanel();
+  toggleEl.addEventListener('click', () => {
+    state.showPanel = !state.showPanel;
+    syncPanel();
+  });
+
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyH') {
       state.showPanel = !state.showPanel;
-      document.getElementById('panel').classList.toggle('hidden', !state.showPanel);
+      syncPanel();
     }
     if (e.code === 'KeyC') {
       director.enabled = !director.enabled;
@@ -184,7 +208,7 @@ async function start() {
     if (e.code === 'KeyF') { pipeline.settings.dof = !pipeline.settings.dof; }
   });
 
-  buildPanel(document.getElementById('panel'), { pipeline, weather, director, forest, quality, state, renderer });
+  buildPanel(panelEl, { pipeline, weather, director, forest, quality, state, renderer, camera, studio });
 
   /* --------------------------------------------------------------- main loop */
   const clock = new THREE.Clock();
@@ -321,8 +345,9 @@ async function start() {
       <span class="k">wind</span> ${weather.state.wind.toFixed(1)} <span class="k">rain</span> ${weather.state.rain.toFixed(2)} <span class="k">storm</span> ${weather.state.storm.toFixed(2)} <span class="k">drops</span> ${forest.rain?.stats.drops ?? 0} <span class="k">debris</span> ${forest.debris?.stats.debris ?? 0} <span class="k">fall</span> ${forest.falling?.stats.falling ?? 0} <span class="k">down</span> ${forest.trees?.stats.fallen ?? 0}<br/>
       <span class="k">life</span> i${forest.life?.stats.insects ?? 0} f${forest.life?.stats.fireflies ?? 0} b${forest.life?.stats.birds ?? 0} l${forest.life?.stats.leaves ?? 0} <span class="k">fire</span> ${((forest.fire?.stats.strength ?? 0) * 100) | 0}% e${forest.fire?.stats.embers ?? 0}<br/>
       <span class="k">draws</span> ${info.calls} <span class="k">tris</span> ${(info.triangles / 1e6).toFixed(2)}M <span class="k">patches</span> ${forest.stats.patches} <span class="k">·</span> webgl2${navigator.gpu ? '+webgpu' : ''}<br/>
-      <span class="k">${director.enabled ? `shot: ${director.shot}` : 'walk (WASD, mouse) · weather stays fair until you change it'}</span><br/>
-      <span class="k">H panel · C cine · N/B weather · G walk · F dof · P pause</span>
+      <span class="k">árvores</span> ${forest.trees?.stats.trees ?? 0} <span class="k">chão</span> ${forest.clutter?.stats.instances ?? 0} <span class="k">água</span> ${forest.water?.stats.cells ?? 0}<br/>
+      <span class="k">${director.enabled ? `shot: ${director.shot}` : 'walk (WASD, mouse) · editor à direita'}</span><br/>
+      <span class="k">H editor · C cine · N/B clima · G walk · F dof · P pause</span>
     `;
   };
 
@@ -358,7 +383,7 @@ async function start() {
     };
   };
 
-  window.__forest = { forest, pipeline, weather, director, camera, renderer, controls, state, drawOnce };
+  window.__forest = { forest, pipeline, weather, director, camera, renderer, controls, state, studio, drawOnce };
   frame();
 }
 

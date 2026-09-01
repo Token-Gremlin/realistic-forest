@@ -22,6 +22,7 @@
 export const GLSL_TERRAIN = /* glsl */ `
 uniform vec2 uTerrainSeed;
 uniform vec4 uTerrainParams;  // x = macro amplitude, y = macro freq, z = detail amp, w = valley depth
+uniform vec4 uHydro;          // x water fill (m), y basin scale, z channel loosen, w reserved
 
 // ---------------------------------------------------------------- eroded fbm
 float erodedFbm(vec2 p, int oct, float feedback, out vec2 grad){
@@ -105,10 +106,16 @@ BasinInfo basinInfo(vec2 wp){
   float m = 1.0 - smoothstep(radius * 0.30, radius, best);
   if(m <= 0.001) return b;
   m = m * m * (3.0 - 2.0 * m);
-  b.depthMax = (1.05 + 2.9 * fract(bestId * 57.31)) * (0.45 + 0.55 * along);
+  b.depthMax = (1.05 + 2.9 * fract(bestId * 57.31)) * (0.45 + 0.55 * along) * max(uHydro.y, 0.0);
   b.depth = b.depthMax * m;
-  b.mask = m;
+  b.mask = m * step(0.02, uHydro.y);
   return b;
+}
+
+/** Channel occupancy. uHydro.z lowers the gate so more of the network floods. */
+float channelCut(vec2 cr){
+  float gate = 0.615 - uHydro.z;
+  return smoothstep(gate, gate + 0.350, cr.x);
 }
 
 // ----------------------------------------------------------------- fine relief
@@ -134,8 +141,8 @@ float terrainEval(vec2 wp, out float outSmooth, out vec4 outInfo){
   float steep = clamp(length(grad) * 0.052, 0.0, 1.0);
 
   vec2 cr = channelRaw(wp);
-  float cut   = smoothstep(0.615, 0.965, cr.x);
-  float notch = smoothstep(0.895, 0.995, cr.x);
+  float cut   = channelCut(cr);
+  float notch = smoothstep(0.895 - uHydro.z * 0.35, 0.995, cr.x);
   float valleyDepth = uTerrainParams.w * (0.28 + 0.72 * cr.y);
   float bedDepth    = 0.30 + 1.25 * cr.y;
 
@@ -163,11 +170,11 @@ float waterSurfaceAt(vec2 wp){
   vec2 grad;
   float macro = terrainMacroPre(wp, grad);
   vec2 cr = channelRaw(wp);
-  float cut = smoothstep(0.615, 0.965, cr.x);
+  float cut = channelCut(cr);
   float valleyDepth = uTerrainParams.w * (0.28 + 0.72 * cr.y);
   float bedDepth = 0.30 + 1.25 * cr.y;
   float water = (cut > 0.02)
-    ? macro - valleyDepth - bedDepth + (0.11 + 0.62 * cr.y)
+    ? macro - valleyDepth - bedDepth + (0.11 + 0.62 * cr.y) + uHydro.x
     : -1e9;
 
   BasinInfo b = basinInfo(wp);
@@ -175,7 +182,7 @@ float waterSurfaceAt(vec2 wp){
     vec2 g2;
     float macroSite = terrainMacroPre(b.site, g2);
     if(length(g2) < 13.0){
-      float level = macroSite - b.depthMax * 0.34;
+      float level = macroSite - b.depthMax * 0.34 + uHydro.x * 0.55;
       water = max(water, level);
     }
   }

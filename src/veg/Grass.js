@@ -187,6 +187,15 @@ export class Grass {
 
     this.stats = { blades: this.rings.reduce((a, r) => a + r.count * r.count, 0) };
     this.ringBudget = this.rings.length;
+    this.heightMul = 1;
+  }
+
+  /** Live density / blade height from the forest editor. Forces a re-seed. */
+  setLook(density, height) {
+    const gu = this.genPass.material.uniforms;
+    if (density != null) gu.uDensity.value = density;
+    if (height != null) this.heightMul = height;
+    for (const r of this.rings) r.origin.set(1e9, 1e9);
   }
 
   /** Hide outer rings when adaptive quality is cutting cost. */
@@ -419,7 +428,7 @@ void main(){
       gu.uOrigin.value.set(ox, oz);
       gu.uRingSpacing.value = r.spacing;
       gu.uCount.value = r.count;
-      gu.uHeightMul.value = 1;
+      gu.uHeightMul.value = this.heightMul ?? 1;
       this.genPass.render(renderer, r.dataRT);
     }
     renderer.setRenderTarget(prev);

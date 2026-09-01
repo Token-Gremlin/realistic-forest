@@ -43,6 +43,9 @@ export class WorldMaps {
     this.terrainUniforms = {
       uTerrainSeed: { value: new THREE.Vector2(opts.seedX ?? 13.77, opts.seedY ?? 91.31) },
       uTerrainParams: { value: new THREE.Vector4(opts.amp ?? 62, opts.freq ?? 0.00115, opts.detail ?? 1.0, opts.valley ?? 9.5) },
+      // x fill (m), y basin scale, z channel loosen. Default matches the
+      // original carve so existing stills stay put until the editor moves it.
+      uHydro: { value: new THREE.Vector4(0, 1, 0, 0) },
     };
 
     this._buildPasses();

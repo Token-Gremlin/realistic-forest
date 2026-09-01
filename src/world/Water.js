@@ -141,7 +141,9 @@ export class Water {
       // clear lake water: red dies first, blue travels, so the column reads cyan.
       uAbsorb: { value: new THREE.Vector3(0.40, 0.13, 0.062) },
       uScatter: { value: new THREE.Vector3(0.018, 0.038, 0.070) },
+      uFoam: { value: 1.0 },
     };
+    this.look = { tint: 0.42, foam: 1, waves: 1 };
 
     this.material = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
@@ -159,6 +161,27 @@ export class Water {
     this.waterMesh.matrixAutoUpdate = false;
     this.stats = { cells: 0 };
     this._causticHeld = false;
+  }
+
+  /** Live radius, tint (0 crystal .. 1 tea), foam and chop from the editor. */
+  setLook({ radius, tint, foam, waves } = {}) {
+    if (radius != null) this.radius = Math.max(16, radius);
+    if (foam != null) this.look.foam = foam;
+    if (waves != null) this.look.waves = waves;
+    if (tint != null) this._applyTint(tint);
+  }
+
+  _applyTint(t) {
+    this.look.tint = t;
+    const crystalA = [0.22, 0.08, 0.045], crystalS = [0.010, 0.022, 0.048];
+    const blueA = [0.40, 0.13, 0.062], blueS = [0.018, 0.038, 0.070];
+    const teaA = [0.62, 0.38, 0.28], teaS = [0.055, 0.042, 0.018];
+    const mix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+    const [A, S] = t < 0.5
+      ? [mix(crystalA, blueA, t / 0.5), mix(crystalS, blueS, t / 0.5)]
+      : [mix(blueA, teaA, (t - 0.5) / 0.5), mix(blueS, teaS, (t - 0.5) / 0.5)];
+    this.uniforms.uAbsorb.value.set(A[0], A[1], A[2]);
+    this.uniforms.uScatter.value.set(S[0], S[1], S[2]);
   }
 
   holdCaustics(x, y, z) {
@@ -229,6 +252,7 @@ uniform mat4 uViewProj;
 uniform vec2 uResolution;
 uniform vec3 uAbsorb;
 uniform vec3 uScatter;
+uniform float uFoam;
 layout(location = 0) out vec4 oColor;
 in vec3 vWorld;
 in vec4 vCur;
@@ -382,7 +406,7 @@ void main(){
   float lace = smoothstep(0.42, 0.80, foamNoise * 0.40 + foamNoise2 * 0.60);
   float foam = shore * 0.70 + riffle * 0.48 * streak + rainFoam;
   foam *= mix(0.06, 1.0, lace);
-  foam = clamp(foam, 0.0, 1.0);
+  foam = clamp(foam * uFoam, 0.0, 1.0);
   // a cool body tint so deep water reads as lake, not stained tea
   float body = smoothstep(0.12, 0.85, depth);
   col *= mix(vec3(1.0), vec3(0.80, 0.93, 1.08), body * 0.38);
@@ -493,10 +517,12 @@ void main(){
     this.stats.cells = n;
 
     const w = U.uWeather.value;
+    const waves = this.look.waves;
+    this.uniforms.uFoam.value = this.look.foam;
     this.uniforms.uWaterWave.value.set(
-      1.0,
-      0.26 + w.y * 0.55 + Math.min(U.uWind.value.z * 0.012, 0.35),
-      0.4 + w.y * 0.8,
+      1.0 * waves,
+      (0.26 + w.y * 0.55 + Math.min(U.uWind.value.z * 0.012, 0.35)) * waves,
+      (0.4 + w.y * 0.8) * waves,
       w.z,
     );
     if(!this._causticHeld) U.uCausticHold.value.w = 0;

@@ -41,6 +41,7 @@ export class Clutter {
     this.quality = quality;
     this.densityScale = quality.clutterDensity;
     this.distScale = clamp(quality.clutterRadius / 62, 0.4, 1.4);
+    this.mix = Object.create(null);
     this.meshes = [];
     this.shadowMeshes = [];
     this.chunks = new Map();
@@ -104,6 +105,27 @@ export class Clutter {
       this.kinds.push({ arch, variants, maxDist });
     }
     this.stats.kinds = this.kinds.length;
+  }
+
+  /** Live density, draw distance and per-kind mix from the forest editor. */
+  setLook({ density, distScale, mix } = {}) {
+    if (density != null) this.densityScale = clamp(density, 0.02, 2.4);
+    if (distScale != null) {
+      this.distScale = clamp(distScale, 0.35, 1.55);
+      this.radius = 0;
+      for (const k of this.kinds) {
+        k.maxDist = k.arch.maxDist * this.distScale;
+        this.radius = Math.max(this.radius, k.maxDist);
+      }
+    }
+    if (mix) Object.assign(this.mix, mix);
+    this.invalidate();
+  }
+
+  invalidate() {
+    this.chunks.clear();
+    this.pending.length = 0;
+    this._last.set(1e9, 1e9, 1e9);
   }
 
   _materialConfig(key, built) {
@@ -181,9 +203,10 @@ export class Clutter {
     const out = { byKind: ARCHETYPES.map(() => []), cx, cz };
     const rng = new Rng(hash2i(cx, cz) ^ 0x2c1b3c6d);
     // one lattice for all archetypes: total candidate density is the sum
-    const totalDensity = ARCHETYPES.reduce((a, k) => a + k.density, 0) * this.densityScale;
+    const mixOf = (key) => this.mix[key] ?? 1;
+    const totalDensity = ARCHETYPES.reduce((a, k) => a + k.density * mixOf(k.key), 0) * this.densityScale;
     const cell = 1 / Math.sqrt(Math.max(totalDensity, 1e-4));
-    const n = Math.max(1, Math.round(CHUNK / cell));
+    const n = Math.max(1, Math.min(56, Math.round(CHUNK / cell)));
     const step = CHUNK / n;
     const baseX = cx * CHUNK, baseZ = cz * CHUNK;
     const scores = new Float32Array(ARCHETYPES.length);
@@ -200,7 +223,7 @@ export class Clutter {
         let sum = 0;
         for (let k = 0; k < ARCHETYPES.length; k++) {
           const a = ARCHETYPES[k];
-          const s = Math.max(0, a.score(eco)) * a.density;
+          const s = Math.max(0, a.score(eco)) * a.density * mixOf(a.key);
           scores[k] = s;
           sum += s;
         }
@@ -250,7 +273,7 @@ export class Clutter {
         || key === 'twig' || key === 'flower' || key === 'herb' || key === 'rock'
         || key === 'lily') {
         nearIdx.push(k);
-        nearSum0 += ARCHETYPES[k].density;
+        nearSum0 += ARCHETYPES[k].density * mixOf(ARCHETYPES[k].key);
       }
     }
     const nearN = Math.max(8, Math.round(CHUNK / 1.05));
@@ -263,7 +286,7 @@ export class Clutter {
         if (!eco.inside) continue;
         let sum = 0;
         for (const k of nearIdx) {
-          const s = Math.max(0, ARCHETYPES[k].score(eco)) * ARCHETYPES[k].density;
+          const s = Math.max(0, ARCHETYPES[k].score(eco)) * ARCHETYPES[k].density * mixOf(ARCHETYPES[k].key);
           scores[k] = s;
           sum += s;
         }

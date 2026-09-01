@@ -74,6 +74,22 @@ export class Trees {
     this._wounds = new Map();
   }
 
+  /** Live density / streaming radius from the forest editor. */
+  setLook(densityMul, radius) {
+    const next = 0.105 * clamp(densityMul, 0.02, 2.4);
+    const r = clamp(radius ?? this.radius, 24, 200);
+    if (Math.abs(next - this.density) < 1e-4 && Math.abs(r - this.radius) < 0.25) return;
+    this.density = next;
+    this.radius = r;
+    this.invalidate();
+  }
+
+  invalidate() {
+    this.chunks.clear();
+    this.pending.length = 0;
+    this._lastRebuild.set(1e9, 1e9, 1e9);
+  }
+
   /* ------------------------------------------------------------- geometry */
 
   async build(progress) {
@@ -225,7 +241,7 @@ export class Trees {
     const eco = this._eco;
     const trees = [];
     const cellSize = 1 / Math.sqrt(Math.max(this.density, 1e-5));
-    const n = Math.max(1, Math.round(CHUNK / cellSize));
+    const n = Math.max(1, Math.min(40, Math.round(CHUNK / cellSize)));
     const step = CHUNK / n;
     const baseX = cx * CHUNK, baseZ = cz * CHUNK;
     const rng = new Rng(hash2i(cx, cz) ^ 0x5bf03635);

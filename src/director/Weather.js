@@ -62,6 +62,8 @@ export class Weather {
     this.strikeCallbacks = [];
     this.nightAmount = 0;
     this.time = 0;
+    this.sunMul = 1;
+    this.seasonLock = null;
   }
 
   get actName() { return ACTS[this.actIndex].name; }
@@ -194,7 +196,7 @@ export class Weather {
 
     const T = Sky.sunTransmittance(sunDir, 2);
     const above = clamp01((sunDir.y + 0.045) / 0.14);
-    const sunScale = 3.85 * above * lerp(1, 0.52, clamp01(s.cover * 0.85));
+    const sunScale = 3.85 * above * lerp(1, 0.52, clamp01(s.cover * 0.85)) * this.sunMul;
     U.uSunColor.value.set(T[0] * sunScale, T[1] * sunScale, T[2] * sunScale);
 
     // moon opposes the sun with a tilt; phase from the timeline
@@ -216,7 +218,7 @@ export class Weather {
     // a late-day autumn hint so leaves turn and drop without a calendar
     const autumn = smooth(clamp01((s.dayT - 0.68) / 0.08))
       * (1 - smooth(clamp01((s.dayT - 0.82) / 0.08)));
-    U.uSeason.value = autumn * 0.62;
+    U.uSeason.value = this.seasonLock != null ? this.seasonLock : autumn * 0.62;
 
     U.uWeather.value.set(s.cover, s.storm, s.rain, s.wetness);
     U.uFog.value.set(s.fog, 0.045 + 0.02 * s.storm, s.mist, 0.10 + 0.55 * s.storm + 0.28 * s.rain);
