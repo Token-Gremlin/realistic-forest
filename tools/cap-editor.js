@@ -10,9 +10,13 @@ f.state.showPanel = true;
 const panel = document.getElementById('panel');
 const toggle = document.getElementById('editor-toggle');
 if (panel) panel.classList.remove('hidden');
+const top = document.getElementById('top-actions');
+if (top) {
+  top.classList.add('open');
+  top.style.display = '';
+}
 if (toggle) {
-  toggle.classList.add('open');
-  toggle.textContent = 'Fechar';
+  toggle.textContent = 'Close';
   toggle.style.display = '';
 }
 

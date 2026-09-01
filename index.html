@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <title>Sylva — Editor de floresta</title>
+    <title>Sylva — Forest editor</title>
     <style>
       :root {
         color-scheme: dark;
@@ -41,15 +41,29 @@
       #hud b { font-weight: 600; color: #cfe0b4; }
       #hud .k { color: var(--ui-dim); }
 
-      #editor-toggle {
+      #top-actions {
         position: fixed; right: 14px; top: 12px; z-index: 22;
+        display: flex; align-items: center; gap: 8px;
+      }
+      #top-actions.open { right: 354px; }
+      #lang-toggle {
+        display: flex; overflow: hidden;
+        border: 1px solid #ffffff22; border-radius: 999px;
+        background: #12180ecc; backdrop-filter: blur(10px);
+      }
+      #lang-toggle button {
+        font: inherit; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+        padding: 7px 10px; color: #9aa48a; background: transparent; border: 0; cursor: pointer;
+      }
+      #lang-toggle button:hover { color: #e8f0d4; }
+      #lang-toggle button.on { color: #eef6d8; background: #3d5a2a; }
+      #editor-toggle {
         font: inherit; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
         padding: 7px 12px; color: #e8f0d4;
         background: #12180ecc; border: 1px solid #ffffff22; border-radius: 999px;
         backdrop-filter: blur(10px); cursor: pointer;
       }
       #editor-toggle:hover { background: #1c2616; }
-      #editor-toggle.open { right: 354px; }
 
       #panel {
         position: fixed; right: 0; top: 0; z-index: 21;
@@ -112,7 +126,13 @@
     </div>
 
     <div id="hud"></div>
-    <button id="editor-toggle" type="button">Editor</button>
+    <div id="top-actions">
+      <div id="lang-toggle" title="Language" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="pt-BR" aria-pressed="false">PT-BR</button>
+      </div>
+      <button id="editor-toggle" type="button">Editor</button>
+    </div>
     <div id="panel"></div>
     <div id="err"></div>
 

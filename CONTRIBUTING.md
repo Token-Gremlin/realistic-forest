@@ -38,7 +38,8 @@ not beauty proofs.
 
 ## Language
 
-- In-app editor copy is Portuguese.
-- Code comments, commit messages and the primary README are English so the
-  project can be read worldwide.
+- In-app copy defaults to **English**. The EN / PT-BR pill in the top-right
+  switches the editor, HUD and document title. Preference is `?lang=` first,
+  then `localStorage` (`sylva.locale`).
+- Code comments, commit messages and the primary README stay English.
 - `README.pt-BR.md` is the Portuguese landing page.

@@ -7,7 +7,7 @@ Não há texturas, malhas, HDRIs nem materiais prontos no repositório. Terreno,
 árvores, grama, água, céu, nuvens e clima saem da matemática em runtime.
 
 Feito com [Three.js](https://threejs.org/) e **WebGL2**. A sessão padrão é um
-**editor de floresta** (interface em português), com looks nomeados, URL
+**editor de floresta em inglês**, com um botão EN / PT-BR, looks nomeados, URL
 partilhável e câmara andável.
 
 > O repositório no GitHub ainda é **privado**. Esta árvore já está pronta para
@@ -53,6 +53,7 @@ npm run preview    # servir o bundle
 | `?timeline=1` | liga a linha do tempo do clima |
 | `?cine=1` | começa em câmara cinematográfica |
 | `?panel=0` | esconde o editor |
+| `?lang=` | `en` (defeito) ou `pt-BR` — idioma da interface |
 | `?trees=` `?grass=` `?water=` `?hi=1` | overrides dos sliders |
 
 O boot é **sol alto**, linha do tempo desligada. Chuva e tempestade só entram

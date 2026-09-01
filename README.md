@@ -7,8 +7,8 @@ textures, meshes, HDRIs or authored materials in the repo. Terrain, trees, grass
 water, sky, clouds and weather are generated from mathematics at runtime.
 
 Built with [Three.js](https://threejs.org/) and **WebGL2**. The default session
-is a live forest editor (Portuguese UI) with named looks, shareable URLs and a
-walkable camera.
+is a live forest editor in **English**, with a one-click EN / PT-BR switch,
+named looks, shareable URLs and a walkable camera.
 
 > The GitHub repository is still **private**. This tree is ready to go public
 > when you flip the switch.
@@ -53,6 +53,7 @@ npm run preview    # serve the bundle
 | `?timeline=1` | enable the weather timeline |
 | `?cine=1` | start in cinematic camera |
 | `?panel=0` | hide the editor |
+| `?lang=` | `en` (default) or `pt-BR` — in-app language |
 | `?trees=` `?grass=` `?water=` `?hi=1` | slider overrides |
 
 The session boots in **high sun** with the weather timeline off. Rain and storms

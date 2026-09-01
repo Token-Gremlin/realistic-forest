@@ -5,8 +5,8 @@
 
 export const LOOKS = {
   bosque: {
-    label: 'Bosque',
-    hint: 'Clareira temperada, densa aos pés',
+    label: 'Grove',
+    hint: 'Temperate clearing, dense at your feet',
     trees: 0.94, treeRadius: 220, grass: 1.30, grassHeight: 1.00, clutter: 1.14,
     ferns: 1.00, flowers: 1.00, mushrooms: 1.00, sedges: 1.00, lilies: 1.00,
     moss: 1.10, logs: 1.00, rocks: 1.00,
@@ -18,8 +18,8 @@ export const LOOKS = {
     gfx: 'balanced', farMode: 'full',
   },
   prado: {
-    label: 'Prado',
-    hint: 'Poucas árvores, muito capim e flores',
+    label: 'Meadow',
+    hint: 'Few trees, lots of grass and flowers',
     trees: 0.28, treeRadius: 180, grass: 1.85, grassHeight: 1.18, clutter: 1.08,
     ferns: 0.30, flowers: 1.90, mushrooms: 0.35, sedges: 0.70, lilies: 0.35,
     moss: 0.45, logs: 0.30, rocks: 0.65,
@@ -31,8 +31,8 @@ export const LOOKS = {
     gfx: 'balanced', farMode: 'full',
   },
   brejo: {
-    label: 'Brejo',
-    hint: 'Riachos, juncos e lírios',
+    label: 'Wetland',
+    hint: 'Streams, sedges and lilies',
     trees: 0.48, treeRadius: 200, grass: 0.82, grassHeight: 1.22, clutter: 1.22,
     ferns: 1.20, flowers: 0.70, mushrooms: 0.80, sedges: 2.15, lilies: 2.20,
     moss: 1.45, logs: 0.85, rocks: 0.50,
@@ -44,8 +44,8 @@ export const LOOKS = {
     gfx: 'balanced', farMode: 'full',
   },
   mata: {
-    label: 'Mata',
-    hint: 'Dossel fechado, samambaias e musgo',
+    label: 'Woodland',
+    hint: 'Closed canopy, ferns and moss',
     trees: 1.55, treeRadius: 260, grass: 0.40, grassHeight: 0.82, clutter: 1.38,
     ferns: 1.90, flowers: 0.32, mushrooms: 1.70, sedges: 0.50, lilies: 0.18,
     moss: 1.85, logs: 1.50, rocks: 0.80,
@@ -57,8 +57,8 @@ export const LOOKS = {
     gfx: 'balanced', farMode: 'full',
   },
   clareira: {
-    label: 'Clareira',
-    hint: 'Aberta, iluminada, flores no chão',
+    label: 'Clearing',
+    hint: 'Open, sunlit, flowers on the floor',
     trees: 0.52, treeRadius: 200, grass: 1.48, grassHeight: 1.06, clutter: 1.12,
     ferns: 0.70, flowers: 1.60, mushrooms: 0.70, sedges: 0.80, lilies: 0.60,
     moss: 0.85, logs: 0.70, rocks: 0.90,
@@ -71,7 +71,7 @@ export const LOOKS = {
   },
   cinema: {
     label: 'Cinema',
-    hint: 'Hora dourada, profundidade de campo',
+    hint: 'Golden hour, depth of field',
     trees: 1.05, treeRadius: 240, grass: 1.16, grassHeight: 1.00, clutter: 1.22,
     ferns: 1.20, flowers: 0.90, mushrooms: 1.10, sedges: 1.00, lilies: 0.80,
     moss: 1.28, logs: 1.22, rocks: 1.00,
@@ -83,8 +83,8 @@ export const LOOKS = {
     gfx: 'pretty', farMode: 'blur',
   },
   rochoso: {
-    label: 'Rochoso',
-    hint: 'Pouca água, pedra e pinheiros',
+    label: 'Rocky',
+    hint: 'Little water, stone and pines',
     trees: 0.32, treeRadius: 190, grass: 0.46, grassHeight: 0.68, clutter: 0.92,
     ferns: 0.22, flowers: 0.28, mushrooms: 0.22, sedges: 0.18, lilies: 0.08,
     moss: 0.42, logs: 0.38, rocks: 2.20,
@@ -102,25 +102,25 @@ export const LOOK_ORDER = ['bosque', 'prado', 'brejo', 'mata', 'clareira', 'cine
 /** Graphics tiers. Higher ones keep meshes longer and cost frames. */
 export const GFX_PRESETS = {
   fluid: {
-    label: 'Fluido 60',
+    label: 'Fluid 60',
     scale: 0.76, vol: 8, ao: false,
     pxFull: 130, pxMid: 42, pxCard: 32,
     maxLod0: 22, maxLod1: 72, maxTrees: 480, maxClutter: 1400,
   },
   balanced: {
-    label: 'Equilibrado',
+    label: 'Balanced',
     scale: 0.86, vol: 10, ao: true,
     pxFull: 96, pxMid: 30, pxCard: 24,
     maxLod0: 36, maxLod1: 140, maxTrees: 720, maxClutter: 2200,
   },
   pretty: {
-    label: 'Belo',
+    label: 'Beautiful',
     scale: 0.90, vol: 14, ao: true,
     pxFull: 78, pxMid: 24, pxCard: 20,
     maxLod0: 48, maxLod1: 190, maxTrees: 880, maxClutter: 2600,
   },
   max: {
-    label: 'Máximo',
+    label: 'Maximum',
     scale: 0.98, vol: 20, ao: true,
     pxFull: 56, pxMid: 18, pxCard: 16,
     maxLod0: 68, maxLod1: 240, maxTrees: 1100, maxClutter: 3200,
@@ -130,16 +130,16 @@ export const GFX_PRESETS = {
 export const GFX_ORDER = ['fluid', 'balanced', 'pretty', 'max'];
 
 export const ACT_LABELS = [
-  'névoa do amanhecer',
-  'primeira luz',
-  'raios da manhã',
-  'sol alto',
-  'vento subindo',
-  'frente chegando',
-  'temporal',
-  'tempestade',
-  'abrindo',
-  'hora dourada',
-  'hora azul',
-  'noite',
+  'dawn mist',
+  'first light',
+  'morning shafts',
+  'high sun',
+  'wind rising',
+  'front arriving',
+  'downpour',
+  'severe storm',
+  'breaking up',
+  'golden hour',
+  'blue hour',
+  'night',
 ];

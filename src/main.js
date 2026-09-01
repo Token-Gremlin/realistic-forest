@@ -8,6 +8,7 @@ import { Weather, ACTS } from './director/Weather.js';
 import { CameraDirector } from './director/CameraDirector.js';
 import { buildPanel } from './ui/panel.js';
 import { ForestStudio } from './editor/ForestStudio.js';
+import { t, getLocale, setLocale, onLocale, applyDocumentLocale } from './ui/i18n.js';
 
 const bootEl = document.getElementById('boot');
 const bootBar = document.getElementById('boot-bar');
@@ -32,6 +33,7 @@ async function nextFrame() {
 }
 
 async function start() {
+  applyDocumentLocale();
   const canvas = document.getElementById('gl');
 
   const renderer = new THREE.WebGLRenderer({
@@ -71,7 +73,7 @@ async function start() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality.pixelRatio ?? 1.5));
   renderer.setSize(window.innerWidth, window.innerHeight, false);
 
-  boot(0.05, 'baking noise volumes');
+  boot(0.05, t('bootNoise'));
   await nextFrame();
 
   const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.08, quality.camFar ?? 520);
@@ -85,7 +87,7 @@ async function start() {
     return;
   }
 
-  boot(0.25, 'carving terrain and ecology');
+  boot(0.25, t('bootTerrain'));
   await nextFrame();
 
   const weather = new Weather();
@@ -104,7 +106,7 @@ async function start() {
   U.uCamPos.value.copy(camera.position);
   U.uCamPrevPos.value.copy(camera.position);
 
-  boot(0.45, 'growing vegetation');
+  boot(0.45, t('bootVeg'));
   await nextFrame();
 
   const { registerSystems } = await import('./veg/register.js');
@@ -115,7 +117,7 @@ async function start() {
     return;
   }
 
-  boot(0.9, 'compiling shaders');
+  boot(0.9, t('bootShaders'));
   await nextFrame();
 
   const pipeline = new RenderPipeline(renderer, forest, { scale: quality.renderScale });
@@ -178,18 +180,38 @@ async function start() {
 
   const panelEl = document.getElementById('panel');
   const toggleEl = document.getElementById('editor-toggle');
+  const topActions = document.getElementById('top-actions');
+  const langToggle = document.getElementById('lang-toggle');
+  const paintLangToggle = () => {
+    if (!langToggle) return;
+    langToggle.title = t('langTitle');
+    langToggle.setAttribute('aria-label', t('langTitle'));
+    for (const btn of langToggle.querySelectorAll('button')) {
+      const on = btn.dataset.lang === getLocale();
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  };
   const syncPanel = () => {
     panelEl.classList.toggle('hidden', !state.showPanel);
-    toggleEl.classList.toggle('open', state.showPanel);
-    toggleEl.textContent = state.showPanel ? 'Fechar' : 'Editor';
+    topActions?.classList.toggle('open', state.showPanel);
+    if (toggleEl) toggleEl.textContent = state.showPanel ? t('close') : t('editor');
   };
-  if (params.get('q') === 'tiny' || params.get('panel') === '0') {
-    toggleEl.style.display = 'none';
+  if (params.get('q') === 'tiny') {
+    if (topActions) topActions.style.display = 'none';
+  } else if (params.get('panel') === '0') {
+    if (toggleEl) toggleEl.style.display = 'none';
   }
+  paintLangToggle();
   syncPanel();
   toggleEl.addEventListener('click', () => {
     state.showPanel = !state.showPanel;
     syncPanel();
+  });
+  langToggle?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-lang]');
+    if (!btn) return;
+    setLocale(btn.dataset.lang);
   });
 
   window.addEventListener('keydown', (e) => {
@@ -348,18 +370,26 @@ async function start() {
 
   const writeHud = () => {
     const info = renderer.info.render;
+    const actLabel = t(`act.${weather.actIndex}`);
+    const farLabel = studio.values?.farMode === 'blur' ? t('hudFarBlur') : t('hudFarFull');
+    const camHint = director.enabled ? `${t('hudShot')}: ${director.shot}` : t('hudWalk');
     hudEl.innerHTML = `
       <b>${fps.toFixed(0)} fps</b> <span class="k">· ${quality.name}</span> <span class="k">· ${pipeline.width}×${pipeline.height} (${(pipeline.scale * 100) | 0}%)</span><br/>
-      <span class="k">act</span> ${weather.actName} <span class="k">· day</span> ${(weather.state.dayT * 24).toFixed(1)}h<br/>
+      <span class="k">${t('hudAct')}</span> ${actLabel} <span class="k">· ${t('hudDay')}</span> ${(weather.state.dayT * 24).toFixed(1)}h<br/>
       <span class="k">wind</span> ${weather.state.wind.toFixed(1)} <span class="k">rain</span> ${weather.state.rain.toFixed(2)} <span class="k">storm</span> ${weather.state.storm.toFixed(2)} <span class="k">drops</span> ${forest.rain?.stats.drops ?? 0} <span class="k">debris</span> ${forest.debris?.stats.debris ?? 0} <span class="k">fall</span> ${forest.falling?.stats.falling ?? 0} <span class="k">down</span> ${forest.trees?.stats.fallen ?? 0}<br/>
       <span class="k">life</span> i${forest.life?.stats.insects ?? 0} f${forest.life?.stats.fireflies ?? 0} b${forest.life?.stats.birds ?? 0} l${forest.life?.stats.leaves ?? 0} <span class="k">fire</span> ${((forest.fire?.stats.strength ?? 0) * 100) | 0}% e${forest.fire?.stats.embers ?? 0}<br/>
       <span class="k">draws</span> ${info.calls} <span class="k">tris</span> ${(info.triangles / 1e6).toFixed(2)}M <span class="k">patches</span> ${forest.stats.patches} <span class="k">·</span> webgl2${navigator.gpu ? '+webgpu' : ''}<br/>
-      <span class="k">árvores</span> ${forest.trees?.stats.trees ?? 0} <span class="k">lod</span> ${(forest.trees?.stats.lod ?? []).join('/')} <span class="k">visão</span> ${Math.round(forest.trees?.radius ?? 0)}m/${Math.round((forest.maps?.span ?? 0) * 0.46)}m <span class="k">${studio.values?.farMode === 'blur' ? 'fundo desfocado' : 'tudo nítido'}</span><br/>
-      <span class="k">chão</span> ${forest.clutter?.stats.instances ?? 0} <span class="k">água</span> ${forest.water?.stats.cells ?? 0}<br/>
-      <span class="k">${director.enabled ? `shot: ${director.shot}` : 'walk (WASD, mouse) · editor à direita'}</span><br/>
-      <span class="k">H editor · C cine · N/B clima · G walk · F dof · P pause</span>
+      <span class="k">${t('hudTrees')}</span> ${forest.trees?.stats.trees ?? 0} <span class="k">lod</span> ${(forest.trees?.stats.lod ?? []).join('/')} <span class="k">${t('hudView')}</span> ${Math.round(forest.trees?.radius ?? 0)}m/${Math.round((forest.maps?.span ?? 0) * 0.46)}m <span class="k">${farLabel}</span><br/>
+      <span class="k">${t('hudGround')}</span> ${forest.clutter?.stats.instances ?? 0} <span class="k">${t('hudWater')}</span> ${forest.water?.stats.cells ?? 0}<br/>
+      <span class="k">${camHint}</span><br/>
+      <span class="k">${t('hudKeys')}</span>
     `;
   };
+  onLocale(() => {
+    paintLangToggle();
+    syncPanel();
+    writeHud();
+  });
 
   const drawOnce = () => {
     camera.updateMatrixWorld(true);

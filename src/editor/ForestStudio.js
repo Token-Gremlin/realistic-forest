@@ -1,5 +1,6 @@
 import { LOOKS, GFX_PRESETS } from './looks.js';
 import { clamp } from '../core/rng.js';
+import { getLocale } from '../ui/i18n.js';
 
 const STORE_KEY = 'sylva.editor.v1';
 const HYDRO_KEYS = new Set(['water', 'ponds', 'valley']);
@@ -311,6 +312,8 @@ export class ForestStudio {
     if (this.values.cine) q.set('cine', '1');
     if (this.values.gfx && this.values.gfx !== 'balanced') q.set('gfx', this.values.gfx);
     if (this.values.farMode && this.values.farMode !== 'full') q.set('far', this.values.farMode);
+    const loc = getLocale();
+    if (loc && loc !== 'en') q.set('lang', loc);
     return q;
   }
 
