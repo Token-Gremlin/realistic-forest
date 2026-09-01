@@ -193,9 +193,18 @@ export class Grass {
   /** Live density / blade height from the forest editor. Forces a re-seed. */
   setLook(density, height) {
     const gu = this.genPass.material.uniforms;
-    if (density != null) gu.uDensity.value = density;
-    if (height != null) this.heightMul = height;
-    for (const r of this.rings) r.origin.set(1e9, 1e9);
+    let dirty = false;
+    if (density != null) {
+      const next = Math.max(0.05, Math.min(density, 1.55));
+      if (Math.abs(gu.uDensity.value - next) > 1e-4) { gu.uDensity.value = next; dirty = true; }
+    }
+    if (height != null) {
+      const next = Math.max(0.35, Math.min(height, 1.45));
+      if (Math.abs(this.heightMul - next) > 1e-4) { this.heightMul = next; dirty = true; }
+    }
+    if (dirty) {
+      for (const r of this.rings) r.origin.set(1e9, 1e9);
+    }
   }
 
   /** Hide outer rings when adaptive quality is cutting cost. */

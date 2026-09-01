@@ -52,6 +52,7 @@ export class Clutter {
     this._frame = 0;
     this.radius = 0;
     this.stats = { instances: 0, kinds: 0 };
+    this.maxInstances = 2200;
   }
 
   async build(progress) {
@@ -108,18 +109,32 @@ export class Clutter {
   }
 
   /** Live density, draw distance and per-kind mix from the forest editor. */
-  setLook({ density, distScale, mix } = {}) {
-    if (density != null) this.densityScale = clamp(density, 0.02, 2.4);
+  setLook({ density, distScale, mix, maxInstances } = {}) {
+    let dirty = false;
+    if (density != null) {
+      const next = clamp(density, 0.02, 1.5);
+      if (Math.abs(next - this.densityScale) > 1e-4) { this.densityScale = next; dirty = true; }
+    }
     if (distScale != null) {
-      this.distScale = clamp(distScale, 0.35, 1.55);
-      this.radius = 0;
-      for (const k of this.kinds) {
-        k.maxDist = k.arch.maxDist * this.distScale;
-        this.radius = Math.max(this.radius, k.maxDist);
+      const next = clamp(distScale, 0.35, 1.25);
+      if (Math.abs(next - this.distScale) > 1e-3) {
+        this.distScale = next;
+        this.radius = 0;
+        for (const k of this.kinds) {
+          k.maxDist = k.arch.maxDist * this.distScale;
+          this.radius = Math.max(this.radius, k.maxDist);
+        }
+        dirty = true;
       }
     }
-    if (mix) Object.assign(this.mix, mix);
-    this.invalidate();
+    if (maxInstances != null) this.maxInstances = maxInstances;
+    if (mix) {
+      for (const k of Object.keys(mix)) {
+        if (Math.abs((this.mix[k] ?? 1) - mix[k]) > 1e-3) dirty = true;
+      }
+      Object.assign(this.mix, mix);
+    }
+    if (dirty) this.invalidate();
   }
 
   invalidate() {
@@ -393,7 +408,7 @@ export class Clutter {
       this.pending = want;
     }
 
-    const budget = this.chunks.size === 0 ? 400 : 8;
+    const budget = this.chunks.size === 0 ? 16 : 5;
     let built = 0;
     while (this.pending.length && built < budget) {
       const c = this.pending.shift();
@@ -420,8 +435,15 @@ export class Clutter {
     const sphere = this._sphere ?? (this._sphere = new THREE.Sphere());
     const vals = new Float32Array(STRIDE);
     let total = 0;
+    const maxInst = this.maxInstances || 2200;
+    const chunkList = [...this.chunks.values()].sort((a, b) => {
+      const ax = a.cx * CHUNK + CHUNK * 0.5 - cam.x, az = a.cz * CHUNK + CHUNK * 0.5 - cam.z;
+      const bx = b.cx * CHUNK + CHUNK * 0.5 - cam.x, bz = b.cz * CHUNK + CHUNK * 0.5 - cam.z;
+      return (ax * ax + az * az) - (bx * bx + bz * bz);
+    });
 
-    for (const chunk of this.chunks.values()) {
+    for (const chunk of chunkList) {
+      if (total >= maxInst) break;
       // nearest point of the chunk box to the camera, in XZ
       const bx = chunk.cx * CHUNK, bz = chunk.cz * CHUNK;
       const nx = Math.max(bx, Math.min(cam.x, bx + CHUNK));
@@ -433,6 +455,7 @@ export class Clutter {
         if (!kind || chunkNear > kind.maxDist) continue;
         const maxD = kind.maxDist;
         for (const it of chunk.byKind[k]) {
+          if (total >= maxInst) break;
           const dx = it.x - cam.x, dz = it.z - cam.z;
           const dist = Math.sqrt(dx * dx + dz * dz);
           if (dist > maxD) continue;
@@ -449,6 +472,7 @@ export class Clutter {
           it.variant.bucket.push(vals);
           total++;
         }
+        if (total >= maxInst) break;
       }
     }
 

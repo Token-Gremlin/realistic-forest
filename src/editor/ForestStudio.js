@@ -1,4 +1,5 @@
 import { LOOKS, GFX_PRESETS } from './looks.js';
+import { clamp } from '../core/rng.js';
 
 const STORE_KEY = 'sylva.editor.v1';
 const HYDRO_KEYS = new Set(['water', 'ponds', 'valley']);
@@ -8,6 +9,11 @@ const NUM_KEYS = [
   'water', 'ponds', 'valley', 'waterRadius', 'waterTint', 'foam', 'waves',
   'sun', 'season', 'fov',
 ];
+const HEAVY_KEYS = new Set([
+  'trees', 'treeRadius', 'grass', 'grassHeight', 'clutter',
+  'ferns', 'flowers', 'mushrooms', 'sedges', 'lilies', 'moss', 'logs', 'rocks',
+  'water', 'ponds', 'valley', 'waterRadius',
+]);
 
 function cloneLook(name) {
   const src = LOOKS[name] ?? LOOKS.bosque;
@@ -28,7 +34,11 @@ export class ForestStudio {
     this._basePR = ctx.quality.pixelRatio ?? 1.35;
     this._hydroTimer = 0;
     this._persistTimer = 0;
+    this._heavyTimer = 0;
+    this._heavyPending = {};
     this._listeners = [];
+    this._lastGfx = '';
+    this._lastHi = null;
   }
 
   onChange(fn) { this._listeners.push(fn); }
@@ -77,6 +87,7 @@ export class ForestStudio {
 
   applyLook(name, opts = {}) {
     if (!LOOKS[name]) return;
+    this.flush();
     this.values = cloneLook(name);
     this.apply(this.values, { all: true, persist: true, ...opts });
   }
@@ -88,7 +99,30 @@ export class ForestStudio {
   patch(partial) {
     Object.assign(this.values, partial);
     if (!partial.look) this.values.look = this.values.look || 'bosque';
-    this.apply(partial, { persist: true });
+    if (this.silent) {
+      this.apply(partial, { persist: true });
+      return;
+    }
+    const cheap = {};
+    const heavy = {};
+    for (const k of Object.keys(partial)) {
+      if (HEAVY_KEYS.has(k)) heavy[k] = partial[k];
+      else cheap[k] = partial[k];
+    }
+    if (Object.keys(cheap).length) this.apply(cheap, { persist: true });
+    if (Object.keys(heavy).length) {
+      Object.assign(this._heavyPending, heavy);
+      clearTimeout(this._heavyTimer);
+      this._heavyTimer = setTimeout(() => this.flush(), 100);
+    }
+  }
+
+  /** Apply any queued slider work now. Captures and look changes call this. */
+  flush() {
+    clearTimeout(this._heavyTimer);
+    const pending = this._heavyPending;
+    this._heavyPending = {};
+    if (Object.keys(pending).length) this.apply(pending, { persist: true });
   }
 
   apply(partial, opts = {}) {
@@ -97,29 +131,33 @@ export class ForestStudio {
     const all = !!opts.all;
 
     if (all || 'trees' in partial || 'treeRadius' in partial || 'gfx' in partial || 'farMode' in partial) {
-      forest.trees?.setLook?.(v.trees, v.treeRadius);
       this._applyView(v);
     }
     if (all || 'grass' in partial || 'grassHeight' in partial) {
-      forest.grass?.setLook?.(v.grass, v.grassHeight);
+      forest.grass?.setLook?.(Math.min(v.grass, 1.55), Math.min(v.grassHeight, 1.45));
     }
     if (all || 'clutter' in partial || 'ferns' in partial || 'flowers' in partial
       || 'mushrooms' in partial || 'sedges' in partial || 'lilies' in partial
       || 'moss' in partial || 'logs' in partial || 'rocks' in partial) {
-      const distScale = (quality.clutterRadius / 62) * (0.72 + 0.28 * Math.min(v.clutter, 1.8));
+      const g = GFX_PRESETS[v.gfx] ?? GFX_PRESETS.balanced;
+      const distScale = (quality.clutterRadius / 62) * (0.72 + 0.28 * Math.min(v.clutter, 1.45));
       forest.clutter?.setLook?.({
-        density: v.clutter,
-        distScale,
+        density: Math.min(v.clutter, 1.45),
+        distScale: Math.min(distScale, 1.25),
+        maxInstances: g.maxClutter,
         mix: {
-          fern: v.ferns, flower: v.flowers, mushroom: v.mushrooms,
-          sedge: v.sedges, lily: v.lilies, moss: v.moss, log: v.logs, rock: v.rocks,
-          herb: 0.55 + 0.45 * v.flowers,
+          fern: Math.min(v.ferns, 1.7), flower: Math.min(v.flowers, 1.7),
+          mushroom: Math.min(v.mushrooms, 1.7),
+          sedge: Math.min(v.sedges, 1.7), lily: Math.min(v.lilies, 1.7),
+          moss: Math.min(v.moss, 1.7), log: Math.min(v.logs, 1.7), rock: Math.min(v.rocks, 1.7),
+          herb: 0.55 + 0.45 * Math.min(v.flowers, 1.7),
         },
       });
     }
     if (all || 'waterRadius' in partial || 'waterTint' in partial || 'foam' in partial || 'waves' in partial) {
+      const cover = (forest.maps?.span ?? 560) * 0.42;
       forest.water?.setLook?.({
-        radius: v.waterRadius,
+        radius: Math.min(v.waterRadius, cover),
         tint: v.waterTint,
         foam: v.foam,
         waves: v.waves,
@@ -181,28 +219,49 @@ export class ForestStudio {
     for (const fn of this._listeners) fn(v, partial);
   }
 
+  /**
+   * View distance never outruns the baked maps. Growing the window is allowed;
+   * stretching the last bake across a kilometre is what painted the black void.
+   */
   _applyView(v) {
     const { forest, camera, quality } = this.ctx;
     const g = GFX_PRESETS[v.gfx] ?? GFX_PRESETS.balanced;
+    const maps = forest.maps;
+    const wantR = clamp(v.treeRadius ?? 200, 40, 420);
+    const needSpan = Math.max(quality.mapSpan ?? 560, wantR * 2.12 + 48);
+    if (maps.setSpan?.(needSpan)) {
+      forest.ensureMaps(camera, true);
+    }
+    const cover = maps.span * 0.455;
+    const r = Math.min(wantR, cover);
+    forest.trees?.setLook?.(v.trees, r);
     forest.trees?.setPolicy?.({
-      radius: v.treeRadius,
+      radius: r,
       farMode: v.farMode || 'full',
       gfx: v.gfx || 'balanced',
       pxFull: g.pxFull,
       pxMid: g.pxMid,
+      pxCard: g.pxCard,
       maxLod0: g.maxLod0,
       maxLod1: g.maxLod1,
+      maxTrees: g.maxTrees,
     });
-    camera.far = Math.max(quality.camFar ?? 520, (v.treeRadius ?? 200) * 2.4 + 120);
+    const far = Math.min(
+      Math.max(r * 1.22 + 64, 280),
+      maps.span * 0.49,
+    );
+    camera.far = far;
     camera.updateProjectionMatrix();
   }
 
   _applyGfx(name) {
     const g = GFX_PRESETS[name] ?? GFX_PRESETS.balanced;
+    if (this._lastGfx === name && Math.abs(this.ctx.quality.renderScale - g.scale) < 1e-4) return;
+    this._lastGfx = name;
     const { pipeline, quality, state } = this.ctx;
     quality.renderScale = g.scale;
     this._baseScale = g.scale;
-    pipeline.setScale(g.scale);
+    if (Math.abs(pipeline.scale - g.scale) > 0.004) pipeline.setScale(g.scale);
     pipeline.settings.volumetricSteps = g.vol;
     quality.volumetricSteps = g.vol;
     pipeline.settings.ao = g.ao;
@@ -212,11 +271,13 @@ export class ForestStudio {
 
   _applyResolution(hi) {
     const { renderer, pipeline, quality, state } = this.ctx;
+    if (this._lastHi === hi) return;
+    this._lastHi = hi;
     state.hiRes = hi;
     if (hi) {
-      quality.renderScale = Math.min(1.12, Math.max(this._baseScale, 0.94));
+      quality.renderScale = Math.min(1.05, Math.max(this._baseScale, 0.92));
       pipeline.setScale(quality.renderScale);
-      const pr = Math.min(window.devicePixelRatio || 2, Math.max(this._basePR, 1.7));
+      const pr = Math.min(window.devicePixelRatio || 2, Math.max(this._basePR, 1.55));
       renderer.setPixelRatio(pr);
       pipeline.setSize(window.innerWidth, window.innerHeight, pr);
       pipeline.settings.sharpen = Math.max(pipeline.settings.sharpen, 0.30);
@@ -234,7 +295,7 @@ export class ForestStudio {
     this._hydroTimer = setTimeout(() => {
       const cam = this.ctx.camera;
       this.ctx.forest.ensureMaps(cam, true);
-    }, 140);
+    }, 220);
   }
 
   toQuery() {

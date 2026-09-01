@@ -371,9 +371,9 @@ void main(){
   vec3 nMap = groundNormalMap(wxz, uMapInfo.w * 1.5);
   vec3 N = normalize(mix(nGeo, nMap, ins * 0.92));
 
-  vec4 eco = ecoSample(wxz);
-  vec4 mapv = mapSample(wxz);
-  vec4 ao = aoSample(wxz);
+  vec4 eco = ecoSampleSafe(wxz);
+  vec4 mapv = mapSampleSafe(wxz, vWorld.y);
+  vec4 ao = aoSampleSafe(wxz);
 
   float lodPx = length(vec2(length(dFdx(wxz)), length(dFdy(wxz))));
   Ground g = groundSurface(vWorld, N, eco, mapv, ao, lodPx);
@@ -387,7 +387,7 @@ void main(){
   selectView(camera) {
     this._mvp.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this._frustum.setFromProjectionMatrix(this._mvp);
-    this._maxView = camera.far * 1.12;
+    this._maxView = Math.min(camera.far * 1.08, (this.maps?.span ?? 560) * 0.52);
     const cam = camera.position;
     const rootSize = MIN_PATCH * Math.pow(2, MAX_LEVEL);
     const ox = Math.floor(cam.x / rootSize) * rootSize;
@@ -451,7 +451,11 @@ void main(){
 
     const minLevel = this._minLevel ?? 0;
     const maxView = this._maxView ?? 1e6;
-    if (level > minLevel && dist < this.ranges[level - 1 + lodBias] && dist < maxView) {
+    const wantSplit = level > minLevel && dist < this.ranges[level - 1 + lodBias] && dist < maxView;
+    // Need spare slots for this node plus its siblings. Splitting with 4
+    // remaining slots lets a child eat the budget and drop a neighbour —
+    // that is the black hole in the middle of the frame.
+    if (wantSplit && (this.maxPatches - this._count) >= 8) {
       const h = size * 0.5;
       this._select(x, z, h, level - 1, cam, cull, lodBias);
       this._select(x + h, z, h, level - 1, cam, cull, lodBias);

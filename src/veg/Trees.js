@@ -26,7 +26,6 @@ const VARIANTS_PER_SPECIES = 2;
 // a triangle budget: full meshes run 6k–31k triangles, so the near band has to
 // stay small enough that only a few dozen trees are in it.
 const LOD_BOUNDS = [15, 38, 78];
-const BAND = 0.16;                     // cross-fade band as a fraction
 
 class Bucket {
   constructor(stride = 12) {
@@ -65,6 +64,8 @@ export class Trees {
     this.pxMid = 22;
     this.maxLod0 = 40;
     this.maxLod1 = 110;
+    this.pxCard = 24;
+    this.maxTrees = 720;
     this._pack = [];
     // stems per square metre before the ecology filter thins it; a temperate
     // mixed forest including saplings and shrubs sits around 0.10–0.25
@@ -85,8 +86,8 @@ export class Trees {
 
   /** Live density / streaming radius from the forest editor. */
   setLook(densityMul, radius) {
-    const next = 0.105 * clamp(densityMul, 0.02, 2.4);
-    const r = clamp(radius ?? this.radius, 40, 480);
+    const next = 0.105 * clamp(densityMul, 0.02, 1.65);
+    const r = clamp(radius ?? this.radius, 40, 420);
     if (Math.abs(next - this.density) < 1e-4 && Math.abs(r - this.radius) < 0.25) return;
     this.density = next;
     this.radius = r;
@@ -97,18 +98,20 @@ export class Trees {
    * View policy: how far trees stream, when meshes give way to cards, and
    * how many full / mid meshes we keep. Does not hide the horizon.
    */
-  setPolicy({ radius, farMode, gfx, pxFull, pxMid, maxLod0, maxLod1 } = {}) {
+  setPolicy({ radius, farMode, gfx, pxFull, pxMid, pxCard, maxLod0, maxLod1, maxTrees } = {}) {
     let dirty = false;
     if (radius != null) {
-      const r = clamp(radius, 40, 480);
+      const r = clamp(radius, 40, 420);
       if (Math.abs(r - this.radius) > 0.25) { this.radius = r; dirty = true; }
     }
     if (farMode != null && farMode !== this.farMode) { this.farMode = farMode; dirty = true; }
     if (gfx != null && gfx !== this.gfx) { this.gfx = gfx; dirty = true; }
     if (pxFull != null) this.pxFull = pxFull;
     if (pxMid != null) this.pxMid = pxMid;
+    if (pxCard != null) this.pxCard = pxCard;
     if (maxLod0 != null) this.maxLod0 = maxLod0;
     if (maxLod1 != null) this.maxLod1 = maxLod1;
+    if (maxTrees != null) this.maxTrees = maxTrees;
     if (dirty) {
       this.pending.length = 0;
       this._lastRebuild.set(1e9, 1e9, 1e9);
@@ -273,7 +276,10 @@ export class Trees {
     const eco = this._eco;
     const trees = [];
     const cellSize = 1 / Math.sqrt(Math.max(this.density, 1e-5));
-    const n = Math.max(1, Math.min(40, Math.round(CHUNK / cellSize)));
+    const chunksEst = Math.pow((2 * this.radius) / CHUNK + 2, 2);
+    const per = Math.max(6, (this.maxTrees ?? 720) * 1.45 / Math.max(chunksEst, 1));
+    const nCap = Math.max(2, Math.min(16, Math.round(Math.sqrt(per * 2.4))));
+    const n = Math.max(1, Math.min(nCap, Math.round(CHUNK / cellSize)));
     const step = CHUNK / n;
     const baseX = cx * CHUNK, baseZ = cz * CHUNK;
     const rng = new Rng(hash2i(cx, cz) ^ 0x5bf03635);
@@ -374,7 +380,7 @@ export class Trees {
       this.pending = want;
     }
 
-    const budget = this.chunks.size === 0 ? 512 : (this.pending.length > 24 ? 16 : 8);
+    const budget = this.chunks.size === 0 ? 20 : (this.pending.length > 24 ? 8 : 4);
     let built = 0;
     while (this.pending.length && built < budget) {
       const c = this.pending.shift();
@@ -499,8 +505,10 @@ export class Trees {
     const blurK = this.farMode === 'blur' ? 1.18 : 1;
     const thFull = this.pxFull * blurK * (1 + stress * 0.7);
     const thMid = this.pxMid * blurK * (1 + stress * 0.55);
+    const thCard = (this.pxCard ?? 24) * blurK * (1 + stress * 0.4);
     const max0 = this.maxLod0 | 0;
     const max1 = this.maxLod1 | 0;
+    const maxTrees = this.maxTrees | 0;
 
     const pack = this._pack;
     pack.length = 0;
@@ -531,6 +539,7 @@ export class Trees {
       }
     }
     pack.sort((a, b) => a._dist - b._dist);
+    if (maxTrees > 0 && pack.length > maxTrees) pack.length = maxTrees;
 
     let used0 = 0, used1 = 0;
     for (const t of pack) {
@@ -560,11 +569,13 @@ export class Trees {
         lodCounts[lod]++;
       };
 
-      // Never show the coarse (lego) mesh. Mid mesh until the tree is small
-      // on screen, then a card. Fade only in a thin pixel band.
+      // Never show the coarse (lego) mesh. Mid mesh while the tree is still
+      // large on screen and budget remains; cards fill the rest. The card
+      // shader has to read as a canopy at 80–150 px — skipping here opened
+      // holes in the stand.
       let want = 3;
       if (px > thFull && used0 < max0) want = 0;
-      else if (px > thMid && used1 < max1) want = 1;
+      else if ((px > thMid || px > thCard) && used1 < max1) want = 1;
 
       if (want === 0) {
         const edge = thFull * 1.16;

@@ -256,6 +256,7 @@ uniform sampler2D uAoTex;    // R sky visibility, G macro AO, B canopy shade, A 
 uniform vec4 uMapInfo;       // xy centre, z span, w 1/span
 
 vec2 mapUv(vec2 wp){ return (wp - uMapInfo.xy) * uMapInfo.w + 0.5; }
+vec2 mapUvSafe(vec2 wp){ return clamp(mapUv(wp), vec2(0.004), vec2(0.996)); }
 float mapInside(vec2 wp){
   vec2 uv = mapUv(wp);
   vec2 d = min(uv, 1.0 - uv);
@@ -264,7 +265,24 @@ float mapInside(vec2 wp){
 vec4 mapSample(vec2 wp){ return texture(uMapTex, mapUv(wp)); }
 vec4 ecoSample(vec2 wp){ return texture(uEcoTex, mapUv(wp)); }
 vec4 aoSample(vec2 wp){ return texture(uAoTex, mapUv(wp)); }
-float groundHeight(vec2 wp){ return texture(uMapTex, mapUv(wp)).r; }
+// Past the bake window ClampToEdge would stretch the rim forever — a lake on
+// the map edge became a black slab across the horizon. Safe taps fall back
+// to dry ground at the vertex height instead of repeating that rim.
+vec4 mapSampleSafe(vec2 wp, float groundY){
+  float ins = mapInside(wp);
+  vec4 m = texture(uMapTex, mapUvSafe(wp));
+  vec4 dry = vec4(groundY, groundY - 4.0, 0.0, 0.0);
+  return mix(dry, m, ins);
+}
+vec4 ecoSampleSafe(vec2 wp){
+  float ins = mapInside(wp);
+  return mix(vec4(0.42, 0.50, 0.10, 0.36), texture(uEcoTex, mapUvSafe(wp)), ins);
+}
+vec4 aoSampleSafe(vec2 wp){
+  float ins = mapInside(wp);
+  return mix(vec4(0.88, 0.82, 0.35, 0.18), texture(uAoTex, mapUvSafe(wp)), ins);
+}
+float groundHeight(vec2 wp){ return texture(uMapTex, mapUvSafe(wp)).r; }
 float mapWetness(vec2 wp){ return clamp(texture(uMapTex, mapUv(wp)).b, 0.0, 1.0); }
 float mapFlow(vec2 wp){ return clamp(texture(uMapTex, mapUv(wp)).a, 0.0, 1.0); }
 float mapWaterDepth(vec2 wp){ vec4 m = texture(uMapTex, mapUv(wp)); return m.g - m.r; }

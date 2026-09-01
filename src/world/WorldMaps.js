@@ -30,6 +30,7 @@ export class WorldMaps {
 
     this.center = new THREE.Vector2(1e9, 1e9);
     this.generation = 0;
+    this._pendingSpan = 0;
 
     const f32 = { type: THREE.FloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter };
     this.mapRT = makeRT(this.res, this.res, f32);
@@ -208,12 +209,28 @@ export class WorldMaps {
   }
 
   needsRebake(camX, camZ) {
+    if (this._pendingSpan) return true;
     const d = Math.max(Math.abs(camX - this.center.x), Math.abs(camZ - this.center.y));
     return d > this.span * 0.16;
   }
 
+  /**
+   * Grow or shrink the bake window. `uMapInfo` stays on the last baked span
+   * until `bake()` so shaders never sample a new window against an old texture.
+   */
+  setSpan(span) {
+    const next = Math.max(320, Math.min(920, span));
+    if (Math.abs(next - (this._pendingSpan || this.span)) < 8) return false;
+    this._pendingSpan = next;
+    return true;
+  }
+
   /** Re-bake all maps centred on the camera. Returns the new generation id. */
   bake(camX, camZ) {
+    if (this._pendingSpan) {
+      this.span = this._pendingSpan;
+      this._pendingSpan = 0;
+    }
     const texel = this.span / this.res;
     const cx = Math.round(camX / texel) * texel;
     const cz = Math.round(camZ / texel) * texel;

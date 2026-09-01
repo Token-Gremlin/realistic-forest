@@ -165,7 +165,7 @@ export class Water {
 
   /** Live radius, tint (0 crystal .. 1 tea), foam and chop from the editor. */
   setLook({ radius, tint, foam, waves } = {}) {
-    if (radius != null) this.radius = Math.max(16, radius);
+    if (radius != null) this.radius = Math.max(16, Math.min(radius, 160));
     if (foam != null) this.look.foam = foam;
     if (waves != null) this.look.waves = waves;
     if (tint != null) this._applyTint(tint);
@@ -293,6 +293,7 @@ void main(){
   if(gl_FragCoord.z > sceneDepth + 1.0e-7) discard;
 
   vec2 wxz = vWorld.xz;
+  if(mapInside(wxz) < 0.08) discard;
   vec4 m = mapSample(wxz);
   float surf = m.g;
   float ground = m.r;

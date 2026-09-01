@@ -648,7 +648,7 @@ vec3 place(float t){
   float gy = mix(iPosScale.y, groundHeight(iPosScale.xz), mapInside(iPosScale.xz));
   vec3 base = vec3(iPosScale.x, gy, iPosScale.z);
   float h = uTreeHeight * iPosScale.w;
-  float w = h * uCrown.x * 0.62;
+  float w = h * uCrown.x * 0.90;
   vec3 toCam = uCamPos - base; toCam.y = 0.0;
   float l = length(toCam);
   vec3 f = l > 1e-4 ? toCam / l : vec3(0.0, 0.0, 1.0);
@@ -697,21 +697,19 @@ uniform vec3 uLeafAutumnA; uniform vec3 uLeafAutumnB;
 uniform vec3 uBarkA; uniform vec3 uBarkB;
 uniform float uSeason;
 
-// Crown half-width profile as a function of height fraction.
+// Crown half-width. Broadleaf is a spreading mass, not a sine egg / cone.
 float crownProfile(float y, float conifer){
-  float broad = pow(max(sin(3.14159 * clamp((y - 0.20) / 0.82, 0.0, 1.0)), 0.0), 0.58);
-  broad *= 1.0 - 0.22 * smoothstep(0.86, 1.0, y);
-  float cone = clamp(1.0 - (y - 0.10) / 0.94, 0.0, 1.0);
-  cone = pow(cone, 0.78) * smoothstep(0.0, 0.10, y);
+  float broad = smoothstep(0.16, 0.34, y) * smoothstep(1.04, 0.74, y);
+  broad *= 0.78 + 0.22 * sin(y * 2.7);
+  float cone = clamp(1.0 - (y - 0.08) / 0.96, 0.0, 1.0);
+  cone = pow(cone, 0.88) * smoothstep(0.0, 0.08, y);
   return mix(broad, cone, conifer);
 }
 
 /**
- * Distant crown coverage. Fine fbm holes and seven small lobes die as
- * speckle or a cauliflower stamp at 528 px; this mask is built from a
- * few metre-scale clumps (broadleaf) or stacked triangular tiers
- * (conifer) plus one or two large sky gaps so a silhouette still reads
- * when the whole tree is thirty pixels tall.
+ * Distant crown. Built to hold up at 80–150 px (mid-stand cards), not only
+ * at a 30 px stamp. Broadleaf is overlapping clumps on a wide body; the
+ * old sine envelope turned every distant tree into a green cone.
  */
 float crownMask(vec2 uv, float seed, out float depth, out float clump){
   float y = uv.y;
@@ -726,7 +724,6 @@ float crownMask(vec2 uv, float seed, out float depth, out float clump){
   float m = 0.0;
 
   if(dead > 0.5){
-    // snag: a few broken limb nubs, no foliage mass
     for(int i = 0; i < 3; i++){
       float fi = float(i);
       vec3 h = hash33(vec3(seed * 19.0, fi + 2.4, 5.1));
@@ -741,20 +738,23 @@ float crownMask(vec2 uv, float seed, out float depth, out float clump){
   }
 
   if(conifer > 0.5){
-    // four stacked wedges: a pine/fir reads as steps, not a cone blob
-    for(int i = 0; i < 4; i++){
+    // ragged tiers: hemline noise so a pine is not a filled cone
+    for(int i = 0; i < 5; i++){
       float fi = float(i);
       vec3 h = hash33(vec3(seed * 11.0, fi * 2.9, 1.7));
-      float y0 = mix(0.16, 0.78, fi / 3.0) + (h.x - 0.5) * 0.05;
-      float y1 = y0 + mix(0.20, 0.30, h.y);
-      if(y < y0 - 0.02 || y > y1 + 0.02) continue;
+      float y0 = mix(0.12, 0.74, fi / 4.0) + (h.x - 0.5) * 0.04;
+      float y1 = y0 + mix(0.16, 0.26, h.y);
+      if(y < y0 - 0.03 || y > y1 + 0.03) continue;
       float t = clamp((y - y0) / max(y1 - y0, 1e-3), 0.0, 1.0);
-      float halfW = mix(1.05, 0.12, t) * mix(0.95, 0.38, fi / 3.5);
-      halfW *= (0.82 + 0.28 * h.z) * (1.0 + 0.16 * sin(y * 14.0 + seed * 9.0 + fi));
-      float cx = (h.y - 0.5) * 0.18;
+      float halfW = mix(1.08, 0.18, t) * mix(1.00, 0.42, fi / 4.5);
+      halfW *= (0.78 + 0.34 * h.z);
+      float hem = 0.16 * sin((x) * 13.0 + seed * 6.0 + fi * 2.1)
+                + 0.08 * sin(y * 22.0 - fi * 3.0 + seed * 4.0);
+      float cx = (h.y - 0.5) * 0.16;
       float wx = abs(x - cx) / max(halfW, 1e-3);
-      float hem = 0.10 * sin((x - cx) * 11.0 + seed * 6.0 + fi * 2.1);
-      float lm = (1.0 - smoothstep(0.78 + hem, 1.08 + hem, wx)) * smoothstep(-0.03, 0.06, y - y0) * smoothstep(y1 + 0.03, y1 - 0.04, y);
+      float lm = (1.0 - smoothstep(0.70 + hem, 1.12 + hem, wx))
+               * smoothstep(-0.04, 0.07, y - y0)
+               * smoothstep(y1 + 0.04, y1 - 0.05, y);
       if(lm > m){
         m = lm;
         clump = fract(h.x * 5.1 + fi * 0.27);
@@ -762,25 +762,28 @@ float crownMask(vec2 uv, float seed, out float depth, out float clump){
       }
     }
   } else {
-    // four large irregular clumps. rr stays big so a 30 px tree still
-    // shows a scalloped outline instead of a pill.
-    const int LOBES = 6;
+    // wide body so a 100 px card is a canopy mass, not a pill
+    float body = smoothstep(0.20, 0.36, y) * smoothstep(1.01, 0.70, y);
+    float wob = 0.14 * sin(y * 16.0 + seed * 9.0) + 0.08 * sin(y * 29.0 - seed * 4.0);
+    body *= smoothstep(1.18, 0.52, abs(x) + wob);
+    m = max(m, body * 0.88);
+    depth = body * 0.35;
+    const int LOBES = 8;
     for(int i = 0; i < LOBES; i++){
       float fi = float(i);
       vec3 h = hash33(vec3(seed * 37.1, fi * 1.7, 3.13));
-      float cy = mix(0.36, 0.90, mix(h.x, 0.35 + 0.65 * h.x, 0.55));
-      float pr = crownProfile(cy, 0.0);
-      if(pr <= 0.02) continue;
-      float cx = (h.y * 2.0 - 1.0) * pr * 0.62;
-      float rr = mix(0.36, 0.62, h.z) * (0.55 + 0.70 * pr);
-      vec2 d = vec2(x - cx, (y - cy) * 1.15);
+      float cy = mix(0.30, 0.94, mix(h.x, 0.28 + 0.72 * h.x, 0.55));
+      float pr = max(crownProfile(cy, 0.0), 0.35);
+      float cx = (h.y * 2.0 - 1.0) * pr * 0.78;
+      float rr = mix(0.28, 0.58, h.z) * (0.70 + 0.55 * pr);
+      vec2 d = vec2(x - cx, (y - cy) * 1.05);
       float dd = length(d) / max(rr, 1e-3);
-      if(dd > 1.85) continue;
+      if(dd > 1.9) continue;
       float ang = atan(d.y, d.x);
-      float wob = 1.0
-        + 0.28 * sin(ang * 3.0 + seed * 17.0 + fi * 2.3)
-        + 0.14 * sin(ang * 5.0 - fi * 1.7 + seed * 9.0);
-      float lm = smoothstep(wob, wob * 0.42, dd);
+      float scallop = 1.0
+        + 0.32 * sin(ang * 3.0 + seed * 17.0 + fi * 2.3)
+        + 0.16 * sin(ang * 5.0 - fi * 1.7 + seed * 9.0);
+      float lm = smoothstep(scallop, scallop * 0.38, dd);
       if(lm > m){
         m = lm;
         clump = fract(h.x * 7.31 + fi * 0.37);
@@ -790,21 +793,17 @@ float crownMask(vec2 uv, float seed, out float depth, out float clump){
   }
   if(m <= 0.001) return 0.0;
 
-  // one or two large sky gaps, not a hashed field of pinholes
+  // one soft sky gap, kept large so it reads at 30 px without speckling
   vec3 g0 = hash33(vec3(seed * 13.0, 4.2, 8.1));
-  vec2 hole0 = vec2((g0.x - 0.5) * 1.15, mix(0.42, 0.82, g0.y));
-  float hr0 = mix(0.16, 0.28, g0.z);
-  m *= 1.0 - 0.72 * smoothstep(hr0, hr0 * 0.35, length(vec2(x, (y - hole0.y) * 1.2) - vec2(hole0.x, 0.0)));
-  if(fract(seed * 3.7) > 0.42){
-    vec3 g1 = hash33(vec3(seed * 21.0, 9.4, 2.6));
-    vec2 hole1 = vec2((g1.x - 0.5) * 1.05, mix(0.48, 0.86, g1.y));
-    float hr1 = mix(0.12, 0.22, g1.z);
-    m *= 1.0 - 0.58 * smoothstep(hr1, hr1 * 0.30, length(vec2(x - hole1.x, (y - hole1.y) * 1.15)));
-  }
+  vec2 hole0 = vec2((g0.x - 0.5) * 0.95, mix(0.48, 0.84, g0.y));
+  float hr0 = mix(0.12, 0.22, g0.z);
+  m *= 1.0 - 0.48 * smoothstep(hr0, hr0 * 0.30, length(vec2(x - hole0.x, (y - hole0.y) * 1.15)));
 
-  // soft falloff outside the species profile so a pine stays a cone
-  float envelope = smoothstep(1.35, 0.72, abs(x) / max(prof, 1e-3));
-  m *= mix(0.15, 1.0, envelope);
+  // conifer only: keep a taper. Broadleaf must not inherit a cone envelope.
+  if(conifer > 0.5){
+    float envelope = smoothstep(1.45, 0.62, abs(x) / max(prof, 1e-3));
+    m *= mix(0.20, 1.0, envelope);
+  }
   return m;
 }
 `;

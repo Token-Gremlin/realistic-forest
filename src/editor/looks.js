@@ -103,19 +103,27 @@ export const LOOK_ORDER = ['bosque', 'prado', 'brejo', 'mata', 'clareira', 'cine
 export const GFX_PRESETS = {
   fluid: {
     label: 'Fluido 60',
-    scale: 0.78, vol: 8, ao: false, pxFull: 120, pxMid: 36, maxLod0: 28, maxLod1: 72,
+    scale: 0.76, vol: 8, ao: false,
+    pxFull: 130, pxMid: 42, pxCard: 32,
+    maxLod0: 22, maxLod1: 72, maxTrees: 480, maxClutter: 1400,
   },
   balanced: {
     label: 'Equilibrado',
-    scale: 0.88, vol: 12, ao: true, pxFull: 88, pxMid: 22, maxLod0: 42, maxLod1: 120,
+    scale: 0.86, vol: 10, ao: true,
+    pxFull: 96, pxMid: 30, pxCard: 24,
+    maxLod0: 36, maxLod1: 140, maxTrees: 720, maxClutter: 2200,
   },
   pretty: {
     label: 'Belo',
-    scale: 0.96, vol: 18, ao: true, pxFull: 68, pxMid: 16, maxLod0: 56, maxLod1: 160,
+    scale: 0.90, vol: 14, ao: true,
+    pxFull: 78, pxMid: 24, pxCard: 20,
+    maxLod0: 48, maxLod1: 190, maxTrees: 880, maxClutter: 2600,
   },
   max: {
     label: 'Máximo',
-    scale: 1.05, vol: 26, ao: true, pxFull: 48, pxMid: 11, maxLod0: 84, maxLod1: 240,
+    scale: 0.98, vol: 20, ao: true,
+    pxFull: 56, pxMid: 18, pxCard: 16,
+    maxLod0: 68, maxLod1: 240, maxTrees: 1100, maxClutter: 3200,
   },
 };
 

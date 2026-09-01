@@ -105,7 +105,7 @@ export function buildPanel(root, ctx) {
   }
   const gfxHint = document.createElement('div');
   gfxHint.className = 'hint';
-  gfxHint.textContent = 'Fluido 60 prioriza fotogramas. Belo e Máximo mantêm malhas mais longe e podem baixar os fps. Árvores no horizonte nunca desaparecem — só perdem detalhe quando são pequenas no ecrã.';
+  gfxHint.textContent = 'Fluido 60 prioriza fotogramas. A distância de visão não passa do chão que o motor consegue desenhar — além disso aparecia um buraco preto. Árvores ao longe viram copas, não cones, e o editor limita a densidade para não cair a 7 fps.';
   vision.append(gfxHint);
 
   const detail = section(root, 'chão e detalhes', true);
