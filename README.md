@@ -19,6 +19,25 @@ By [Token Gremlin](https://x.com/TokenGremlin) · [Português](README.pt-BR.md) 
 
 ![Sylva](docs/hero.svg)
 
+## Gallery
+
+<table>
+  <tr>
+    <td width="33.33%"><img src="docs/screenshots/frame_00.png" alt="Sylva procedural forest — default high-sun scene"></td>
+    <td width="33.33%"><img src="docs/screenshots/frame_04.png" alt="Sylva procedural forest — atmospheric weather scene"></td>
+    <td width="33.33%"><img src="docs/screenshots/frame_08.png" alt="Sylva procedural forest — late weather timeline scene"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Procedural forest</sub></td>
+    <td align="center"><sub>Weather study</sub></td>
+    <td align="center"><sub>Atmosphere study</sub></td>
+  </tr>
+</table>
+
+These frames are captured automatically from the **real production renderer**
+during the demo workflow. They are not concept art or hand-authored scene
+assets.
+
 ## Features
 
 - **Fully procedural** — the repository has no binary art. Everything is GLSL
