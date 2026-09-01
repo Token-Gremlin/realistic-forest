@@ -56,7 +56,7 @@ vec3 rippleNormal(vec2 p, vec2 flow, float flowMag, float depth, float lodPx){
   vec2 fdir = flowMag > 1e-4 ? flow / flowMag : vec2(0.0, 1.0);
   float amp = uWaterWave.y * mix(0.35, 1.0, smoothstep(0.0, 0.45, depth));
   // Still ponds used to keep 22% of the chop and read as a painted slab.
-  amp *= mix(0.58, 1.0, smoothstep(0.05, 0.42, flowMag));
+  amp *= mix(0.78, 1.0, smoothstep(0.05, 0.42, flowMag));
   float det = clamp(1.0 - lodPx * 6.0, 0.0, 1.0);
 
   vec2 q1 = p * (0.85 * uWaterWave.x) - fdir * t * (0.35 + flowMag * 1.6);
@@ -91,7 +91,7 @@ float rippleHeight(vec2 p, vec2 flow, float flowMag, float depth){
   // centimetre chop dies at 528 px. Riffle-scale displacement is what
   // still reads as a surface when the camera sits on the bank.
   float amp = uWaterWave.y * mix(0.20, 0.58, smoothstep(0.0, 0.42, depth));
-  amp *= mix(0.50, 1.0, smoothstep(0.05, 0.42, flowMag));
+  amp *= mix(0.78, 1.0, smoothstep(0.05, 0.42, flowMag));
   vec2 q1 = p * (0.85 * uWaterWave.x) - fdir * t * (0.35 + flowMag * 1.6);
   vec2 q2 = p * (2.30 * uWaterWave.x) - fdir * t * (0.62 + flowMag * 2.9) + 11.0;
   float h = (noised(q1).x * 2.0 - 1.0) * 0.64 + (noised(q2).x * 2.0 - 1.0) * 0.30;
@@ -218,9 +218,11 @@ void main(){
   float fl = length(flow);
   flow = fl > 1e-4 ? flow / fl : vec2(0.0, 1.0);
   float dist = length(vec3(wp.x, surf, wp.y) - uCamPos);
-  float fade = 1.0 - smoothstep(72.0, 210.0, dist);
-  float near = 1.0 - smoothstep(4.0, 18.0, dist);
-  float chop = rippleHeight(wp, flow, clamp(m.a, 0.0, 1.0), depth) * (fade + near * 0.62);
+  float fade = 1.0 - smoothstep(110.0, 280.0, dist);
+  float near = 1.0 - smoothstep(4.0, 22.0, dist);
+  float stillBoost = 1.0 + (1.0 - smoothstep(0.04, 0.28, clamp(m.a, 0.0, 1.0))) * 0.35;
+  float chop = rippleHeight(wp, flow, clamp(m.a, 0.0, 1.0), depth)
+             * (fade + near * 0.70) * stillBoost;
   // Dry verts stay on the bank. Sinking them 0.35 m made black wedges
   // along the waterline on the close still.
   float y = depth > 0.0 ? max(surf + chop, ground + 0.01) : ground + 0.02;
@@ -266,13 +268,13 @@ vec3 sceneAt(vec2 uv){ return texture(uSceneColor, uv).rgb; }
 
 /** Screen-space reflection with a sky-probe fallback. */
 vec3 reflection(vec3 p, vec3 R, vec3 skyFallback, float rough){
-  float stepLen = 0.22;
-  vec3 q = p + R * 0.08;
+  float stepLen = 0.16;
+  vec3 q = p + R * 0.06;
   vec3 hit = skyFallback;
   float hitW = 0.0;
-  for(int i = 0; i < 24; i++){
+  for(int i = 0; i < 32; i++){
     q += R * stepLen;
-    stepLen *= 1.26;
+    stepLen *= 1.22;
     vec4 c = uViewProj * vec4(q, 1.0);
     if(c.w <= 0.0) break;
     vec2 uv = (c.xy / c.w) * 0.5 + 0.5;
@@ -288,10 +290,10 @@ vec3 reflection(vec3 p, vec3 R, vec3 skyFallback, float rough){
       return mix(skyFallback, sceneAt(uv), edge * 0.94);
     }
   }
-  // Planar hint toward the opposite bank when the march misses. Without
+  // Planar hints toward the opposite bank when the march misses. Without
   // this a still pond is only sky + a painted column.
-  vec3 Rp = normalize(vec3(R.x, abs(R.y) + 0.12, R.z));
-  vec4 pc = uViewProj * vec4(p + Rp * 7.5, 1.0);
+  vec3 Rp = normalize(vec3(R.x, abs(R.y) + 0.10, R.z));
+  vec4 pc = uViewProj * vec4(p + Rp * 5.5, 1.0);
   if(pc.w > 0.0){
     vec2 uv = (pc.xy / pc.w) * 0.5 + 0.5;
     if(all(greaterThan(uv, vec2(0.02))) && all(lessThan(uv, vec2(0.98)))){
@@ -299,8 +301,23 @@ vec3 reflection(vec3 p, vec3 R, vec3 skyFallback, float rough){
       if(d < 0.9995){
         vec2 e = min(uv, 1.0 - uv);
         float edge = smoothstep(0.0, 0.10, min(e.x, e.y));
-        hit = mix(skyFallback, sceneAt(uv), edge * 0.48);
+        hit = mix(skyFallback, sceneAt(uv), edge * 0.70);
         hitW = 1.0;
+      }
+    }
+  }
+  if(hitW < 0.5){
+    pc = uViewProj * vec4(p + Rp * 14.0, 1.0);
+    if(pc.w > 0.0){
+      vec2 uv = (pc.xy / pc.w) * 0.5 + 0.5;
+      if(all(greaterThan(uv, vec2(0.02))) && all(lessThan(uv, vec2(0.98)))){
+        float d = texture(uSceneDepth, uv).r;
+        if(d < 0.9995){
+          vec2 e = min(uv, 1.0 - uv);
+          float edge = smoothstep(0.0, 0.10, min(e.x, e.y));
+          hit = mix(skyFallback, sceneAt(uv), edge * 0.62);
+          hitW = 1.0;
+        }
       }
     }
   }
@@ -320,6 +337,7 @@ void main(){
   float ground = m.r;
   float depth = surf - ground;
   if(depth <= 0.006) discard;
+  float body = smoothstep(0.12, 0.85, depth);
 
   float flowMag = clamp(m.a, 0.0, 1.0);
   // flow follows the downhill gradient of the water surface
@@ -362,13 +380,24 @@ void main(){
   if(bedDepthTex < 0.999999 && length(bedPos - uCamPos) < viewDist - 0.05){
     ruv = uv;
     refrOff = vec2(0.0);
-    bedPos = worldFromDepth(uv, texture(uSceneDepth, uv).r, uInvViewProj);
+    bedDepthTex = texture(uSceneDepth, uv).r;
+    bedPos = worldFromDepth(uv, bedDepthTex, uInvViewProj);
   }
   // a little lateral chromatic split so the column reads as a thick medium
   vec3 bed;
   bed.r = sceneAt(clamp(uv + refrOff * 1.14, vec2(0.002), vec2(0.998))).r;
   bed.g = sceneAt(ruv).g;
   bed.b = sceneAt(clamp(uv + refrOff * 0.86, vec2(0.002), vec2(0.998))).b;
+  // Empty / sky refraction is the black hole and the glowing slab: the
+  // pond then shows the clear colour or the sky instead of a lake bed.
+  float bedSky = step(0.9994, bedDepthTex);
+  float bedAbove = step(surf + 0.20, bedPos.y);
+  float noBed = max(bedSky, bedAbove);
+  vec3 siltBed = vec3(0.052, 0.078, 0.070);
+  vec3 deepBed = vec3(0.028, 0.068, 0.108);
+  vec3 mapFloor = mix(siltBed, deepBed, body);
+  mapFloor *= 0.55 + 0.70 * luma(skyIrradiance(vec3(0.0, 1.0, 0.0)));
+  bed = mix(bed, mapFloor, noBed);
 
   // ---- path length through the water for absorption
   float cosV = max(dot(N, V), 0.08);
@@ -402,14 +431,13 @@ void main(){
   fres = mix(fres, clamp(fres * 1.35, 0.0, 0.88), clamp(flowMag * 0.45, 0.0, 1.0));
   float still = 1.0 - smoothstep(0.06, 0.40, flowMag);
   // Grazing water has to take the sky. The old 0.26–0.36 cap painted
-  // every pond as a flat glowing slab.
+  // every pond as a flat glowing slab. A missing bed must not take the
+  // sky either — that is the other glowing plate.
   fres = clamp(fres, 0.045, 0.86);
+  fres = mix(fres, fres * 0.52, noBed * still);
 
-  // body is the deep-column mask. It must exist before the lake floor
-  // lift — a later declaration left the shader uncompiled and the pond black.
-  float body = smoothstep(0.12, 0.85, depth);
   // Lift only a crushed bed. A hard cyan floor flattened the column.
-  vec3 lake = vec3(0.038, 0.092, 0.145) * (0.62 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 1.35);
+  vec3 lake = vec3(0.048, 0.110, 0.168) * (0.70 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 1.15);
   lake += uSunColor * max(uSunDir.y, 0.0) * vec3(0.03, 0.06, 0.10);
   float bedL = luma(bedLit);
   bedLit = mix(bedLit, max(bedLit, lake * mix(0.36, 0.78, body)), smoothstep(0.055, 0.016, bedL));

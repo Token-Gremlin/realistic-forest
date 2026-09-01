@@ -43,7 +43,7 @@ export const PRESETS = {
     treeDensity: 0.94, treeRadius: 300, treeDetail: 1,
     lodBounds: [22, 70, 140],
     clutterDensity: 1.14, clutterRadius: 16,
-    waterRadius: 140, waterGrid: 22, waterCells: 160,
+    waterRadius: 160, waterGrid: 22, waterCells: 200,
     rainParticles: 9000,
     camFar: 640,
     pixelRatio: 1.35,

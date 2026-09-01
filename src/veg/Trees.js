@@ -131,7 +131,7 @@ export class Trees {
   }
 
   /** Generate a ring past the draw radius so walking finds ready trees. */
-  _streamRadius() { return this.radius + CHUNK * 1.7; }
+  _streamRadius() { return this.radius + CHUNK * 2.2; }
 
   _chunkCenter(cx, cz) { return { x: (cx + 0.5) * CHUNK, z: (cz + 0.5) * CHUNK }; }
 
@@ -388,8 +388,8 @@ export class Trees {
 
         // Closed canopy is dense; open hills still get a silhouette stand so
         // the far field is a forest, not a bare limbo that fills when you walk.
-        let p = 0.50 + eco.canopy * 0.90;
-        p = Math.max(p, 0.42 * (1 - eco.rock * 0.85));
+        let p = 0.54 + eco.canopy * 0.82;
+        p = Math.max(p, 0.48 * (1 - eco.rock * 0.85));
         p *= 1 - smoothstep(0.62, 0.96, eco.rock) * 0.55;
         p *= 1 - smoothstep(0.58, 0.96, eco.slope) * 0.45;
         p *= 1 - smoothstep(0.0, 0.6, eco.waterDepth + 0.6) * 0.85;
@@ -452,12 +452,19 @@ export class Trees {
 
     if (this.pending.length === 0) this._enqueueMissing(cam);
 
-    const budget = this.chunks.size === 0 ? 48 : (this.pending.length > 16 ? 14 : 6);
+    const budget = this.chunks.size === 0 ? 48 : (this.pending.length > 12 ? 20 : 10);
     let built = 0;
     while (this.pending.length && built < budget) {
       const c = this.pending.shift();
       if (!this.chunks.has(c.key)) {
-        this.chunks.set(c.key, this._generateChunk(c.cx, c.cz));
+        const list = this._generateChunk(c.cx, c.cz);
+        // Prefetch that is already inside the view disk must be fully
+        // visible. Fading those in is the "stems appear after you walk".
+        const cc = this._chunkCenter(c.cx, c.cz);
+        if (Math.hypot(cc.x - cam.x, cc.z - cam.z) < this.radius + CHUNK * 0.6) {
+          for (const t of list) t._appear = 1;
+        }
+        this.chunks.set(c.key, list);
         built++;
       }
     }
@@ -691,12 +698,12 @@ export class Trees {
       total++;
     }
 
-    // Horizon silhouette: a visible far sector that is thin gets a few
-    // extra cards so the hill does not read as a hole. View-only — not
-    // stored in chunks — so walking into the ring meets the real stand.
+    // Horizon silhouette: a visible far sector that is thin gets extra
+    // cards on two rings so the hill is a stand, not a hole. View-only —
+    // not stored in chunks — so walking into the ring meets the real trees.
     let horizonFill = 0;
     {
-      const SECTORS = 32;
+      const SECTORS = 36;
       const counts = new Array(SECTORS).fill(0);
       const sectorOf = (x, z) => {
         const a = Math.atan2(z - cam.z, x - cam.x);
@@ -711,25 +718,23 @@ export class Trees {
       const nx = fx / flen, nz = fz / flen;
       const eco = this._eco;
       const maps = this.maps;
-      const want = 7;
-      const fillerCap = 96;
-      for (let s = 0; s < SECTORS; s++) {
-        const mid = -Math.PI + (s + 0.5) / SECTORS * Math.PI * 2;
-        const dx = Math.cos(mid), dz = Math.sin(mid);
-        if (dx * nx + dz * nz < 0.12) continue;
-        const need = want - counts[s];
-        if (need <= 0) continue;
-        for (let k = 0; k < need && horizonFill < fillerCap; k++) {
-          const a = -Math.PI + (s + 0.22 + k * 0.28) / SECTORS * Math.PI * 2;
-          const dist = rMax * (0.76 + 0.14 * ((k * 17 + s * 3) % 5) / 4);
-          const x = cam.x + Math.cos(a) * dist;
-          const z = cam.z + Math.sin(a) * dist;
+      const want = 10;
+      const fillerCap = 140;
+      const ox = [0, 9, -8, 5, -6];
+      const oz = [0, 4, 6, -8, -5];
+      const placeFiller = (s, k, distScale) => {
+        if (horizonFill >= fillerCap) return false;
+        const a = -Math.PI + (s + 0.16 + k * 0.21) / SECTORS * Math.PI * 2;
+        const dist = rMax * distScale;
+        for (let t = 0; t < ox.length; t++) {
+          const x = cam.x + Math.cos(a) * dist + ox[t];
+          const z = cam.z + Math.sin(a) * dist + oz[t];
           if (maps.covers && !maps.covers(x, z)) continue;
           maps.sample(x, z, eco);
           if (!eco.inside) continue;
           if (eco.waterDepth > -0.02) continue;
           if (eco.slope > 0.70) continue;
-          const rnd = (hash2i(s + 19, k + 7) >>> 0) / 4294967296;
+          const rnd = (hash2i(s + 19, k + 7 + t * 13) >>> 0) / 4294967296;
           const key = pickSpecies(eco, rnd);
           let vi = 0;
           for (let i = 0; i < this.variants.length; i++) {
@@ -739,15 +744,32 @@ export class Trees {
           if (!variant?.billboard) continue;
           const gy = maps.height(x, z);
           vals[0] = x; vals[1] = gy; vals[2] = z;
-          vals[3] = 1.14 + rnd * 0.26;
+          vals[3] = 1.10 + rnd * 0.28;
           vals[4] = 1; vals[5] = 0;
           vals[6] = 0; vals[7] = 0;
           vals[8] = rnd; vals[9] = 0.42 + rnd * 0.22; vals[10] = rnd;
-          vals[11] = 0.90;
+          vals[11] = 0.88;
           variant.billboard.bucket.push(vals);
           lodCounts[3]++;
           total++;
           horizonFill++;
+          return true;
+        }
+        return false;
+      };
+      for (let s = 0; s < SECTORS; s++) {
+        const midA = -Math.PI + (s + 0.5) / SECTORS * Math.PI * 2;
+        const dx = Math.cos(midA), dz = Math.sin(midA);
+        if (dx * nx + dz * nz < 0.02) continue;
+        const need = want - counts[s];
+        if (need <= 0) continue;
+        for (let k = 0; k < need && horizonFill < fillerCap; k++) {
+          const far = 0.78 + 0.14 * ((k * 17 + s * 3) % 5) / 4;
+          placeFiller(s, k, far);
+          if ((k & 1) === 0) {
+            const mid = 0.56 + 0.12 * ((k * 11 + s * 5) % 5) / 4;
+            placeFiller(s, k + 17, mid);
+          }
         }
       }
     }
