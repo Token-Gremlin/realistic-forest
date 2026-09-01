@@ -1,9 +1,27 @@
 {
-  "name": "procedural-forest",
+  "name": "sylva",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Fully procedural cinematic forest rendered in the browser with Three.js + WebGL2. No external assets.",
+  "license": "MIT",
+  "author": "Davi Dias",
+  "description": "Fully procedural cinematic forest in the browser. Three.js + WebGL2. No external assets.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Token-Gremlin/realistic-forest.git"
+  },
+  "homepage": "https://github.com/Token-Gremlin/realistic-forest",
+  "bugs": {
+    "url": "https://github.com/Token-Gremlin/realistic-forest/issues"
+  },
+  "keywords": [
+    "procedural",
+    "forest",
+    "three.js",
+    "webgl2",
+    "cinematic",
+    "editor"
+  ],
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
     "build": "vite build",
