@@ -40,4 +40,5 @@ return {
   waterCells: f.forest.water?.stats.cells ?? 0,
   generatedBands: bands,
   walkAheadTrees: walkAhead,
+  horizonFill: f.forest.trees?.stats.horizonFill ?? 0,
 };

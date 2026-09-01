@@ -55,7 +55,8 @@ vec3 rippleNormal(vec2 p, vec2 flow, float flowMag, float depth, float lodPx){
   float t = uTime;
   vec2 fdir = flowMag > 1e-4 ? flow / flowMag : vec2(0.0, 1.0);
   float amp = uWaterWave.y * mix(0.35, 1.0, smoothstep(0.0, 0.45, depth));
-  amp *= mix(0.22, 1.0, smoothstep(0.05, 0.42, flowMag));
+  // Still ponds used to keep 22% of the chop and read as a painted slab.
+  amp *= mix(0.58, 1.0, smoothstep(0.05, 0.42, flowMag));
   float det = clamp(1.0 - lodPx * 6.0, 0.0, 1.0);
 
   vec2 q1 = p * (0.85 * uWaterWave.x) - fdir * t * (0.35 + flowMag * 1.6);
@@ -89,8 +90,8 @@ float rippleHeight(vec2 p, vec2 flow, float flowMag, float depth){
   vec2 fdir = flowMag > 1e-4 ? flow / flowMag : vec2(0.0, 1.0);
   // centimetre chop dies at 528 px. Riffle-scale displacement is what
   // still reads as a surface when the camera sits on the bank.
-  float amp = uWaterWave.y * mix(0.14, 0.52, smoothstep(0.0, 0.42, depth));
-  amp *= mix(0.16, 1.0, smoothstep(0.05, 0.42, flowMag));
+  float amp = uWaterWave.y * mix(0.20, 0.58, smoothstep(0.0, 0.42, depth));
+  amp *= mix(0.50, 1.0, smoothstep(0.05, 0.42, flowMag));
   vec2 q1 = p * (0.85 * uWaterWave.x) - fdir * t * (0.35 + flowMag * 1.6);
   vec2 q2 = p * (2.30 * uWaterWave.x) - fdir * t * (0.62 + flowMag * 2.9) + 11.0;
   float h = (noised(q1).x * 2.0 - 1.0) * 0.64 + (noised(q2).x * 2.0 - 1.0) * 0.30;
@@ -216,7 +217,7 @@ void main(){
   vec2 flow = uWind.xy;
   float fl = length(flow);
   flow = fl > 1e-4 ? flow / fl : vec2(0.0, 1.0);
-  float fade = 1.0 - smoothstep(48.0, 168.0, length(vec3(wp.x, surf, wp.y) - uCamPos));
+  float fade = 1.0 - smoothstep(72.0, 210.0, length(vec3(wp.x, surf, wp.y) - uCamPos));
   float chop = rippleHeight(wp, flow, clamp(m.a, 0.0, 1.0), depth) * fade;
   // Dry verts stay on the bank. Sinking them 0.35 m made black wedges
   // along the waterline on the close still.
@@ -309,7 +310,7 @@ void main(){
   float sU = texture(uMapTex, mapUv(wxz + vec2(0.0, uMapInfo.z * e))).g;
   vec2 flow = vec2(sL - sR, sD - sU);
   float fl = length(flow);
-  flow = fl > 1e-6 ? flow / fl : vec2(0.0);
+  flow = fl > 1e-6 ? flow / fl : normalize(uWind.xy + vec2(0.0, 0.18));
   flowMag = clamp(flowMag * 0.55 + fl * 22.0, 0.0, 1.4);
 
   float lodPx = length(vec2(length(dFdx(wxz)), length(dFdy(wxz))));
@@ -365,7 +366,7 @@ void main(){
   vec3 skyRef = skyRadiance(R, 0.03);
   vec3 refl = reflection(vWorld, R, skyRef, 0.03);
 
-  float f0 = 0.02;
+  float f0 = 0.045;
   float fres = f0 + (1.0 - f0) * pow(1.0 - cosV, 5.0);
   fres = mix(fres, clamp(fres * 1.35, 0.0, 0.88), clamp(flowMag * 0.45, 0.0, 1.0));
   float still = 1.0 - smoothstep(0.06, 0.40, flowMag);
@@ -383,6 +384,8 @@ void main(){
   bedLit = mix(bedLit, max(bedLit, lake * mix(0.36, 0.78, body)), smoothstep(0.055, 0.016, bedL));
   vec3 col = mix(bedLit + inScatter, refl, fres);
   col = mix(col, max(col, lake * 0.40), smoothstep(0.050, 0.014, luma(col)));
+  // Crest / trough so a still column is not a single painted value.
+  col *= 1.0 + (N.y - 0.88) * 0.22;
 
   // ---- specular sun glint
   vec3 H = normalize(uSunDir + V);

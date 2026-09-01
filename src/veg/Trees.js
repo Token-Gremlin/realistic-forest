@@ -689,6 +689,67 @@ export class Trees {
       total++;
     }
 
+    // Horizon silhouette: a visible far sector that is thin gets a few
+    // extra cards so the hill does not read as a hole. View-only — not
+    // stored in chunks — so walking into the ring meets the real stand.
+    let horizonFill = 0;
+    {
+      const SECTORS = 32;
+      const counts = new Array(SECTORS).fill(0);
+      const sectorOf = (x, z) => {
+        const a = Math.atan2(z - cam.z, x - cam.x);
+        return ((Math.floor((a + Math.PI) / (Math.PI * 2) * SECTORS) % SECTORS) + SECTORS) % SECTORS;
+      };
+      for (const t of pack) {
+        if (t._dist >= farStart && t._dist <= rMax) counts[sectorOf(t.x, t.z)]++;
+      }
+      const el = camera.matrixWorld.elements;
+      const fx = -el[8], fz = -el[10];
+      const flen = Math.hypot(fx, fz) || 1;
+      const nx = fx / flen, nz = fz / flen;
+      const eco = this._eco;
+      const maps = this.maps;
+      const want = 7;
+      const fillerCap = 96;
+      for (let s = 0; s < SECTORS; s++) {
+        const mid = -Math.PI + (s + 0.5) / SECTORS * Math.PI * 2;
+        const dx = Math.cos(mid), dz = Math.sin(mid);
+        if (dx * nx + dz * nz < 0.12) continue;
+        const need = want - counts[s];
+        if (need <= 0) continue;
+        for (let k = 0; k < need && horizonFill < fillerCap; k++) {
+          const a = -Math.PI + (s + 0.22 + k * 0.28) / SECTORS * Math.PI * 2;
+          const dist = rMax * (0.76 + 0.14 * ((k * 17 + s * 3) % 5) / 4);
+          const x = cam.x + Math.cos(a) * dist;
+          const z = cam.z + Math.sin(a) * dist;
+          if (maps.covers && !maps.covers(x, z)) continue;
+          maps.sample(x, z, eco);
+          if (!eco.inside) continue;
+          if (eco.waterDepth > -0.02) continue;
+          if (eco.slope > 0.70) continue;
+          const rnd = (hash2i(s + 19, k + 7) >>> 0) / 4294967296;
+          const key = pickSpecies(eco, rnd);
+          let vi = 0;
+          for (let i = 0; i < this.variants.length; i++) {
+            if (this.variants[i].key === key) { vi = i; break; }
+          }
+          const variant = this.variants[vi];
+          if (!variant?.billboard) continue;
+          const gy = maps.height(x, z);
+          vals[0] = x; vals[1] = gy; vals[2] = z;
+          vals[3] = 1.14 + rnd * 0.26;
+          vals[4] = 1; vals[5] = 0;
+          vals[6] = 0; vals[7] = 0;
+          vals[8] = rnd; vals[9] = 0.42 + rnd * 0.22; vals[10] = rnd;
+          vals[11] = 0.90;
+          variant.billboard.bucket.push(vals);
+          lodCounts[3]++;
+          total++;
+          horizonFill++;
+        }
+      }
+    }
+
     // upload
     for (const v of this.variants) {
       for (const d of v.draws) {
@@ -715,6 +776,7 @@ export class Trees {
 
     this.stats.trees = total;
     this.stats.lod = lodCounts;
+    this.stats.horizonFill = horizonFill;
     let fallen = 0;
     for (const list of this.chunks.values()) {
       for (const t of list) if ((t.damage ?? 0) > 0.2) fallen++;
