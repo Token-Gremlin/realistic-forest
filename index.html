@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="Sylva — a fully procedural cinematic forest in the browser. Three.js and WebGL2. No downloaded assets." />
+    <meta name="author" content="Token Gremlin" />
+    <meta name="theme-color" content="#0a100c" />
+    <meta property="og:title" content="Sylva — procedural forest" />
+    <meta property="og:description" content="A cinematic forest generated entirely in the browser. No textures, no meshes, no HDRIs." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://token-gremlin.github.io/realistic-forest/" />
+    <meta property="og:image" content="https://token-gremlin.github.io/realistic-forest/og.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Sylva — procedural forest" />
+    <meta name="twitter:description" content="A cinematic forest generated entirely in the browser. No textures, no meshes, no HDRIs." />
+    <meta name="twitter:image" content="https://token-gremlin.github.io/realistic-forest/og.jpg" />
+    <meta name="twitter:site" content="@TokenGremlin" />
+    <meta name="twitter:creator" content="@TokenGremlin" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Sylva — Forest editor</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ui-fg: #efe8dc;
+        --ui-dim: #9b968c;
+        --ui-accent: #b7d48a;
+        --ui-line: #ffffff14;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0; width: 100%; height: 100%;
+        background: #05070a; overflow: hidden;
+        font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+        color: var(--ui-fg);
+      }
+      #gl { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
+
+      #boot {
+        position: fixed; inset: 0; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 18px;
+        background: radial-gradient(ellipse at 50% 60%, #0d1410 0%, #04060a 70%);
+        z-index: 50; transition: opacity 1.2s ease; letter-spacing: 0.16em;
+      }
+      #boot.gone { opacity: 0; pointer-events: none; }
+      #boot h1 { font-size: 13px; font-weight: 400; margin: 0; text-transform: uppercase; opacity: .85; }
+      #boot .bar { width: 320px; height: 1px; background: #23291f; position: relative; overflow: hidden; }
+      #boot .bar i { position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg,#4a7a3a,#c8d8a0); transition: width .35s ease; }
+      #boot .task { font-size: 10px; color: var(--ui-dim); height: 12px; }
+
+      #hud {
+        position: fixed; left: 0; top: 0; padding: 10px 12px;
+        font-size: 10.5px; line-height: 1.5; text-shadow: 0 1px 2px #000a;
+        pointer-events: none; z-index: 20; opacity: .82;
+      }
+      #hud b { font-weight: 600; color: #cfe0b4; }
+      #hud .k { color: var(--ui-dim); }
+
+      #top-actions {
+        position: fixed; right: 14px; top: 12px; z-index: 22;
+        display: flex; align-items: center; gap: 8px;
+      }
+      #top-actions.open { right: 354px; }
+      #lang-toggle {
+        display: flex; overflow: hidden;
+        border: 1px solid #ffffff22; border-radius: 999px;
+        background: #12180ecc; backdrop-filter: blur(10px);
+      }
+      #lang-toggle button {
+        font: inherit; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+        padding: 7px 10px; color: #9aa48a; background: transparent; border: 0; cursor: pointer;
+      }
+      #lang-toggle button:hover { color: #e8f0d4; }
+      #lang-toggle button.on { color: #eef6d8; background: #3d5a2a; }
+      #editor-toggle {
+        font: inherit; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+        padding: 7px 12px; color: #e8f0d4;
+        background: #12180ecc; border: 1px solid #ffffff22; border-radius: 999px;
+        backdrop-filter: blur(10px); cursor: pointer;
+      }
+      #editor-toggle:hover { background: #1c2616; }
+
+      #panel {
+        position: fixed; right: 0; top: 0; z-index: 21;
+        width: 340px; max-height: 100vh; overflow-y: auto;
+        padding: 16px 16px 28px; font-size: 11px;
+        background: linear-gradient(180deg, #0b100de8 0%, #0a0d0bd4 100%);
+        backdrop-filter: blur(16px) saturate(1.2);
+        border-left: 1px solid #ffffff16;
+        box-shadow: -18px 0 48px #0008;
+      }
+      #panel.hidden { display: none; }
+      #panel .brand {
+        display: flex; align-items: baseline; gap: 8px;
+        margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--ui-line);
+      }
+      #panel .brand b {
+        font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase;
+        font-weight: 500; color: var(--ui-accent);
+      }
+      #panel .brand span { font-size: 10px; color: var(--ui-dim); letter-spacing: 0.08em; }
+      #panel .looks { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+      #panel .looks button { letter-spacing: 0.04em; }
+      #panel details { margin: 8px 0 4px; }
+      #panel summary {
+        font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #a9bb8c;
+        margin: 8px 0 8px; font-weight: 500; border-bottom: 1px solid #ffffff14; padding-bottom: 5px;
+        cursor: pointer; list-style: none;
+      }
+      #panel summary::-webkit-details-marker { display: none; }
+      #panel summary::after { content: '▾'; float: right; opacity: .45; }
+      #panel details:not([open]) summary::after { content: '▸'; }
+      #panel label { display: flex; align-items: center; gap: 8px; margin: 5px 0; color: #d6d2c8; }
+      #panel label span.n { flex: 1 1 auto; min-width: 0; }
+      #panel label span.v { color: var(--ui-dim); font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; }
+      #panel input[type=range] { flex: 0 0 118px; height: 14px; accent-color: #7fa055; }
+      #panel input[type=checkbox] { accent-color: #7fa055; }
+      #panel select { background: #12170f; color: #d6d2c8; border: 1px solid #ffffff20; font: inherit; padding: 3px 5px; flex: 1; border-radius: 3px; }
+      #panel .btnrow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+      #panel button {
+        font: inherit; font-size: 10px; padding: 5px 8px; color: #d8e2c4;
+        background: #1b2415; border: 1px solid #ffffff20; cursor: pointer; border-radius: 3px;
+      }
+      #panel button:hover { background: #2a3620; }
+      #panel button.on { background: #3d5a2a; border-color: #7fa055; color: #eef6d8; }
+      #panel .hint { color: #7d786f; font-size: 10px; line-height: 1.5; margin-top: 12px; }
+      #err {
+        position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+        max-width: 70ch; padding: 18px 22px; background: #1a0d0dcc; border: 1px solid #ff6b6b55;
+        font-size: 11px; line-height: 1.6; white-space: pre-wrap; display: none; z-index: 100;
+      }
+    </style>
+    <script type="module" crossorigin src="./assets/index-zXCtvUDl.js"></script>
+  </head>
+  <body>
+    <canvas id="gl"></canvas>
+
+    <div id="boot">
+      <h1>Sylva</h1>
+      <div class="bar"><i id="boot-bar"></i></div>
+      <div class="task" id="boot-task">initialising</div>
+    </div>
+
+    <div id="hud"></div>
+    <div id="top-actions">
+      <div id="lang-toggle" title="Language" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="pt-BR" aria-pressed="false">PT-BR</button>
+      </div>
+      <button id="editor-toggle" type="button">Editor</button>
+    </div>
+    <div id="panel"></div>
+    <div id="err"></div>
+
+  </body>
+</html>
