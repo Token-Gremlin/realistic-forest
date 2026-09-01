@@ -1,8 +1,11 @@
-# Build the Vite bundle, refresh real renderer screenshots and publish the demo.
+# Build the Vite bundle and publish it to the gh-pages branch.
 # Demo: https://token-gremlin.github.io/realistic-forest/
 #
-# After the first green run, turn Pages on once if needed:
+# After the first green run, turn Pages on once:
 # Settings → Pages → Deploy from a branch → gh-pages / (root).
+#
+# Public README stills live in docs/screens/ and were taken on a discrete GPU.
+# GitHub Actions is SwiftShader — do not commit those frames as the gallery.
 
 name: Live demo
 
@@ -23,59 +26,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build production bundle
-        run: npm run build
-
-      - name: Start production preview
-        run: |
-          npm run preview -- --host 127.0.0.1 > /tmp/sylva-preview.log 2>&1 &
-          for i in {1..60}; do
-            if curl -fsS http://127.0.0.1:4173/ > /dev/null; then
-              exit 0
-            fi
-            sleep 1
-          done
-          cat /tmp/sylva-preview.log
-          exit 1
-
-      - name: Capture gallery from the real renderer
-        run: |
-          npm run capture -- \
-            --url=http://127.0.0.1:4173/ \
-            --q=low \
-            --w=1440 \
-            --h=900 \
-            --shots=00,04,08 \
-            --out=docs/screenshots \
-            --wait=120000 \
-            --settle=4000
-
-      - name: Commit refreshed gallery
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/screenshots/frame_00.png docs/screenshots/frame_04.png docs/screenshots/frame_08.png
-          if git diff --cached --quiet; then
-            echo "Gallery is already current."
-          else
-            git commit -m "docs: refresh renderer screenshots"
-            git push
-          fi
-
+      - run: npm ci
+      - run: npm run build
       - name: Add Pages marker
         run: touch dist/.nojekyll
-
-      - name: Publish demo to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
