@@ -388,8 +388,8 @@ export class Trees {
 
         // Closed canopy is dense; open hills still get a silhouette stand so
         // the far field is a forest, not a bare limbo that fills when you walk.
-        let p = 0.42 + eco.canopy * 0.95;
-        p = Math.max(p, 0.34 * (1 - eco.rock * 0.85));
+        let p = 0.50 + eco.canopy * 0.90;
+        p = Math.max(p, 0.42 * (1 - eco.rock * 0.85));
         p *= 1 - smoothstep(0.62, 0.96, eco.rock) * 0.55;
         p *= 1 - smoothstep(0.58, 0.96, eco.slope) * 0.45;
         p *= 1 - smoothstep(0.0, 0.6, eco.waterDepth + 0.6) * 0.85;
@@ -614,8 +614,8 @@ export class Trees {
     pack.sort((a, b) => a._dist - b._dist);
     // Keep the whole stream disk. Truncating to maxTrees dropped the far
     // hills and they only appeared after you walked into that ring.
-    const farStart = rMax * 0.50;
-    const nearCardCap = Math.max(80, Math.round(maxCards * 0.60));
+    const farStart = rMax * 0.48;
+    const nearCardCap = Math.max(80, Math.round(maxCards * 0.55));
     const farCardCap = Math.max(80, maxCards - nearCardCap);
 
     let used0 = 0, used1 = 0, cardsNear = 0, cardsFar = 0;

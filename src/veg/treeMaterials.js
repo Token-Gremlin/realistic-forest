@@ -648,7 +648,7 @@ vec3 place(float t){
   float gy = mix(iPosScale.y, groundHeight(iPosScale.xz), mapInside(iPosScale.xz));
   vec3 base = vec3(iPosScale.x, gy, iPosScale.z);
   float h = uTreeHeight * iPosScale.w;
-  float w = h * uCrown.x * 0.90;
+  float w = h * uCrown.x * 1.08;
   vec3 toCam = uCamPos - base; toCam.y = 0.0;
   float l = length(toCam);
   vec3 f = l > 1e-4 ? toCam / l : vec3(0.0, 0.0, 1.0);
@@ -763,10 +763,10 @@ float crownMask(vec2 uv, float seed, out float depth, out float clump){
     }
   } else {
     // wide body so a 100 px card is a canopy mass, not a pill
-    float body = smoothstep(0.20, 0.36, y) * smoothstep(1.01, 0.70, y);
-    float wob = 0.14 * sin(y * 16.0 + seed * 9.0) + 0.08 * sin(y * 29.0 - seed * 4.0);
-    body *= smoothstep(1.18, 0.52, abs(x) + wob);
-    m = max(m, body * 0.88);
+    float body = smoothstep(0.18, 0.34, y) * smoothstep(1.02, 0.68, y);
+    float wob = 0.16 * sin(y * 14.0 + seed * 9.0) + 0.09 * sin(y * 27.0 - seed * 4.0);
+    body *= smoothstep(1.28, 0.48, abs(x) + wob);
+    m = max(m, body * 0.92);
     depth = body * 0.35;
     const int LOBES = 8;
     for(int i = 0; i < LOBES; i++){
@@ -775,7 +775,7 @@ float crownMask(vec2 uv, float seed, out float depth, out float clump){
       float cy = mix(0.30, 0.94, mix(h.x, 0.28 + 0.72 * h.x, 0.55));
       float pr = max(crownProfile(cy, 0.0), 0.35);
       float cx = (h.y * 2.0 - 1.0) * pr * 0.78;
-      float rr = mix(0.28, 0.58, h.z) * (0.70 + 0.55 * pr);
+      float rr = mix(0.32, 0.64, h.z) * (0.74 + 0.58 * pr);
       vec2 d = vec2(x - cx, (y - cy) * 1.05);
       float dd = length(d) / max(rr, 1e-3);
       if(dd > 1.9) continue;
@@ -797,7 +797,7 @@ float crownMask(vec2 uv, float seed, out float depth, out float clump){
   vec3 g0 = hash33(vec3(seed * 13.0, 4.2, 8.1));
   vec2 hole0 = vec2((g0.x - 0.5) * 0.95, mix(0.48, 0.84, g0.y));
   float hr0 = mix(0.12, 0.22, g0.z);
-  m *= 1.0 - 0.48 * smoothstep(hr0, hr0 * 0.30, length(vec2(x - hole0.x, (y - hole0.y) * 1.15)));
+  m *= 1.0 - 0.30 * smoothstep(hr0, hr0 * 0.30, length(vec2(x - hole0.x, (y - hole0.y) * 1.15)));
 
   // conifer only: keep a taper. Broadleaf must not inherit a cone envelope.
   if(conifer > 0.5){
@@ -880,8 +880,8 @@ void main(){
     if(uCrown.w > 0.5) alb = mix(uBarkA, uBarkB, idv) * 0.8;
     // self-shadowing: dark underside, brighter sunlit crown top. That
     // height gradient is what stops a distant tree reading as a stamp.
-    float shade = clump * 0.40 + 0.60 * smoothstep(0.22, 0.92, vUv.y);
-    alb *= mix(0.26, 1.18, shade);
+    float shade = clump * 0.36 + 0.64 * smoothstep(0.18, 0.88, vUv.y);
+    alb *= mix(0.18, 0.94, shade);
     rough = 0.56; trans = uCrown.z * 0.72;
     occ = mix(0.28, 1.0, shade);
   }

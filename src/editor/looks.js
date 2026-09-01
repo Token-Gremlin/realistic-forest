@@ -111,7 +111,7 @@ export const GFX_PRESETS = {
     label: 'Balanced',
     scale: 0.86, vol: 10, ao: true,
     pxFull: 96, pxMid: 30, pxCard: 24,
-    maxLod0: 36, maxLod1: 140, maxTrees: 980, maxCards: 2600, maxClutter: 2200,
+    maxLod0: 36, maxLod1: 140, maxTrees: 980, maxCards: 2800, maxClutter: 2200,
   },
   pretty: {
     label: 'Beautiful',

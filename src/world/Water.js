@@ -367,20 +367,22 @@ void main(){
 
   float f0 = 0.02;
   float fres = f0 + (1.0 - f0) * pow(1.0 - cosV, 5.0);
-  fres = mix(fres, clamp(fres * 1.35, 0.0, 0.82), clamp(flowMag * 0.45, 0.0, 1.0));
+  fres = mix(fres, clamp(fres * 1.35, 0.0, 0.88), clamp(flowMag * 0.45, 0.0, 1.0));
   float still = 1.0 - smoothstep(0.06, 0.40, flowMag);
-  fres = min(fres, mix(0.36, 0.26, 1.0 - still));
+  // Grazing water has to take the sky. The old 0.26–0.36 cap painted
+  // every pond as a flat glowing slab.
+  fres = clamp(fres, 0.045, 0.86);
 
   // body is the deep-column mask. It must exist before the lake floor
   // lift — a later declaration left the shader uncompiled and the pond black.
   float body = smoothstep(0.12, 0.85, depth);
-  // A dark wet bed used to read as a black hole. Keep a lake-blue floor
-  // so the column is water even when the terrain under it is crushed.
-  vec3 lake = vec3(0.045, 0.11, 0.165) * (0.70 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 1.6);
-  lake += uSunColor * max(uSunDir.y, 0.0) * vec3(0.04, 0.08, 0.12);
-  bedLit = max(bedLit, lake * mix(0.55, 1.15, body));
+  // Lift only a crushed bed. A hard cyan floor flattened the column.
+  vec3 lake = vec3(0.038, 0.092, 0.145) * (0.62 + luma(skyIrradiance(vec3(0.0, 1.0, 0.0))) * 1.35);
+  lake += uSunColor * max(uSunDir.y, 0.0) * vec3(0.03, 0.06, 0.10);
+  float bedL = luma(bedLit);
+  bedLit = mix(bedLit, max(bedLit, lake * mix(0.36, 0.78, body)), smoothstep(0.055, 0.016, bedL));
   vec3 col = mix(bedLit + inScatter, refl, fres);
-  col = max(col, lake * 0.72);
+  col = mix(col, max(col, lake * 0.40), smoothstep(0.050, 0.014, luma(col)));
 
   // ---- specular sun glint
   vec3 H = normalize(uSunDir + V);
@@ -451,14 +453,13 @@ void main(){
   }
   col += vec3(0.04, 0.06, 0.09) * uWeather.z;
   float sunUp = clamp(uSunDir.y, 0.0, 1.0);
-  col += uSkyAmbient * mix(0.22, 0.08, sunUp);
-  col += vec3(0.012, 0.028, 0.052) * mix(0.40, 0.06, sunUp);
+  col += uSkyAmbient * mix(0.12, 0.04, sunUp);
+  col += vec3(0.008, 0.018, 0.034) * mix(0.22, 0.04, sunUp);
 
   // soften the very edge so the waterline is not a hard cut.
-  // Mix toward the lake floor, not the raw bed — a crushed bed made a
-  // black rim around every pond.
+  // Mix toward a dim lake floor, not a crushed bed or a bright slab.
   float edgeFade = smoothstep(0.006, 0.05, depth);
-  col = mix(max(bed, lake * 0.88), col, edgeFade);
+  col = mix(max(bed, lake * 0.52), col, edgeFade);
 
   oColor = vec4(clamp(col, vec3(0.0), vec3(2.2)), 1.0);
 }
@@ -535,8 +536,8 @@ void main(){
     this.uniforms.uFoam.value = this.look.foam;
     this.uniforms.uWaterWave.value.set(
       1.0 * waves,
-      (0.26 + w.y * 0.55 + Math.min(U.uWind.value.z * 0.012, 0.35)) * waves,
-      (0.4 + w.y * 0.8) * waves,
+      (0.34 + w.y * 0.55 + Math.min(U.uWind.value.z * 0.012, 0.35)) * waves,
+      (0.48 + w.y * 0.8) * waves,
       w.z,
     );
     if(!this._causticHeld) U.uCausticHold.value.w = 0;

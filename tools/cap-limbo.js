@@ -14,6 +14,8 @@ f.forest.settleView?.(f.camera);
 const cam = f.camera.position;
 const r = f.forest.trees.radius;
 const bands = [0, 0, 0, 0];
+const destX = cam.x + 130, destZ = cam.z - 30;
+let walkAhead = 0;
 for (const list of f.forest.trees.chunks.values()) {
   for (const t of list) {
     const d = Math.hypot(t.x - cam.x, t.z - cam.z);
@@ -21,6 +23,7 @@ for (const list of f.forest.trees.chunks.values()) {
     else if (d < r * 0.5) bands[1]++;
     else if (d < r * 0.75) bands[2]++;
     else if (d <= r + 1) bands[3]++;
+    if (Math.hypot(t.x - destX, t.z - destZ) < 70) walkAhead++;
   }
 }
 
@@ -36,4 +39,5 @@ return {
   waterR: Math.round(f.forest.water?.radius ?? 0),
   waterCells: f.forest.water?.stats.cells ?? 0,
   generatedBands: bands,
+  walkAheadTrees: walkAhead,
 };
