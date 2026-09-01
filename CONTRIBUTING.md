@@ -45,6 +45,8 @@ not beauty proofs.
 - Code comments, commit messages and the primary README stay English.
 - `README.pt-BR.md` is the Portuguese landing page.
 - The live demo is GitHub Pages: `https://token-gremlin.github.io/realistic-forest/`.
+- README screenshots live in `docs/screens/`. They are GPU stills. Do not
+  replace them with SwiftShader captures.
 
 ## License
 

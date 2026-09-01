@@ -2,7 +2,32 @@
 
 This is the technical companion to the [README](../README.md). The forest is
 generated at runtime. There are no textures, meshes, HDRIs or authored
-materials in the repository.
+materials in the repository. The Grove stills in `docs/screens/` were taken
+on a discrete GPU — headless SwiftShader captures are not beauty proofs.
+
+```mermaid
+flowchart TB
+  subgraph bake [Once per map window]
+    fn[Analytic terrain XZ] --> maps[WorldMaps bake]
+  end
+  subgraph gbuffer [Deferred colour]
+    maps --> terrain[Terrain quadtree]
+    maps --> trees[Pixel-LOD trees]
+    maps --> grass[Sliding GPU grass]
+    maps --> clutter[Undergrowth]
+    terrain --> gb[G-buffer]
+    trees --> gb
+    grass --> gb
+    clutter --> gb
+  end
+  subgraph forward [After lighting]
+    gb --> light[Shadows + deferred light]
+    light --> water[Forward water]
+    water --> vol[Volumetrics]
+    vol --> taa[TAA + bloom + DoF]
+    taa --> agx[AgX grade]
+  end
+```
 
 ## Terrain is a function, not a heightmap
 

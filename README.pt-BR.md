@@ -13,7 +13,9 @@ Feito com [Three.js](https://threejs.org/) e **WebGL2**. A sessão padrão é um
 partilhável e câmara andável.
 
 Demo ao vivo: [token-gremlin.github.io/realistic-forest](https://token-gremlin.github.io/realistic-forest/).
-A documentação principal está em [inglês](README.md).
+
+A documentação principal, os prints e o detalhe técnico estão em
+[inglês](README.md).
 
 ## Começar
 
