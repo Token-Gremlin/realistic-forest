@@ -237,6 +237,7 @@ precision highp float;
 precision highp int;
 precision highp sampler2DShadow;
 uniform vec3 uCamPos; uniform vec4 uWeather; uniform float uTime;
+uniform vec4 uWind;
 uniform vec3 uSunDir; uniform vec3 uSunColor; uniform vec3 uMoonDir; uniform vec3 uMoonColor;
 uniform vec3 uSkyAmbient;
 uniform vec4 uFlash; uniform vec3 uFlashColor;
