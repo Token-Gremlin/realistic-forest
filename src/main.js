@@ -381,6 +381,7 @@ async function start() {
       forest.lightning?.update?.(0, camera);
     }
     pipeline.resetTemporal();
+    renderer.info.reset();
     pipeline.render(camera, { nightAmount: weather.nightAmount });
     writeHud();
     window.__boltAfter = {
